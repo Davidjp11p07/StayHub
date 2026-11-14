@@ -51,6 +51,11 @@ export interface ServiceClientOptions {
   readonly maxRetries?: number;
   /** Cabecera de correlación aceptada por el destino. */
   readonly traceHeaderName?: 'x-trace-id' | 'x-request-id';
+  /**
+   * Si el emisor devuelve un token vacío, omite `Authorization` en lugar de enviar `Bearer `.
+   * Solo para destinos con lecturas anónimas (p. ej. detalle público de una propiedad).
+   */
+  readonly allowAnonymous?: boolean;
 }
 
 export interface ServiceClientDependencies {
@@ -192,8 +197,9 @@ export class ServiceClientBase {
       [this.options.traceHeaderName ?? 'x-trace-id']: call.traceId,
       accept: 'application/json',
     };
-    // Un emisor que devuelve '' indica una llamada anónima deliberada (p. ej. lectura pública).
-    if (token !== '') headers['authorization'] = `Bearer ${token}`;
+    if (token !== '' || this.options.allowAnonymous !== true) {
+      headers['authorization'] = `Bearer ${token}`;
+    }
 
     const provided = lowercaseHeaders(call.headers);
     for (const name of this.requestAllowlist) {

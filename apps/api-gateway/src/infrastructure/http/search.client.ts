@@ -8,6 +8,12 @@ import {
   type ServiceTokenIssuer,
 } from '@gateway/infrastructure/http/service-client.base';
 
+/**
+ * Cliente del Gateway hacia Search (RQ-04). Search solo acepta service JWT
+ * (audience `stayhub-search-service`, scope `search:invoke`); la búsqueda es pública en el
+ * Gateway, así que nunca se reenvía el bearer del usuario.
+ */
+
 const SEARCH_DEPENDENCY = 'search';
 
 export interface SearchItemView {
@@ -41,16 +47,12 @@ export interface SearchClientDeps {
   readonly sleep?: (ms: number) => Promise<void>;
 }
 
-/**
- * Adaptador REST Gateway -> Search. Las rutas públicas son anónimas; el Gateway se autentica
- * ante Search con un service JWT propio (audience/scope de Search). No contiene reglas de búsqueda.
- */
 export class SearchClient {
   private readonly base: ServiceClientBase;
 
   public constructor(config: GatewayConfig, serviceToken: ServiceTokenIssuer, deps: SearchClientDeps = {}) {
     this.base = new ServiceClientBase(
-      { dependency: SEARCH_DEPENDENCY, baseUrl: config.searchBaseUrl, circuit: config.search, traceHeaderName: 'x-trace-id' },
+      { dependency: SEARCH_DEPENDENCY, baseUrl: config.searchBaseUrl, circuit: config.search },
       {
         serviceToken,
         ...(deps.fetch === undefined ? {} : { fetch: deps.fetch }),
@@ -60,16 +62,15 @@ export class SearchClient {
     );
   }
 
-  /** `query` ya viene filtrado por allowlist y codificado (incluye `?` o es vacío). */
   public search(query: string, traceId: string): Promise<SearchPageView> {
-    return this.getJson<SearchPageView>(`/internal/v1/search${query}`, traceId);
+    return this.get<SearchPageView>(`/internal/v1/search${query}`, traceId);
   }
 
   public suggest(query: string, traceId: string): Promise<SuggestionsView> {
-    return this.getJson<SuggestionsView>(`/internal/v1/search/suggest${query}`, traceId);
+    return this.get<SuggestionsView>(`/internal/v1/search/suggest${query}`, traceId);
   }
 
-  private async getJson<T>(path: string, traceId: string): Promise<T> {
+  private async get<T>(path: string, traceId: string): Promise<T> {
     let result: ServiceResult;
     try {
       result = await this.base.request({ method: 'GET', path, traceId });
@@ -77,8 +78,6 @@ export class SearchClient {
       if (error instanceof GatewayDependencyError) throw error;
       throw new GatewayDependencyError(SEARCH_DEPENDENCY);
     }
-    // 401/403 de Search significan credenciales de servicio mal configuradas en el Gateway,
-    // no un problema del cliente anónimo: se exponen como dependencia no disponible.
     if (result.status === 401 || result.status === 403) throw new GatewayDependencyError(SEARCH_DEPENDENCY);
     if (result.status >= 400) throw toRemoteHttpException(result);
     try {

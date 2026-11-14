@@ -51,8 +51,8 @@ export interface GatewayConfig {
   readonly usersBaseUrl: string;
   readonly reviewsBaseUrl: string;
   readonly bookingsBaseUrl: string;
-  readonly searchBaseUrl: string;
   readonly accommodationsBaseUrl: string;
+  readonly searchBaseUrl: string;
   readonly userJwt: UserJwtConfig;
   readonly serviceJwt: ServiceJwtConfig;
   readonly reviewsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
@@ -69,8 +69,8 @@ export interface GatewayConfig {
   readonly users: CircuitPolicy;
   readonly reviews: CircuitPolicy;
   readonly bookings: CircuitPolicy;
-  readonly search: CircuitPolicy;
   readonly accommodations: CircuitPolicy;
+  readonly search: CircuitPolicy;
   readonly introspectionTimeoutMs: number;
   readonly otlpEndpoint: string;
   readonly otelServiceName: string;
@@ -107,8 +107,8 @@ export function loadGatewayConfig(
     usersBaseUrl: url(environment, 'GATEWAY_USERS_BASE_URL', ['http:', 'https:']),
     reviewsBaseUrl: url(environment, 'GATEWAY_REVIEWS_BASE_URL', ['http:', 'https:']),
     bookingsBaseUrl: url(environment, 'GATEWAY_BOOKINGS_BASE_URL', ['http:', 'https:']),
-    searchBaseUrl: url(environment, 'GATEWAY_SEARCH_BASE_URL', ['http:', 'https:']),
     accommodationsBaseUrl: url(environment, 'GATEWAY_ACCOMMODATIONS_BASE_URL', ['http:', 'https:']),
+    searchBaseUrl: url(environment, 'GATEWAY_SEARCH_BASE_URL', ['http:', 'https:']),
     userJwt: {
       publicKeys: publicKeys(environment, 'GATEWAY_JWT_PUBLIC_KEYS_JSON'),
       issuer: required(environment, 'GATEWAY_JWT_ISSUER'),
@@ -161,8 +161,8 @@ export function loadGatewayConfig(
     users: circuit(environment, 'GATEWAY_USERS_'),
     reviews: circuit(environment, 'GATEWAY_REVIEWS_'),
     bookings: circuit(environment, 'GATEWAY_BOOKINGS_'),
-    search: circuit(environment, 'GATEWAY_SEARCH_'),
     accommodations: circuit(environment, 'GATEWAY_ACCOMMODATIONS_'),
+    search: circuit(environment, 'GATEWAY_SEARCH_'),
     introspectionTimeoutMs: integer(environment, 'GATEWAY_INTROSPECTION_TIMEOUT_MS', 100, 30_000),
     otlpEndpoint: url(environment, 'GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT', ['http:', 'https:']),
     otelServiceName: required(environment, 'GATEWAY_OTEL_SERVICE_NAME'),
