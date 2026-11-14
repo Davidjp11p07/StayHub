@@ -206,6 +206,8 @@ const accessKeysJson = JSON.stringify({ [ACCESS_KID]: accessPublicKey });
 const gatewayKeysJson = JSON.stringify({ [INBOUND_KID]: gatewayPublicKey });
 replaceEnvironment({
   GATEWAY_PROTOCOL: 'https',
+  // The Compose Gateway only listens on HTTPS; the Vite dev proxy must target it accordingly.
+  WEB_GATEWAY_URL: 'https://127.0.0.1:8080',
   GATEWAY_JWT_PUBLIC_KEYS_JSON: accessKeysJson,
   GATEWAY_SERVICE_KID: INBOUND_KID,
   GATEWAY_SERVICE_ISSUER: INBOUND_ISSUER,

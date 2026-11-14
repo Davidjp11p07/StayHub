@@ -189,10 +189,11 @@ export class ServiceClientBase {
   private async buildHeaders(call: ServiceCall): Promise<Record<string, string>> {
     const token = await this.serviceToken.issue();
     const headers: Record<string, string> = {
-      authorization: `Bearer ${token}`,
       [this.options.traceHeaderName ?? 'x-trace-id']: call.traceId,
       accept: 'application/json',
     };
+    // Un emisor que devuelve '' indica una llamada anónima deliberada (p. ej. lectura pública).
+    if (token !== '') headers['authorization'] = `Bearer ${token}`;
 
     const provided = lowercaseHeaders(call.headers);
     for (const name of this.requestAllowlist) {

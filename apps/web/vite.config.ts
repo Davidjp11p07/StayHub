@@ -30,6 +30,16 @@ export function assertProductionApiBaseUrl(value: string | undefined): void {
   }
 }
 
+/** True for https://localhost / 127.0.0.1 / [::1] targets, which use self-signed dev certificates. */
+export function isLoopbackHttps(target: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(target);
+    return protocol === 'https:' && ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export default defineConfig(({ command, mode }) => {
   const root = resolve(__dirname, '../..');
   // Server-only settings (WEB_GATEWAY_URL) come from the repository root .env, needed only by the
@@ -39,10 +49,13 @@ export default defineConfig(({ command, mode }) => {
   // Public VITE_* settings come from apps/web/.env* (Vite's default envDir) or the process.
   const publicEnv = { ...loadEnv(mode, __dirname, 'VITE_'), ...process.env };
   if (command === 'build' && mode === 'production') assertProductionApiBaseUrl(publicEnv.VITE_API_BASE_URL);
+  const gatewayTarget = env.WEB_GATEWAY_URL || 'http://127.0.0.1:8080';
   return {
     plugins: [react(), tailwindcss(), excludeMockWorker()], resolve: { alias: { '@': resolve(__dirname, './src') } },
     server: { host: 'localhost', port: 5173, strictPort: true,
-      proxy: { '/api': { target: env.WEB_GATEWAY_URL || 'http://127.0.0.1:8080', changeOrigin: true } },
+      // The Compose Gateway serves HTTPS with a self-signed dev certificate; only skip verification
+      // for a loopback target so a remote WEB_GATEWAY_URL is still verified.
+      proxy: { '/api': { target: gatewayTarget, changeOrigin: true, secure: !isLoopbackHttps(gatewayTarget) } },
     },
     preview: { host: 'localhost', port: 4173, strictPort: true },
   };

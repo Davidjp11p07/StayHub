@@ -48,3 +48,16 @@ export class ReviewsServiceTokenProvider {
     });
   }
 }
+
+@Injectable()
+export class SearchServiceTokenProvider {
+  public constructor(@Inject(GATEWAY_CONFIG) private readonly config: GatewayConfig) {}
+
+  public issue(): Promise<string> {
+    return issueServiceToken({
+      ...this.config.serviceJwt,
+      audience: this.config.searchServiceJwt.audience,
+      scope: this.config.searchServiceJwt.scope,
+    });
+  }
+}
