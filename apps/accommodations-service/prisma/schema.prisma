@@ -89,3 +89,14 @@ model Photo {
 
   @@unique([propertyId, position])
 }
+
+/// Immutable reporting supply history; no FK so removed rooms retain historical evidence.
+model ReportSupplyVersion {
+ id BigInt @id @default(autoincrement())
+ propertyId String @db.Uuid
+ ownerId String @db.Uuid
+ capturedAt DateTime @default(now()) @db.Timestamptz(6)
+ name String @db.VarChar(120)
+ roomIds Json @db.JsonB
+ @@index([ownerId, capturedAt, id])
+}

@@ -16,6 +16,7 @@ export function HostHome() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hola, {currentUser?.name.split(' ')[0] ?? 'anfitrión'}</h1>
         <p className="text-gray-500 text-sm mb-8">Publica tus alojamientos para que los huéspedes puedan encontrarlos y reservarlos.</p>
         <div className="flex flex-wrap gap-3">
+          <Button variant="outline" size="lg" onClick={() => navigate(paths.hostReports)}>Ver reportes</Button>
           <Button variant="primary" size="lg" onClick={() => navigate(paths.hostNew)}>Publicar una propiedad</Button>
           <Button variant="outline" size="lg" onClick={() => navigate(paths.hostProperties)}>Ver mis propiedades</Button>
           <Button variant="outline" size="lg" onClick={() => navigate(paths.hostBookings)}>Reservas recibidas</Button>

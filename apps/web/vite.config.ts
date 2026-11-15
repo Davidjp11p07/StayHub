@@ -42,7 +42,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [react(), tailwindcss(), excludeMockWorker()], resolve: { alias: { '@': resolve(__dirname, './src') } },
     server: { host: 'localhost', port: 5173, strictPort: true,
-      proxy: { '/api': { target: env.WEB_GATEWAY_URL || 'http://127.0.0.1:8080', changeOrigin: true } },
+      proxy: { '/api': { target: env.WEB_GATEWAY_URL || 'http://127.0.0.1:8080', changeOrigin: true, secure: env.WEB_GATEWAY_TLS_VERIFY !== 'false' } },
     },
     preview: { host: 'localhost', port: 4173, strictPort: true },
   };

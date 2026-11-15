@@ -19,3 +19,6 @@ apps/*/src/infrastructure/persistence/generated/
 dsecrets/
 .artifacts/
 AGENT.md
+
+# Obsolete local Reports generated-client path (before isolated build layout).
+apps/reports-service/src/infrastructure/generated/

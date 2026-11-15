@@ -5,6 +5,7 @@ coverage/
 .git/
 .agents/
 .codex/
+.artifacts/
 .env*
 secrets/
 **/generated/

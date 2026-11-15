@@ -1,0 +1,30 @@
+import 'reflect-metadata';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { ReportsController, ReportsErrorFilter, CONFIG, HealthController } from '../src/interfaces/http';
+import { GetReport, type SourcesPort } from '../src/application/get-report';
+import { SnapshotStore } from '../src/infrastructure/store';
+import { config, owner, other, token } from './support';
+describe('Reports HTTP contract and isolation', () => {
+  let app: INestApplication;
+  const sources: SourcesPort = { source: 'LIVE', load: jest.fn(async () => ({ bookings: [], movements: [], supply: [] })) };
+  const save = jest.fn(async () => undefined);
+  const ready = jest.fn(async () => true);
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({ controllers: [ReportsController, HealthController], providers: [{ provide: CONFIG, useValue: config }, { provide: GetReport, useValue: new GetReport(sources, { save }) }, { provide: SnapshotStore, useValue: { ready } }] }).compile();
+    app = module.createNestApplication(); app.useGlobalFilters(new ReportsErrorFilter()); await app.init();
+  });
+  afterAll(async () => app.close());
+  beforeEach(() => jest.clearAllMocks());
+  const range = '?from=2026-11-01&to=2026-11-11';
+  test('anonymous rejected before querying sources', async () => { await request(app.getHttpServer()).get('/reports/owner/' + owner + range).expect(401); expect(sources.load).not.toHaveBeenCalled(); });
+  test('owner cannot read a different owner', async () => { await request(app.getHttpServer()).get('/reports/owner/' + other + range).auth(token(), { type: 'bearer' }).expect(403); expect(sources.load).not.toHaveBeenCalled(); });
+  test('guest is denied', async () => { await request(app.getHttpServer()).get('/reports/revenue' + range).auth(token('GUEST'), { type: 'bearer' }).expect(403); });
+  test('admin must choose an owner', async () => { await request(app.getHttpServer()).get('/reports/revenue' + range).auth(token('ADMIN'), { type: 'bearer' }).expect(400); });
+  test('admin may read specified owner; no-store and persisted snapshot', async () => { const result = await request(app.getHttpServer()).get('/reports/owner/' + other + range).auth(token('ADMIN'), { type: 'bearer' }).expect(200).expect('Cache-Control', 'no-store'); expect(result.body.ownerId).toBe(other); expect(result.body.metrics.reservations.total).toBe(0); expect(result.body.metrics.occupancy.rate).toBeNull(); expect(save).toHaveBeenCalledTimes(1); });
+  test.each(['/reports/occupancy', '/reports/revenue', '/reports/owner/' + owner])('implements protected operation %s', async path => { const result = await request(app.getHttpServer()).get(path + range).auth(token(), { type: 'bearer' }).expect(200); expect(result.body.source).toBe('LIVE'); expect(result.body.timezone).toBe('UTC'); });
+  test.each(['&unrecognized=x', '&group=week', '&propertyId=invalid', '&from=2026-01-01', '&ownerId=' + other])('rejects invalid owner-path query %s', async suffix => { await request(app.getHttpServer()).get('/reports/owner/' + owner + range + suffix).auth(token(), { type: 'bearer' }).expect(400); expect(sources.load).not.toHaveBeenCalled(); });
+  test('source failure returns 503 without synthetic zeros or raw errors', async () => { jest.mocked(sources.load).mockRejectedValueOnce(new Error('postgresql://secret')); const result = await request(app.getHttpServer()).get('/reports/revenue' + range).auth(token(), { type: 'bearer' }).expect(503); expect(JSON.stringify(result.body)).not.toContain('secret'); expect(save).not.toHaveBeenCalled(); });
+  test('readiness fails when persistence is unavailable', async () => { ready.mockResolvedValueOnce(false); await request(app.getHttpServer()).get('/health/ready').expect(503); await request(app.getHttpServer()).get('/health/live').expect(200); });
+});
