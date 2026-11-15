@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stayhub.local/schemas/reports-consumed-events-v1.schema.json",
+  "title": "Reports Service consumed events v1",
+  "oneOf": [
+    { "$ref": "#/$defs/bookingCreated" },
+    { "$ref": "#/$defs/bookingConfirmed" },
+    { "$ref": "#/$defs/bookingCancelled" },
+    { "$ref": "#/$defs/bookingCompleted" },
+    { "$ref": "#/$defs/paymentApproved" },
+    { "$ref": "#/$defs/paymentRefunded" },
+    { "$ref": "#/$defs/roomReportingUpserted" }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "dateTime": { "type": "string", "format": "date-time" },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "base": {
+      "type": "object",
+      "required": ["eventId", "eventType", "schemaVersion", "occurredAt"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/uuid" },
+        "eventType": { "type": "string" },
+        "schemaVersion": { "const": 1 },
+        "occurredAt": { "$ref": "#/$defs/dateTime" },
+        "traceId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bookingCreatedPayload": {
+      "type": "object",
+      "required": ["bookingId", "guestId", "ownerId", "propertyId", "roomId", "checkIn", "checkOut", "total", "status"],
+      "properties": {
+        "bookingId": { "$ref": "#/$defs/uuid" },
+        "guestId": { "$ref": "#/$defs/uuid" },
+        "ownerId": { "$ref": "#/$defs/uuid" },
+        "propertyId": { "$ref": "#/$defs/uuid" },
+        "roomId": { "$ref": "#/$defs/uuid" },
+        "checkIn": { "type": "string", "format": "date" },
+        "checkOut": { "type": "string", "format": "date" },
+        "total": {
+          "type": "object",
+          "required": ["amount", "currency"],
+          "properties": {
+            "amount": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,2})?$" },
+            "currency": { "$ref": "#/$defs/currency" }
+          }
+        },
+        "status": { "type": "string" }
+      }
+    },
+    "bookingCreated": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "properties": { "eventType": { "const": "booking.v1.created" } } },
+        { "$ref": "#/$defs/bookingCreatedPayload" }
+      ]
+    },
+    "bookingConfirmed": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["bookingId", "guestId", "propertyName", "roomName", "checkIn", "checkOut", "guests", "totalPrice", "checkInAt"],
+          "properties": {
+            "eventType": { "const": "booking.v1.confirmed" },
+            "bookingId": { "$ref": "#/$defs/uuid" },
+            "guestId": { "$ref": "#/$defs/uuid" },
+            "propertyName": { "type": "string" },
+            "roomName": { "type": "string" },
+            "checkIn": { "type": "string", "format": "date" },
+            "checkOut": { "type": "string", "format": "date" },
+            "guests": { "type": "integer", "minimum": 1 },
+            "totalPrice": { "type": "string" },
+            "checkInAt": { "$ref": "#/$defs/dateTime" }
+          }
+        }
+      ]
+    },
+    "bookingCancelled": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["bookingId", "cancelledBy"],
+          "properties": {
+            "eventType": { "const": "booking.v1.cancelled" },
+            "bookingId": { "$ref": "#/$defs/uuid" },
+            "cancelledBy": { "type": "string", "enum": ["GUEST", "OWNER", "ADMIN", "SYSTEM"] }
+          }
+        }
+      ]
+    },
+    "bookingCompleted": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["bookingId", "guestId", "propertyId"],
+          "properties": {
+            "eventType": { "const": "booking.v1.completed" },
+            "bookingId": { "$ref": "#/$defs/uuid" },
+            "guestId": { "$ref": "#/$defs/uuid" },
+            "propertyId": { "$ref": "#/$defs/uuid" }
+          }
+        }
+      ]
+    },
+    "paymentApproved": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["paymentId", "bookingId", "payerUserId", "amountMinor", "currency"],
+          "properties": {
+            "eventType": { "const": "payment.v1.approved" },
+            "paymentId": { "$ref": "#/$defs/uuid" },
+            "bookingId": { "$ref": "#/$defs/uuid" },
+            "payerUserId": { "$ref": "#/$defs/uuid" },
+            "amountMinor": { "type": "integer", "minimum": 1 },
+            "currency": { "$ref": "#/$defs/currency" }
+          }
+        }
+      ]
+    },
+    "paymentRefunded": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["paymentId", "bookingId", "payerUserId", "amountMinor", "currency", "refundId", "refundedAmountMinor", "totalRefundedAmountMinor", "reason", "paymentStatus"],
+          "properties": {
+            "eventType": { "const": "payment.v1.refunded" },
+            "paymentId": { "$ref": "#/$defs/uuid" },
+            "bookingId": { "$ref": "#/$defs/uuid" },
+            "payerUserId": { "$ref": "#/$defs/uuid" },
+            "amountMinor": { "type": "integer", "minimum": 1 },
+            "refundId": { "$ref": "#/$defs/uuid" },
+            "refundedAmountMinor": { "type": "integer", "minimum": 1 },
+            "totalRefundedAmountMinor": { "type": "integer", "minimum": 1 },
+            "currency": { "$ref": "#/$defs/currency" },
+            "reason": { "type": "string" },
+            "paymentStatus": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "roomReportingUpserted": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "required": ["ownerId", "propertyId", "roomId", "active", "effectiveFrom", "projectionVersion"],
+          "properties": {
+            "eventType": { "const": "accommodation.v1.room-reporting-upserted" },
+            "ownerId": { "$ref": "#/$defs/uuid" },
+            "propertyId": { "$ref": "#/$defs/uuid" },
+            "roomId": { "$ref": "#/$defs/uuid" },
+            "active": { "type": "boolean" },
+            "effectiveFrom": { "$ref": "#/$defs/dateTime" },
+            "projectionVersion": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    }
+  }
+}
