@@ -17,17 +17,18 @@ description: "Tareas ejecutables para implementar room-inventory-service del Spr
 
 ## Alcance de esta iteración (Iteración 1)
 
-Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, sin tocar otros microservicios.
+Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, sin tocar otros microservicios.
 
 | Bloque | Tareas | Motivo |
 |---|---|---|
 | Setup | T001–T008 | Workspace, Docker, Compose, CI y README: requisito de todo. |
 | Fundamentos | T009–T024, T028–T030 | Configuración, Prisma/migración, puertos, HTTP común, OpenAPI, JWT entrante, cliente Accommodations contra stub/contrato, token saliente, salud y bootstrap. Bloquean todas las historias. |
 | US1 | T031–T041 | Dominio `InventoryItem`/`RoomInventory`, repositorio, `GET` y módulo: base que reutilizan US2 y US3. |
+| Prerrequisitos de cierre | T064, T075 | Dataset de 200 items (lo usa T068) y validador de los dos OpenAPI `openapi:inventory:check` (lo usa T078). Solo dependen de tareas de esta iteración. |
 
 **Fuera de esta iteración**:
 - Coordinación externa (no se modifican Accommodations ni Gateway): T025–T027 y T070–T073.
-- Iteración 2: US2 (T042–T050), US3 (T051–T060), US4 (T061–T069) y cierre (T074–T080).
+- Iteración 2: US2 (T042–T050), US3 (T051–T060), US4 (T061–T063, T065–T069) y cierre (T074, T076–T080).
 
 **Límite honesto**: sin T025–T027 el contexto de habitación solo se valida contra el stub y el contrato; el ownership distribuido no se declara integrado.
 
@@ -39,14 +40,14 @@ Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, 
 
 **Purpose**: registrar el workspace NestJS y la infraestructura básica sin lógica funcional.
 
-- [ ] T001 Crear `@stayhub/room-inventory-service` con Node 20, NestJS 10.4.22, TypeScript 5.7.3, Prisma 6.19, JOSE, Swagger, OpenTelemetry, Jest y Supertest en `apps/room-inventory-service/package.json`
-- [ ] T002 [P] Configurar TypeScript estricto, build, aliases, ESLint y Jest por proyectos `unit|integration|contract|security|performance|e2e` en `apps/room-inventory-service/tsconfig.json`, `apps/room-inventory-service/tsconfig.build.json`, `apps/room-inventory-service/eslint.config.mjs` y `apps/room-inventory-service/jest.config.ts`
-- [ ] T003 Registrar workspace y scripts `build|lint|typecheck|test|coverage|prisma|openapi` sin alterar los existentes en `package.json` (depends on T001)
-- [ ] T004 [P] Definir variables `INVENTORY_*`, ejemplos locales no secretos y variantes `_FILE` en `apps/room-inventory-service/.env.example`
-- [ ] T005 [P] Crear Dockerfile multi-stage Node 20 con targets migration/runtime, usuario no-root y soporte read-only en `infra/docker/room-inventory/Dockerfile` y `infra/docker/room-inventory/Dockerfile.dockerignore`
-- [ ] T006 Incorporar `inventory-db`, `room-inventory-migrate` y `room-inventory-service` con puerto 3008, redes `inventory-internal`/`services`, secrets, health y `restart: unless-stopped` en `docker-compose.yml` y secretos locales en `scripts/generate-compose-dev-env.mjs` (depends on T005)
-- [ ] T007 [P] Añadir gates de Inventory sin eliminar los demás servicios en `.github/workflows/ci.yml`
-- [ ] T008 [P] Documentar límites del dominio, comandos reales, variables, contratos y dependencia Accommodations en `apps/room-inventory-service/README.md`
+- [X] T001 Crear `@stayhub/room-inventory-service` con Node 20, NestJS 10.4.22, TypeScript 5.7.3, Prisma 6.19, JOSE, Swagger, OpenTelemetry, Jest y Supertest en `apps/room-inventory-service/package.json`
+- [X] T002 [P] Configurar TypeScript estricto, build, aliases, ESLint y Jest por proyectos `unit|integration|contract|security|performance|e2e` en `apps/room-inventory-service/tsconfig.json`, `apps/room-inventory-service/tsconfig.build.json`, `apps/room-inventory-service/eslint.config.mjs` y `apps/room-inventory-service/jest.config.ts`
+- [X] T003 Registrar workspace y scripts `build|lint|typecheck|test|coverage|prisma|openapi` sin alterar los existentes en `package.json` (depends on T001)
+- [X] T004 [P] Definir variables `INVENTORY_*`, ejemplos locales no secretos y variantes `_FILE` en `apps/room-inventory-service/.env.example`
+- [X] T005 [P] Crear Dockerfile multi-stage Node 20 con targets migration/runtime, usuario no-root y soporte read-only en `infra/docker/room-inventory/Dockerfile` y `infra/docker/room-inventory/Dockerfile.dockerignore`
+- [X] T006 Incorporar `inventory-db`, `room-inventory-migrate` y `room-inventory-service` con puerto 3008, redes `inventory-internal`/`services`, secrets, health y `restart: unless-stopped` en `docker-compose.yml` y secretos locales en `scripts/generate-compose-dev-env.mjs` (depends on T005)
+- [X] T007 [P] Añadir gates de Inventory sin eliminar los demás servicios en `.github/workflows/ci.yml`
+- [X] T008 [P] Documentar límites del dominio, comandos reales, variables, contratos y dependencia Accommodations en `apps/room-inventory-service/README.md`
 
 **Checkpoint**: workspace instalable y declarado en Compose/CI.
 
@@ -58,28 +59,28 @@ Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, 
 
 **CRITICAL**: ninguna historia empieza antes de completar esta fase.
 
-- [ ] T009 [P] Crear pruebas fallidas de puerto 3008, URLs, `_FILE`, claves JWT, timeout, límites 200/1 000 000 y configuración fail-closed en `apps/room-inventory-service/test/unit/inventory-config.spec.ts`
-- [ ] T010 Implementar carga tipada y validación fail-fast de `INVENTORY_*` en `apps/room-inventory-service/src/infrastructure/config/inventory-config.ts` y `apps/room-inventory-service/src/infrastructure/config/config.module.ts` (depends on T009)
-- [ ] T011 Modelar `RoomInventory` con `roomId UUID PK`, `propertyId/ownerId UUID required`, `version >= 1`, timestamps; e `InventoryItem` con `id UUID PK`, FK local, `type PRODUCT|SERVICE`, `name VARCHAR(120) trim 1..120`, `quantityAvailable 0..1 000 000`, `active default true`, timestamps y sin FK remota en `apps/room-inventory-service/prisma/schema.prisma`
-- [ ] T012 Crear migración con checks, FK local e índices `(owner_id,updated_at)`, `(room_id,active)` y `(room_id,type)` en `apps/room-inventory-service/prisma/migrations/001_room_inventory/migration.sql` (depends on T011)
-- [ ] T013 [P] Crear prueba de migración desde PostgreSQL 16 vacío, constraints e inexistencia de FK hacia Accommodations en `apps/room-inventory-service/test/integration/migrations-health.spec.ts` (depends on T012)
-- [ ] T014 Implementar conexión Prisma, mapeo seguro de errores y cierre de pool en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma.service.ts`, `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma.module.ts` y `apps/room-inventory-service/src/infrastructure/persistence/prisma/database-error.ts` (depends on T011)
-- [ ] T015 [P] Definir errores de dominio y puertos de repositorio, contexto de habitación y reloj sin imports de NestJS/Prisma en `apps/room-inventory-service/src/domain/inventory-errors.ts`, `apps/room-inventory-service/src/application/ports/inventory.repository.ts`, `apps/room-inventory-service/src/application/ports/room-context.port.ts` y `apps/room-inventory-service/src/application/ports/clock.port.ts`
-- [ ] T016 [P] Implementar ValidationPipe `whitelist + forbidNonWhitelisted`, Problem Details y trace interceptor en `apps/room-inventory-service/src/interfaces/http/validation.pipe.ts`, `apps/room-inventory-service/src/interfaces/http/problem.filter.ts` y `apps/room-inventory-service/src/interfaces/http/trace.interceptor.ts`
-- [ ] T017 [P] Crear prueba de drift que valide las tres operaciones, errores y schemas del OpenAPI público en `apps/room-inventory-service/test/contract/openapi-drift.spec.ts`
-- [ ] T018 Implementar factory Swagger y documentación sincronizada con `openapi-room-inventory.yaml` en `apps/room-inventory-service/src/interfaces/openapi/openapi.factory.ts` y `apps/room-inventory-service/src/interfaces/openapi/inventory.openapi.ts` (depends on T017)
-- [ ] T019 [P] Crear pruebas fallidas de JWT delegado RS256: issuer, `kid`, audience `stayhub-room-inventory-service`, scope `inventory:manage`, `sub`, role, expiración y headers suplantados en `apps/room-inventory-service/test/security/service-auth.spec.ts`
-- [ ] T020 Implementar principal, verificador y guard de token delegado sin confiar en `x-user-id`/`x-role` en `apps/room-inventory-service/src/infrastructure/security/inventory-principal.ts`, `apps/room-inventory-service/src/infrastructure/security/service-jwt.verifier.ts` y `apps/room-inventory-service/src/interfaces/http/guards/service-auth.guard.ts` (depends on T019)
-- [ ] T021 [P] Crear fixture/stub cerrado del contexto `roomId,propertyId,ownerId,propertyStatus,roomExists=true` y casos 401/404/503 en `apps/room-inventory-service/test/fixtures/accommodations-context.fixture.ts`
-- [ ] T022 [P] Crear prueba consumer del contrato `accommodations-inventory-context.openapi.yaml`, validación de respuesta y mapeo de errores/timeout en `apps/room-inventory-service/test/contract/accommodations-context.consumer.spec.ts` (depends on T021)
-- [ ] T023 [P] Crear pruebas unitarias de token saliente RS256 firmado con la clave propia de Inventory (`kid`/issuer `stayhub-room-inventory-service`), vida <= 60 s, subject `stayhub-room-inventory-service`, audience de Accommodations y scope exacto `accommodations:inventory-context` en `apps/room-inventory-service/test/unit/outbound-service-token.spec.ts`
-- [ ] T024 Implementar proveedor de token, cliente REST con timeout/circuito y mapper de Problem Details en `apps/room-inventory-service/src/infrastructure/security/outbound-service-token.provider.ts`, `apps/room-inventory-service/src/infrastructure/http/accommodations-room-context.client.ts` y `apps/room-inventory-service/src/infrastructure/http/remote-problem.mapper.ts` (depends on T022, T023)
+- [X] T009 [P] Crear pruebas fallidas de puerto 3008, URLs, `_FILE`, claves JWT, timeout, límites 200/1 000 000 y configuración fail-closed en `apps/room-inventory-service/test/unit/inventory-config.spec.ts`
+- [X] T010 Implementar carga tipada y validación fail-fast de `INVENTORY_*` en `apps/room-inventory-service/src/infrastructure/config/inventory-config.ts` y `apps/room-inventory-service/src/infrastructure/config/config.module.ts` (depends on T009)
+- [X] T011 Modelar `RoomInventory` con `roomId UUID PK`, `propertyId/ownerId UUID required`, `version >= 1`, timestamps; e `InventoryItem` con `id UUID PK`, FK local, `type PRODUCT|SERVICE`, `name VARCHAR(120) trim 1..120`, `quantityAvailable 0..1 000 000`, `active default true`, timestamps y sin FK remota en `apps/room-inventory-service/prisma/schema.prisma`
+- [X] T012 Crear migración con checks, FK local e índices `(owner_id,updated_at)`, `(room_id,active)` y `(room_id,type)` en `apps/room-inventory-service/prisma/migrations/001_room_inventory/migration.sql` (depends on T011)
+- [X] T013 [P] Crear prueba de migración desde PostgreSQL 16 vacío, constraints e inexistencia de FK hacia Accommodations en `apps/room-inventory-service/test/integration/migrations-health.spec.ts` (depends on T012)
+- [X] T014 Implementar conexión Prisma, mapeo seguro de errores y cierre de pool en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma.service.ts`, `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma.module.ts` y `apps/room-inventory-service/src/infrastructure/persistence/prisma/database-error.ts` (depends on T011)
+- [X] T015 [P] Definir errores de dominio y puertos de repositorio, contexto de habitación y reloj sin imports de NestJS/Prisma en `apps/room-inventory-service/src/domain/inventory-errors.ts`, `apps/room-inventory-service/src/application/ports/inventory.repository.ts`, `apps/room-inventory-service/src/application/ports/room-context.port.ts` y `apps/room-inventory-service/src/application/ports/clock.port.ts`
+- [X] T016 [P] Implementar ValidationPipe `whitelist + forbidNonWhitelisted`, Problem Details y trace interceptor en `apps/room-inventory-service/src/interfaces/http/validation.pipe.ts`, `apps/room-inventory-service/src/interfaces/http/problem.filter.ts` y `apps/room-inventory-service/src/interfaces/http/trace.interceptor.ts`
+- [X] T017 [P] Crear prueba de drift que valide las tres operaciones, errores y schemas del OpenAPI público en `apps/room-inventory-service/test/contract/openapi-drift.spec.ts`
+- [X] T018 Implementar factory Swagger y documentación sincronizada con `openapi-room-inventory.yaml` en `apps/room-inventory-service/src/interfaces/openapi/openapi.factory.ts` y `apps/room-inventory-service/src/interfaces/openapi/inventory.openapi.ts` (depends on T017)
+- [X] T019 [P] Crear pruebas fallidas de JWT delegado RS256: issuer, `kid`, audience `stayhub-room-inventory-service`, scope `inventory:manage`, `sub`, role, expiración y headers suplantados en `apps/room-inventory-service/test/security/service-auth.spec.ts`
+- [X] T020 Implementar principal, verificador y guard de token delegado sin confiar en `x-user-id`/`x-role` en `apps/room-inventory-service/src/infrastructure/security/inventory-principal.ts`, `apps/room-inventory-service/src/infrastructure/security/service-jwt.verifier.ts` y `apps/room-inventory-service/src/interfaces/http/guards/service-auth.guard.ts` (depends on T019)
+- [X] T021 [P] Crear fixture/stub cerrado del contexto `roomId,propertyId,ownerId,propertyStatus,roomExists=true` y casos 401/404/503 en `apps/room-inventory-service/test/fixtures/accommodations-context.fixture.ts`
+- [X] T022 [P] Crear prueba consumer del contrato `accommodations-inventory-context.openapi.yaml`, validación de respuesta y mapeo de errores/timeout en `apps/room-inventory-service/test/contract/accommodations-context.consumer.spec.ts` (depends on T021)
+- [X] T023 [P] Crear pruebas unitarias de token saliente RS256 firmado con la clave propia de Inventory (`kid`/issuer `stayhub-room-inventory-service`), vida <= 60 s, subject `stayhub-room-inventory-service`, audience de Accommodations y scope exacto `accommodations:inventory-context` en `apps/room-inventory-service/test/unit/outbound-service-token.spec.ts`
+- [X] T024 Implementar proveedor de token, cliente REST con timeout/circuito y mapper de Problem Details en `apps/room-inventory-service/src/infrastructure/security/outbound-service-token.provider.ts`, `apps/room-inventory-service/src/infrastructure/http/accommodations-room-context.client.ts` y `apps/room-inventory-service/src/infrastructure/http/remote-problem.mapper.ts` (depends on T022, T023)
 - [ ] T025 [P] [Coordinación externa: Accommodations] Crear pruebas provider para `/internal/v1/rooms/{roomId}/inventory-context`, 404 indistinguible y scope separado en `apps/accommodations-service/test/contract/inventory-context.contract.spec.ts`
 - [ ] T026 [Coordinación externa: Accommodations] Implementar caso de uso/controller de contexto mínimo y autorización `accommodations:inventory-context` sin exponer nombres/precios en `apps/accommodations-service/src/application/properties/get-inventory-context.use-case.ts`, `apps/accommodations-service/src/interfaces/http/internal/inventory-context.controller.ts` y `apps/accommodations-service/src/modules/properties/properties.module.ts` (depends on T025)
 - [ ] T027 [Coordinación externa: Accommodations] Extender configuración/guard a varios llamantes de confianza (issuer + kid + clave por llamante; hoy solo acepta Bookings) y a scopes por endpoint, preservando `accommodations:booking-quote` en `apps/accommodations-service/src/infrastructure/config/accommodations-config.ts`, `apps/accommodations-service/src/interfaces/http/auth/service-auth.guard.ts` y `apps/accommodations-service/test/contract/booking-quote.contract.spec.ts` (depends on T025)
-- [ ] T028 [P] Crear pruebas de health, logging redactado y métricas base sin JWT/body/nombre de item en `apps/room-inventory-service/test/integration/health-observability.spec.ts`
-- [ ] T029 Implementar logger, métricas y health modules para proceso/PostgreSQL/Accommodations en `apps/room-inventory-service/src/infrastructure/observability/inventory-logger.ts`, `apps/room-inventory-service/src/infrastructure/observability/inventory-metrics.ts`, `apps/room-inventory-service/src/modules/health/health.controller.ts` y `apps/room-inventory-service/src/modules/health/health.module.ts` (depends on T028)
-- [ ] T030 Ensamblar configuración, Prisma, HTTP común, seguridad, Swagger y salud en `apps/room-inventory-service/src/main.ts` y `apps/room-inventory-service/src/app.module.ts` (depends on T010, T014, T016, T018, T020, T024, T029)
+- [X] T028 [P] Crear pruebas de health, logging redactado y métricas base sin JWT/body/nombre de item en `apps/room-inventory-service/test/integration/health-observability.spec.ts`
+- [X] T029 Implementar logger, métricas y health modules para proceso/PostgreSQL/Accommodations en `apps/room-inventory-service/src/infrastructure/observability/inventory-logger.ts`, `apps/room-inventory-service/src/infrastructure/observability/inventory-metrics.ts`, `apps/room-inventory-service/src/modules/health/health.controller.ts` y `apps/room-inventory-service/src/modules/health/health.module.ts` (depends on T028)
+- [X] T030 Ensamblar configuración, Prisma, HTTP común, seguridad, Swagger y salud en `apps/room-inventory-service/src/main.ts` y `apps/room-inventory-service/src/app.module.ts` (depends on T010, T014, T016, T018, T020, T024, T029)
 
 **Checkpoint**: servicio arranca, migra, autentica y puede resolver contexto de habitación; aún no expone inventario.
 
@@ -93,20 +94,20 @@ Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, 
 
 ### Pruebas primero
 
-- [ ] T031 [P] [US1] Crear pruebas unitarias del agregado vacío, mapeo de contexto y autorización OWNER/ADMIN/GUEST en `apps/room-inventory-service/test/unit/get-room-inventory.use-case.spec.ts`
-- [ ] T032 [P] [US1] Crear prueba contractual de `GET /inventory/rooms/{roomId}` para 200/400/401/403/404/503 y ausencia de PII en `apps/room-inventory-service/test/contract/get-room-inventory.contract.spec.ts`
-- [ ] T033 [P] [US1] Crear prueba PostgreSQL para lectura por PK, orden estable, items activos/inactivos y snapshot mínimo owner/property en `apps/room-inventory-service/test/integration/get-room-inventory.spec.ts`
-- [ ] T034 [P] [US1] Crear prueba de seguridad OWNER propio/ajeno, ADMIN, GUEST y Accommodations caído en `apps/room-inventory-service/test/security/get-room-inventory-access.spec.ts`
+- [X] T031 [P] [US1] Crear pruebas unitarias del agregado vacío, mapeo de contexto y autorización OWNER/ADMIN/GUEST en `apps/room-inventory-service/test/unit/get-room-inventory.use-case.spec.ts`
+- [X] T032 [P] [US1] Crear prueba contractual de `GET /inventory/rooms/{roomId}` para 200/400/401/403/404/503 y ausencia de PII en `apps/room-inventory-service/test/contract/get-room-inventory.contract.spec.ts`
+- [X] T033 [P] [US1] Crear prueba PostgreSQL para lectura por PK, orden estable, items activos/inactivos y snapshot mínimo owner/property en `apps/room-inventory-service/test/integration/get-room-inventory.spec.ts`
+- [X] T034 [P] [US1] Crear prueba de seguridad OWNER propio/ajeno, ADMIN, GUEST y Accommodations caído en `apps/room-inventory-service/test/security/get-room-inventory-access.spec.ts`
 
 ### Implementación
 
-- [ ] T035 [P] [US1] Implementar `InventoryItem` con enum `PRODUCT|SERVICE`, nombre trim 1..120, cantidad 0..1 000 000 y estado activo en `apps/room-inventory-service/src/domain/inventory-item.ts`
-- [ ] T036 [P] [US1] Implementar `RoomInventory` vacío version 0 y persistido version >=1, máximo 200 items y referencias opacas en `apps/room-inventory-service/src/domain/room-inventory.ts`
-- [ ] T037 [US1] Implementar lectura Prisma y mapeo dominio/persistencia sin joins remotos en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T033, T035, T036)
-- [ ] T038 [US1] Implementar `GetRoomInventoryUseCase`: resolver contexto, validar ownership y sintetizar vacío sin persistirlo en `apps/room-inventory-service/src/application/use-cases/get-room-inventory.use-case.ts` (depends on T024, T031, T037)
-- [ ] T039 [P] [US1] Implementar DTO de path y presenter con `createdAt/updatedAt=null` para versión 0, sin ownerId en respuesta en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` y `apps/room-inventory-service/src/interfaces/http/inventory/inventory.presenter.ts` (depends on T032)
-- [ ] T040 [US1] Implementar `GET /inventory/rooms/:roomId` y mapeo Problem Details en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` (depends on T038, T039)
-- [ ] T041 [US1] Registrar repositorio, cliente, caso de uso, controller y guards en `apps/room-inventory-service/src/modules/inventory.module.ts` y `apps/room-inventory-service/src/app.module.ts` (depends on T040)
+- [X] T035 [P] [US1] Implementar `InventoryItem` con enum `PRODUCT|SERVICE`, nombre trim 1..120, cantidad 0..1 000 000 y estado activo en `apps/room-inventory-service/src/domain/inventory-item.ts`
+- [X] T036 [P] [US1] Implementar `RoomInventory` vacío version 0 y persistido version >=1, máximo 200 items y referencias opacas en `apps/room-inventory-service/src/domain/room-inventory.ts`
+- [X] T037 [US1] Implementar lectura Prisma y mapeo dominio/persistencia sin joins remotos en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T033, T035, T036)
+- [X] T038 [US1] Implementar `GetRoomInventoryUseCase`: resolver contexto, validar ownership y sintetizar vacío sin persistirlo en `apps/room-inventory-service/src/application/use-cases/get-room-inventory.use-case.ts` (depends on T024, T031, T037)
+- [X] T039 [P] [US1] Implementar DTO de path y presenter con `createdAt/updatedAt=null` para versión 0, sin ownerId en respuesta en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` y `apps/room-inventory-service/src/interfaces/http/inventory/inventory.presenter.ts` (depends on T032)
+- [X] T040 [US1] Implementar `GET /inventory/rooms/:roomId` y mapeo Problem Details en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` (depends on T038, T039)
+- [X] T041 [US1] Registrar repositorio, cliente, caso de uso, controller y guards en `apps/room-inventory-service/src/modules/inventory.module.ts` y `apps/room-inventory-service/src/app.module.ts` (depends on T040)
 
 **Checkpoint**: US1 funciona de extremo a extremo con Accommodations y PostgreSQL, sin capacidad de escritura todavía.
 
@@ -174,7 +175,7 @@ Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, 
 - [ ] T061 [P] [US4] Crear prueba contractual de liveness/readiness para DB sana/caída y Accommodations degradado en `apps/room-inventory-service/test/contract/health.contract.spec.ts`
 - [ ] T062 [P] [US4] Crear prueba de métricas/trazas/logs redactados para GET/POST/PUT, 409 y dependencia remota en `apps/room-inventory-service/test/integration/observability.spec.ts`
 - [ ] T063 [P] [US4] Crear prueba contractual de shutdown: dejar de aceptar HTTP, esperar solicitudes y cerrar Prisma en `apps/room-inventory-service/test/contract/shutdown.contract.spec.ts`
-- [ ] T064 [P] [US4] Crear dataset reproducible de 200 items y OWNER/ADMIN para rendimiento en `apps/room-inventory-service/test/fixtures/performance-dataset.ts`
+- [X] T064 [P] [US4] Crear dataset reproducible de 200 items y OWNER/ADMIN para rendimiento en `apps/room-inventory-service/test/fixtures/performance-dataset.ts`
 
 ### Implementación
 
@@ -197,7 +198,7 @@ Se implementan **38 de 80 tareas**: las que son base o requisito de las demás, 
 - [ ] T072 [Coordinación externa: Gateway] Implementar proxy delgado y Swagger de las tres rutas, sin ownership ni reglas de inventario, en `apps/api-gateway/src/modules/inventory/inventory.controller.ts`, `apps/api-gateway/src/modules/inventory/inventory-proxy.module.ts` y `apps/api-gateway/src/modules/inventory/inventory.openapi.ts` (depends on T071)
 - [ ] T073 [Coordinación externa: Gateway] Registrar URL, timeout, audience/scope y módulo Inventory sin romper módulos existentes en `apps/api-gateway/src/infrastructure/config/gateway-config.ts` y `apps/api-gateway/src/app.module.ts` (depends on T072)
 - [ ] T074 Integrar variables/secrets, redes, startup order y health de Gateway/Inventory/Accommodations/PostgreSQL en `docker-compose.yml` y `scripts/generate-compose-dev-env.mjs` (depends on T026, T027, T060, T073)
-- [ ] T075 [P] Crear validador automatizado de los dos OpenAPI y conectarlo a `openapi:inventory:check` en `scripts/validate-room-inventory-contracts.mjs` y `package.json` (depends on T017, T022)
+- [X] T075 [P] Crear validador automatizado de los dos OpenAPI y conectarlo a `openapi:inventory:check` en `scripts/validate-room-inventory-contracts.mjs` y `package.json` (depends on T017, T022)
 - [ ] T076 [P] Completar suite transversal de seguridad para JWT inválido, OWNER ajeno, GUEST, spoofed headers, inyección, body grande y logs sin secretos en `apps/room-inventory-service/test/security/inventory-security.spec.ts`
 - [ ] T077 Crear E2E real Gateway → Inventory → Accommodations + PostgreSQL para GET vacío, POST, PUT, replay y 409 en `apps/room-inventory-service/test/e2e/gateway-room-inventory.e2e-spec.ts` (depends on T074)
 - [ ] T078 Ejecutar lint, typecheck, build, contratos, suites y cobertura >=70 %, registrando resultados en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T068, T069, T075, T076, T077)

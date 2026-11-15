@@ -1,0 +1,51 @@
+// Room Inventory (Sprint 4). Owned exclusively by inventory_db.
+// room_id/property_id/owner_id are opaque Accommodations references: no remote FK, no remote schema access.
+// CHECK constraints live in the SQL migration (Prisma cannot express them).
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/infrastructure/persistence/generated/client"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("INVENTORY_DATABASE_URL")
+}
+
+enum InventoryItemType {
+  PRODUCT
+  SERVICE
+
+  @@map("inventory_item_type")
+}
+
+/// Aggregate per room. Created on the first write; a valid room without a row reads as version 0.
+model RoomInventory {
+  roomId     String          @id @map("room_id") @db.Uuid
+  propertyId String          @map("property_id") @db.Uuid
+  ownerId    String          @map("owner_id") @db.Uuid
+  version    Int
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
+  items      InventoryItem[]
+
+  @@index([ownerId, updatedAt], map: "room_inventories_owner_updated_idx")
+  @@map("room_inventories")
+}
+
+model InventoryItem {
+  id                String            @id @db.Uuid
+  roomId            String            @map("room_id") @db.Uuid
+  type              InventoryItemType
+  name              String            @db.VarChar(120)
+  quantityAvailable Int               @map("quantity_available")
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime          @default(now()) @map("updated_at") @db.Timestamptz(3)
+  inventory         RoomInventory     @relation(fields: [roomId], references: [roomId], onDelete: Cascade, map: "inventory_items_room_id_fkey")
+
+  @@index([roomId, active], map: "inventory_items_room_active_idx")
+  @@index([roomId, type], map: "inventory_items_room_type_idx")
+  @@map("inventory_items")
+}

@@ -119,6 +119,8 @@ const accessPublicKey = readFileSync(join(secretsDirectory, 'access-public.pem')
 const gatewayPrivateKey = readFileSync(join(secretsDirectory, 'gateway-private.pem'), 'utf8');
 const gatewayPublicKey = createPublicKey(gatewayPrivateKey).export({ type: 'spki', format: 'pem' });
 const bookingsKeys = persistentRsaPair('bookings-service');
+// Room Inventory signs its own short-lived tokens for Accommodations (secrets/room-inventory-service-*.pem).
+persistentRsaPair('room-inventory-service');
 
 writeSecret(join(gatewayArtifacts, 'service_private_key.pem'), gatewayPrivateKey);
 const gatewayRedisPassword = persistentSecret('gateway-redis-password.txt');
@@ -131,6 +133,7 @@ const databasePasswords = {
   payments: persistentSecret('payments-db-password.txt'),
   notifications: persistentSecret('notifications-db-password.txt'),
   search: persistentSecret('search-db-password.txt'),
+  inventory: persistentSecret('inventory-db-password.txt'),
 };
 const searchRedisPassword = persistentSecret('search-redis-password.txt');
 const searchRabbitPassword = persistentSecret('search-rabbitmq-password.txt');
@@ -143,9 +146,10 @@ const databaseUrls = {
   payments: `postgresql://stayhub_payments:${databasePasswords.payments}@payments-db:5432/payments_db?schema=public`,
   notifications: `postgresql://stayhub_notifications:${databasePasswords.notifications}@notifications-db:5432/notifications_db?schema=public`,
   search: `postgresql://stayhub_search:${databasePasswords.search}@search-db:5432/search_db?schema=public`,
+  inventory: `postgresql://stayhub_inventory:${databasePasswords.inventory}@inventory-db:5432/inventory_db?schema=public`,
 };
 
-for (const service of ['accommodations', 'bookings', 'reviews', 'payments', 'notifications', 'search']) {
+for (const service of ['accommodations', 'bookings', 'reviews', 'payments', 'notifications', 'search', 'inventory']) {
   writeSecret(join(secretsDirectory, `${service}-database-url.txt`), databaseUrls[service]);
 }
 writeSecret(
@@ -251,6 +255,13 @@ replaceEnvironment({
   REVIEWS_GATEWAY_JWT_PUBLIC_KEYS_JSON: gatewayKeysJson,
   REVIEWS_GATEWAY_JWT_ISSUER: INBOUND_ISSUER,
   REVIEWS_GATEWAY_JWT_AUDIENCE: 'stayhub-reviews-service',
+  // Room Inventory: delegated JWT from the Gateway; DB/private key mounted from ./secrets.
+  INVENTORY_JWT_PUBLIC_KEYS_JSON: gatewayKeysJson,
+  INVENTORY_JWT_ISSUER: INBOUND_ISSUER,
+  INVENTORY_JWT_AUDIENCE: 'stayhub-room-inventory-service',
+  INVENTORY_DB_PASSWORD_FILE: './secrets/inventory-db-password.txt',
+  INVENTORY_DATABASE_URL_FILE: './secrets/inventory-database-url.txt',
+  INVENTORY_SERVICE_PRIVATE_KEY_SOURCE: './secrets/room-inventory-service-private.pem',
   PAYMENTS_SERVICE_JWT_ISSUER: bookingsIssuer,
   NOTIFICATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,
   ACCOMMODATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,

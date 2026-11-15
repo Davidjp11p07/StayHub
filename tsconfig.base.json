@@ -45,6 +45,11 @@
       ,"@reviews/infrastructure/*": ["apps/reviews-service/src/infrastructure/*"]
       ,"@reviews/interfaces/*": ["apps/reviews-service/src/interfaces/*"]
       ,"@reviews/modules/*": ["apps/reviews-service/src/modules/*"]
+      ,"@inventory/domain/*": ["apps/room-inventory-service/src/domain/*"]
+      ,"@inventory/application/*": ["apps/room-inventory-service/src/application/*"]
+      ,"@inventory/infrastructure/*": ["apps/room-inventory-service/src/infrastructure/*"]
+      ,"@inventory/interfaces/*": ["apps/room-inventory-service/src/interfaces/*"]
+      ,"@inventory/modules/*": ["apps/room-inventory-service/src/modules/*"]
     }
   }
 }
