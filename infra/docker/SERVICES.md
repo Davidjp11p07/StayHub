@@ -71,8 +71,10 @@ reiniciar servicios y bases de datos. La prueba deja registros sintéticos.
 
 Cada servicio tiene PostgreSQL independiente, un volumen persistente y un
 contenedor de migraciones que termina con código 0 antes de iniciar la app.
-Payments dispone de RabbitMQ para publicar su outbox. Los puertos de las bases
-y RabbitMQ no se publican al host. Los servicios HTTP solo se publican en loopback.
+Payments dispone de RabbitMQ para publicar su outbox. Su panel está en
+http://localhost:15672; el usuario y la contraseña locales están en
+`.artifacts/services/rabbitmq.env`. Los puertos de las bases y AMQP no se publican
+al host. Los servicios HTTP y el panel solo se publican en loopback.
 
 La configuración y las claves locales se generan en `.artifacts/services`,
 excluido de Git, sin reemplazar las credenciales existentes. No se reutiliza ni

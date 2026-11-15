@@ -15,6 +15,7 @@ services:
   payments-rabbitmq:
     image: rabbitmq:3.13-management-alpine
     env_file: .artifacts/services/rabbitmq.env
+    ports: ['127.0.0.1:15672:15672']
     volumes: [payments_rabbitmq:/var/lib/rabbitmq]
     networks: [payments]
     restart: unless-stopped
