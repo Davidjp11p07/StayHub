@@ -24,7 +24,7 @@ describe('ACC-030 add photo compensation', () => {
     };
     const repo: PropertyRepository = {
       addPhoto: async (_id, decide) => { await decide(property()); throw new Error('constraint'); },
-      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
+      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
     };
     await expect(new AddPropertyPhotoUseCase(repo, storage).execute(randomUUID(), { sub: ownerId, role: 'OWNER' }, png)).rejects.toMatchObject({ code: 'UNAVAILABLE' });
     expect(stored).toHaveLength(1);
@@ -36,7 +36,7 @@ describe('ACC-030 add photo compensation', () => {
     const storage: StoragePort = { store: () => { stored += 1; return Promise.resolve('x'); }, remove: () => Promise.resolve() };
     const repo: PropertyRepository = {
       addPhoto: async (_id, decide): Promise<Photo | null> => { await decide(property()); return null; },
-      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
+      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
     };
     await expect(new AddPropertyPhotoUseCase(repo, storage).execute(randomUUID(), { sub: randomUUID(), role: 'OWNER' }, png)).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(stored).toBe(0);
@@ -48,7 +48,7 @@ describe('ACC-030 add photo compensation', () => {
     const storage: StoragePort = { store: () => Promise.resolve(photo.storageKey), remove: () => Promise.resolve() };
     const repo: PropertyRepository = {
       addPhoto: async (_id, decide) => { created.push(await decide(property([photo]))); return photo; },
-      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
+      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')), replace: () => Promise.reject(new Error('unused')),
     };
     await expect(new AddPropertyPhotoUseCase(repo, storage).execute(photo.id, { sub: ownerId, role: 'OWNER' }, png)).resolves.toBe(photo);
     expect(created[0]).toMatchObject({ storageKey: photo.storageKey, mediaType: 'image/png', byteSize: png.length, position: 2 });

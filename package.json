@@ -164,7 +164,7 @@
     "prisma:inventory:generate": "npm run prisma:generate --workspace @stayhub/room-inventory-service",
     "prisma:inventory:validate": "npm run prisma:validate --workspace @stayhub/room-inventory-service",
     "prisma:inventory:migrate:deploy": "npm run prisma:migrate:deploy --workspace @stayhub/room-inventory-service",
-    "openapi:inventory:check": "node scripts/validate-room-inventory-contracts.mjs && npm run test:inventory:contract -- --runTestsByPath test/contract/openapi-drift.spec.ts test/contract/accommodations-context.consumer.spec.ts"
+    "openapi:inventory:check": "node scripts/validate-room-inventory-contracts.mjs && npm run test:contract --workspace @stayhub/room-inventory-service -- --runTestsByPath test/contract/openapi-drift.spec.ts test/contract/accommodations-context.consumer.spec.ts"
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^5.2.0",

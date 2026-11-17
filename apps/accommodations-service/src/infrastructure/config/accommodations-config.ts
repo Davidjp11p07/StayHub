@@ -4,8 +4,11 @@ import { isAbsolute } from 'node:path';
 
 export interface JwtConfig { issuer: string; audience: string; kid: string; publicKey: string }
 export interface ServiceJwtConfig extends JwtConfig { scope: string }
+/** One trusted internal caller. Every endpoint declares the exact scope it accepts for that caller. */
+export interface ServiceCallerConfig { issuer: string; kid: string; publicKey: string; scopes: readonly string[] }
 export interface AccommodationsConfig {
-  port: number; databaseUrl: string; jwt: JwtConfig; serviceJwt: ServiceJwtConfig; photoStorageRoot: string; otlpEndpoint: string; development: boolean;
+  port: number; databaseUrl: string; jwt: JwtConfig; serviceJwt: ServiceJwtConfig; serviceJwtCallers: readonly ServiceCallerConfig[];
+  photoStorageRoot: string; otlpEndpoint: string; development: boolean;
 }
 export const ACCOMMODATIONS_CONFIG = Symbol('ACCOMMODATIONS_CONFIG');
 export const ACCOMMODATIONS_PORT = 3003;
@@ -61,10 +64,33 @@ export function loadAccommodationsConfig(env: NodeJS.ProcessEnv = process.env): 
   else if (servicePem) servicePublicKey = keyFromPem(servicePem);
   else throw new Error('Missing configuration: ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY');
   const bookingQuoteScope = optional('ACCOMMODATIONS_BOOKING_QUOTE_SCOPE') || 'accommodations:booking-quote';
+  const serviceJwtCallers: ServiceCallerConfig[] = [
+    { issuer: serviceIssuer, kid: serviceKid, publicKey: servicePublicKey, scopes: [bookingQuoteScope] },
+  ];
+
+  // Optional second trust relationship: Room Inventory uses its own key and scope for the inventory context.
+  const inventoryIssuer = optional('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER');
+  const inventoryKid = optional('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID');
+  const inventoryPem = optional('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY');
+  const inventoryJwks = optional('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_JWKS');
+  if (inventoryIssuer || inventoryKid || inventoryPem || inventoryJwks) {
+    const issuerValue = required('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER');
+    const kidValue = required('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID');
+    if (inventoryPem && inventoryJwks) throw new Error('Configure exactly one of ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY or ACCOMMODATIONS_INVENTORY_SERVICE_JWT_JWKS');
+    let inventoryPublicKey: string;
+    if (inventoryJwks) inventoryPublicKey = keyFromJwks(inventoryJwks, kidValue).replace('ACCOMMODATIONS_JWT_JWKS', 'ACCOMMODATIONS_INVENTORY_SERVICE_JWT_JWKS');
+    else if (inventoryPem) inventoryPublicKey = keyFromPem(inventoryPem).replace('ACCOMMODATIONS_JWT_PUBLIC_KEY', 'ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY');
+    else throw new Error('Missing configuration: ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY');
+    if (issuerValue === serviceIssuer) throw new Error('ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER must differ from ACCOMMODATIONS_SERVICE_JWT_ISSUER');
+    serviceJwtCallers.push({
+      issuer: issuerValue, kid: kidValue, publicKey: inventoryPublicKey,
+      scopes: [optional('ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE') || 'accommodations:inventory-context'],
+    });
+  }
 
   return {
     port, databaseUrl, jwt: { issuer, audience, kid, publicKey }, serviceJwt: { issuer: serviceIssuer, audience: serviceAudience, kid: serviceKid, publicKey: servicePublicKey, scope: bookingQuoteScope },
-    photoStorageRoot, otlpEndpoint, development: env.NODE_ENV === 'development',
+    serviceJwtCallers, photoStorageRoot, otlpEndpoint, development: env.NODE_ENV === 'development',
   };
 }
 

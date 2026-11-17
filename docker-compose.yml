@@ -48,7 +48,7 @@ services:
       target: build
     command: ["npm", "run", "prisma:migrate:deploy", "--workspace", "@stayhub/auth-service"]
     env_file: ${AUTH_ENV_FILE:-.env}
-    networks: [stayhub-internal]
+    networks: [stayhub-internal, services]
     depends_on:
       auth-db:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
       context: .
       dockerfile: infra/docker/auth/Dockerfile
     env_file: ${AUTH_ENV_FILE:-.env}
-    networks: [stayhub-internal]
+    networks: [stayhub-internal, services]
     depends_on:
       auth-db:
         condition: service_healthy
@@ -93,6 +93,7 @@ services:
       GATEWAY_BOOKINGS_BASE_URL: ${GATEWAY_BOOKINGS_BASE_URL:-http://bookings-service:3005}
       GATEWAY_ACCOMMODATIONS_BASE_URL: ${GATEWAY_ACCOMMODATIONS_BASE_URL:-http://accommodations-service:3003}
       GATEWAY_SEARCH_BASE_URL: ${GATEWAY_SEARCH_BASE_URL:-http://search-service:3004}
+      GATEWAY_INVENTORY_BASE_URL: ${GATEWAY_INVENTORY_BASE_URL:-http://room-inventory-service:3008}
       GATEWAY_JWT_PUBLIC_KEYS_JSON: ${GATEWAY_JWT_PUBLIC_KEYS_JSON:?required}
       GATEWAY_JWT_ISSUER: ${GATEWAY_JWT_ISSUER:?required}
       GATEWAY_JWT_AUDIENCE: ${GATEWAY_JWT_AUDIENCE:?required}
@@ -108,6 +109,8 @@ services:
       GATEWAY_BOOKINGS_SERVICE_SCOPE: ${GATEWAY_BOOKINGS_SERVICE_SCOPE:-bookings:invoke}
       GATEWAY_SEARCH_SERVICE_AUDIENCE: ${GATEWAY_SEARCH_SERVICE_AUDIENCE:-stayhub-search-service}
       GATEWAY_SEARCH_SERVICE_SCOPE: ${GATEWAY_SEARCH_SERVICE_SCOPE:-search:invoke}
+      GATEWAY_INVENTORY_SERVICE_AUDIENCE: ${GATEWAY_INVENTORY_SERVICE_AUDIENCE:-stayhub-room-inventory-service}
+      GATEWAY_INVENTORY_SERVICE_SCOPE: ${GATEWAY_INVENTORY_SERVICE_SCOPE:-inventory:manage}
       GATEWAY_REDIS_URL: ${GATEWAY_REDIS_URL:?required}
       GATEWAY_REDIS_PASSWORD_FILE: /run/secrets/gateway_redis_password
       GATEWAY_REDIS_NAMESPACE: ${GATEWAY_REDIS_NAMESPACE:-gateway:edge}
@@ -139,6 +142,9 @@ services:
       GATEWAY_SEARCH_TIMEOUT_MS: ${GATEWAY_SEARCH_TIMEOUT_MS:-3000}
       GATEWAY_SEARCH_CIRCUIT_FAILURE_THRESHOLD: ${GATEWAY_SEARCH_CIRCUIT_FAILURE_THRESHOLD:-5}
       GATEWAY_SEARCH_CIRCUIT_RESET_MS: ${GATEWAY_SEARCH_CIRCUIT_RESET_MS:-30000}
+      GATEWAY_INVENTORY_TIMEOUT_MS: ${GATEWAY_INVENTORY_TIMEOUT_MS:-5000}
+      GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD: ${GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD:-5}
+      GATEWAY_INVENTORY_CIRCUIT_RESET_MS: ${GATEWAY_INVENTORY_CIRCUIT_RESET_MS:-30000}
       GATEWAY_INTROSPECTION_TIMEOUT_MS: ${GATEWAY_INTROSPECTION_TIMEOUT_MS:-2000}
       GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT: ${GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT:?required}
       GATEWAY_OTEL_SERVICE_NAME: ${GATEWAY_OTEL_SERVICE_NAME:-stayhub-api-gateway}
@@ -167,6 +173,7 @@ services:
       reviews-service: { condition: service_healthy }
       bookings-service: { condition: service_healthy }
       accommodations-service: { condition: service_healthy }
+      room-inventory-service: { condition: service_healthy }
       search-service: { condition: service_healthy }
 
   accommodations-db:
@@ -216,8 +223,12 @@ services:
       ACCOMMODATIONS_SERVICE_JWT_KID: ${ACCOMMODATIONS_SERVICE_JWT_KID:?required}
       ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY_FILE: /run/secrets/accommodations_service_public
       ACCOMMODATIONS_BOOKING_QUOTE_SCOPE: ${ACCOMMODATIONS_BOOKING_QUOTE_SCOPE:-accommodations:booking-quote}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER:-stayhub-room-inventory-service}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID:-room-inventory-accommodations-2026-01}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE: /run/secrets/accommodations_inventory_service_public
+      ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE: ${ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE:-accommodations:inventory-context}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public]
+    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public, accommodations_inventory_service_public]
     volumes: [accommodations_photos:/var/lib/stayhub/accommodations/photos]
     networks: [accommodations-internal, services]
     restart: unless-stopped
@@ -756,6 +767,7 @@ services:
       retries: 20
     depends_on:
       room-inventory-migrate: { condition: service_completed_successfully }
+      accommodations-service: { condition: service_healthy }
 networks:
   stayhub-edge:
     internal: true
@@ -846,6 +858,8 @@ secrets:
     file: ${ACCOMMODATIONS_JWT_PUBLIC_KEY_FILE:?required}
   accommodations_service_public:
     file: ${ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY_FILE:?required}
+  accommodations_inventory_service_public:
+    file: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE:-./secrets/room-inventory-service-public.pem}
   bookings_notifications_service_token:
     file: ${BOOKINGS_NOTIFICATIONS_SERVICE_TOKEN_FILE:?required}
   bookings_outbound_service_tokens:

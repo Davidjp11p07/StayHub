@@ -13,6 +13,7 @@ import { HealthModule } from '@gateway/modules/health/health.module';
 import { ReviewsProxyModule } from '@gateway/modules/reviews/reviews-proxy.module';
 import { BookingsProxyModule } from '@gateway/modules/bookings/bookings-proxy.module';
 import { SearchProxyModule } from '@gateway/modules/search/search-proxy.module';
+import { InventoryProxyModule } from '@gateway/modules/inventory/inventory-proxy.module';
 import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
 
 /**
@@ -36,6 +37,7 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
     BookingsProxyModule,
     AccommodationsProxyModule,
     SearchProxyModule,
+    InventoryProxyModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },

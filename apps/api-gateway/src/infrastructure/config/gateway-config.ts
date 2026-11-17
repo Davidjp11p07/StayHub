@@ -53,11 +53,13 @@ export interface GatewayConfig {
   readonly bookingsBaseUrl: string;
   readonly accommodationsBaseUrl: string;
   readonly searchBaseUrl: string;
+  readonly inventoryBaseUrl: string;
   readonly userJwt: UserJwtConfig;
   readonly serviceJwt: ServiceJwtConfig;
   readonly reviewsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly bookingsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly searchServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
+  readonly inventoryServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly redis: RedisConfig;
   readonly trustedProxyCidrs: readonly string[];
   readonly registerRateLimit: RateLimitPolicy;
@@ -71,6 +73,7 @@ export interface GatewayConfig {
   readonly bookings: CircuitPolicy;
   readonly accommodations: CircuitPolicy;
   readonly search: CircuitPolicy;
+  readonly inventory: CircuitPolicy;
   readonly introspectionTimeoutMs: number;
   readonly otlpEndpoint: string;
   readonly otelServiceName: string;
@@ -109,6 +112,7 @@ export function loadGatewayConfig(
     bookingsBaseUrl: url(environment, 'GATEWAY_BOOKINGS_BASE_URL', ['http:', 'https:']),
     accommodationsBaseUrl: url(environment, 'GATEWAY_ACCOMMODATIONS_BASE_URL', ['http:', 'https:']),
     searchBaseUrl: url(environment, 'GATEWAY_SEARCH_BASE_URL', ['http:', 'https:']),
+    inventoryBaseUrl: url(environment, 'GATEWAY_INVENTORY_BASE_URL', ['http:', 'https:']),
     userJwt: {
       publicKeys: publicKeys(environment, 'GATEWAY_JWT_PUBLIC_KEYS_JSON'),
       issuer: required(environment, 'GATEWAY_JWT_ISSUER'),
@@ -133,6 +137,10 @@ export function loadGatewayConfig(
     searchServiceJwt: {
       audience: required(environment, 'GATEWAY_SEARCH_SERVICE_AUDIENCE'),
       scope: required(environment, 'GATEWAY_SEARCH_SERVICE_SCOPE'),
+    },
+    inventoryServiceJwt: {
+      audience: required(environment, 'GATEWAY_INVENTORY_SERVICE_AUDIENCE'),
+      scope: required(environment, 'GATEWAY_INVENTORY_SERVICE_SCOPE'),
     },
     redis: {
       url: url(environment, 'GATEWAY_REDIS_URL', ['redis:', 'rediss:']),
@@ -163,6 +171,7 @@ export function loadGatewayConfig(
     bookings: circuit(environment, 'GATEWAY_BOOKINGS_'),
     accommodations: circuit(environment, 'GATEWAY_ACCOMMODATIONS_'),
     search: circuit(environment, 'GATEWAY_SEARCH_'),
+    inventory: circuit(environment, 'GATEWAY_INVENTORY_'),
     introspectionTimeoutMs: integer(environment, 'GATEWAY_INTROSPECTION_TIMEOUT_MS', 100, 30_000),
     otlpEndpoint: url(environment, 'GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT', ['http:', 'https:']),
     otelServiceName: required(environment, 'GATEWAY_OTEL_SERVICE_NAME'),

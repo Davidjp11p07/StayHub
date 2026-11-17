@@ -49,6 +49,17 @@ describeDb('room inventory read on PostgreSQL 16', () => {
     await expect(prisma.roomInventory.count({ where: { roomId: emptyRoomId } })).resolves.toBe(0);
   });
 
+  it('reads an item immediately after POST persistence', async () => {
+    const addedRoomId = randomUUID();
+    const propertyId = randomUUID();
+    try {
+      await repository.addItem({ roomId: addedRoomId, propertyId, ownerId, maxItems: 200, item: { type: 'PRODUCT', name: 'Agua', quantityAvailable: 2, active: true } });
+      await expect(repository.findByRoomId(addedRoomId)).resolves.toMatchObject({ version: 1, items: [{ name: 'Agua' }] });
+    } finally {
+      await prisma.roomInventory.deleteMany({ where: { roomId: addedRoomId } });
+    }
+  });
+
   it('maps a database outage to DEPENDENCY_UNAVAILABLE without leaking driver details', async () => {
     const offline = new PrismaInventoryRepository(new PrismaService({ datasources: { db: { url: 'postgresql://x:y@127.0.0.1:1/inventory_db?connect_timeout=1' } } }));
     await expect(offline.findByRoomId(roomId)).rejects.toMatchObject({ code: 'DEPENDENCY_UNAVAILABLE', message: 'DEPENDENCY_UNAVAILABLE' });

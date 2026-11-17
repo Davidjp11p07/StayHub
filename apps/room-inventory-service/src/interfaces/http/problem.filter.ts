@@ -2,6 +2,7 @@ import { Catch, HttpException, HttpStatus, type ArgumentsHost, type ExceptionFil
 import type { Request, Response } from 'express';
 
 import { InventoryError, type InventoryErrorCode } from '@inventory/domain/inventory-errors';
+import { InventoryMetrics } from '@inventory/infrastructure/observability/inventory-metrics';
 
 /** Contract status codes (openapi-room-inventory.yaml). */
 export const STATUS_BY_CODE: Readonly<Record<InventoryErrorCode, number>> = {
@@ -30,6 +31,12 @@ export interface ProblemDetails {
   readonly errors?: ReadonlyArray<{ readonly field: string }>;
 }
 
+function payloadTooLarge(exception: unknown): boolean {
+  if (!exception || typeof exception !== 'object') return false;
+  const value = exception as { type?: unknown; status?: unknown; statusCode?: unknown };
+  return value.type === 'entity.too.large' || value.status === 413 || value.statusCode === 413;
+}
+
 function httpCode(exception: HttpException, status: number): string {
   const body = exception.getResponse();
   const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
@@ -39,6 +46,8 @@ function httpCode(exception: HttpException, status: number): string {
 /** RFC 7807 Problem Details. Never echoes request values, item names, stack traces or upstream messages. */
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
+  public constructor(private readonly metrics?: InventoryMetrics) {}
+
   public catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
     const response = http.getResponse<Response>();
@@ -50,9 +59,13 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       status = STATUS_BY_CODE[exception.code];
       code = exception.code;
       field = exception.field;
+      if (exception.code === 'VERSION_CONFLICT') this.metrics?.conflict('replace');
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       code = httpCode(exception, status);
+    } else if (payloadTooLarge(exception)) {
+      status = HttpStatus.PAYLOAD_TOO_LARGE;
+      code = 'PAYLOAD_TOO_LARGE';
     }
     const problem: ProblemDetails = {
       type: `https://stayhub.dev/problems/${code.toLowerCase().replace(/_/gu, '-')}`,

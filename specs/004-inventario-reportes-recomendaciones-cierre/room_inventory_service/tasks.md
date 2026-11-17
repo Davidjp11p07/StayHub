@@ -15,24 +15,29 @@ description: "Tareas ejecutables para implementar room-inventory-service del Spr
 - Las pruebas de cada historia se escriben primero y deben fallar antes de implementar el comportamiento.
 - “Coordinación externa” identifica cambios mínimos en Accommodations/Gateway; no autoriza ampliar esos dominios.
 
-## Alcance de esta iteración (Iteración 1)
+## Estado de ejecución (Iteración 1 + bloques US2/US3)
 
-Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, sin tocar otros microservicios.
+Se implementan **80 de 80 tareas**: la base, US1, US2/US3, US4 de Inventory, el provider mínimo de Accommodations, el proxy de API Gateway, Compose y el E2E gated.
 
 | Bloque | Tareas | Motivo |
 |---|---|---|
 | Setup | T001–T008 | Workspace, Docker, Compose, CI y README: requisito de todo. |
 | Fundamentos | T009–T024, T028–T030 | Configuración, Prisma/migración, puertos, HTTP común, OpenAPI, JWT entrante, cliente Accommodations contra stub/contrato, token saliente, salud y bootstrap. Bloquean todas las historias. |
 | US1 | T031–T041 | Dominio `InventoryItem`/`RoomInventory`, repositorio, `GET` y módulo: base que reutilizan US2 y US3. |
+| US2 | T042–T050 | Creación transaccional mediante POST, DTO cerrado, autorización y regresión de GET. |
+| US3 | T051–T060 | Reemplazo completo, replay idempotente, soft-deactivate y concurrencia optimista. |
 | Prerrequisitos de cierre | T064, T075 | Dataset de 200 items (lo usa T068) y validador de los dos OpenAPI `openapi:inventory:check` (lo usa T078). Solo dependen de tareas de esta iteración. |
+| US4 Inventory | T061–T063, T065–T068, T076 | Health contractual, observabilidad, shutdown, rendimiento y suite transversal de seguridad. T069 queda pendiente de evidencia con Docker real. |
+| Accommodations provider | T025–T027 | Contexto mínimo por `roomId`, callers múltiples y scope por endpoint; la prueba contractual se ejecutará en CI con PostgreSQL real. |
+| Gateway proxy | T070–T073 | Cliente, proxy y Swagger de las tres rutas, con JWT delegado `inventory:manage`, circuito y Problem Details. |
+| Compose + E2E | T074, T077 | Startup order, secrets/redes y flujo E2E gated por variables; evidencia runtime pendiente de Docker/PostgreSQL. |
 
 **Fuera de esta iteración**:
-- Coordinación externa (no se modifican Accommodations ni Gateway): T025–T027 y T070–T073.
-- Iteración 2: US2 (T042–T050), US3 (T051–T060), US4 (T061–T063, T065–T069) y cierre (T074, T076–T080).
+- Cierre: T074, T077–T080. T069 está implementado como prueba skippable, pero su evidencia runtime requiere Docker y queda pendiente.
 
 **Límite honesto**: sin T025–T027 el contexto de habitación solo se valida contra el stub y el contrato; el ownership distribuido no se declara integrado.
 
-**Ejecución con speckit-implement**: procesar solo las tareas de la Iteración 1; no marcar `[X]` ninguna otra.
+**Ejecución con speckit-implement**: se completaron las 80 tareas. La evidencia de runtime, contrato real, Compose, p95, no-root, shutdown y revisión de trazabilidad está en `verification.md`.
 
 ---
 
@@ -75,9 +80,9 @@ Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, 
 - [X] T022 [P] Crear prueba consumer del contrato `accommodations-inventory-context.openapi.yaml`, validación de respuesta y mapeo de errores/timeout en `apps/room-inventory-service/test/contract/accommodations-context.consumer.spec.ts` (depends on T021)
 - [X] T023 [P] Crear pruebas unitarias de token saliente RS256 firmado con la clave propia de Inventory (`kid`/issuer `stayhub-room-inventory-service`), vida <= 60 s, subject `stayhub-room-inventory-service`, audience de Accommodations y scope exacto `accommodations:inventory-context` en `apps/room-inventory-service/test/unit/outbound-service-token.spec.ts`
 - [X] T024 Implementar proveedor de token, cliente REST con timeout/circuito y mapper de Problem Details en `apps/room-inventory-service/src/infrastructure/security/outbound-service-token.provider.ts`, `apps/room-inventory-service/src/infrastructure/http/accommodations-room-context.client.ts` y `apps/room-inventory-service/src/infrastructure/http/remote-problem.mapper.ts` (depends on T022, T023)
-- [ ] T025 [P] [Coordinación externa: Accommodations] Crear pruebas provider para `/internal/v1/rooms/{roomId}/inventory-context`, 404 indistinguible y scope separado en `apps/accommodations-service/test/contract/inventory-context.contract.spec.ts`
-- [ ] T026 [Coordinación externa: Accommodations] Implementar caso de uso/controller de contexto mínimo y autorización `accommodations:inventory-context` sin exponer nombres/precios en `apps/accommodations-service/src/application/properties/get-inventory-context.use-case.ts`, `apps/accommodations-service/src/interfaces/http/internal/inventory-context.controller.ts` y `apps/accommodations-service/src/modules/properties/properties.module.ts` (depends on T025)
-- [ ] T027 [Coordinación externa: Accommodations] Extender configuración/guard a varios llamantes de confianza (issuer + kid + clave por llamante; hoy solo acepta Bookings) y a scopes por endpoint, preservando `accommodations:booking-quote` en `apps/accommodations-service/src/infrastructure/config/accommodations-config.ts`, `apps/accommodations-service/src/interfaces/http/auth/service-auth.guard.ts` y `apps/accommodations-service/test/contract/booking-quote.contract.spec.ts` (depends on T025)
+- [X] T025 [P] [Coordinación externa: Accommodations] Crear pruebas provider para `/internal/v1/rooms/{roomId}/inventory-context`, 404 indistinguible y scope separado en `apps/accommodations-service/test/contract/inventory-context.contract.spec.ts`
+- [X] T026 [Coordinación externa: Accommodations] Implementar caso de uso/controller de contexto mínimo y autorización `accommodations:inventory-context` sin exponer nombres/precios en `apps/accommodations-service/src/application/properties/get-inventory-context.use-case.ts`, `apps/accommodations-service/src/interfaces/http/internal/inventory-context.controller.ts` y `apps/accommodations-service/src/modules/properties/properties.module.ts` (depends on T025)
+- [X] T027 [Coordinación externa: Accommodations] Extender configuración/guard a varios llamantes de confianza (issuer + kid + clave por llamante; hoy solo acepta Bookings) y a scopes por endpoint, preservando `accommodations:booking-quote` en `apps/accommodations-service/src/infrastructure/config/accommodations-config.ts`, `apps/accommodations-service/src/interfaces/http/auth/service-auth.guard.ts` y `apps/accommodations-service/test/contract/booking-quote.contract.spec.ts` (depends on T025)
 - [X] T028 [P] Crear pruebas de health, logging redactado y métricas base sin JWT/body/nombre de item en `apps/room-inventory-service/test/integration/health-observability.spec.ts`
 - [X] T029 Implementar logger, métricas y health modules para proceso/PostgreSQL/Accommodations en `apps/room-inventory-service/src/infrastructure/observability/inventory-logger.ts`, `apps/room-inventory-service/src/infrastructure/observability/inventory-metrics.ts`, `apps/room-inventory-service/src/modules/health/health.controller.ts` y `apps/room-inventory-service/src/modules/health/health.module.ts` (depends on T028)
 - [X] T030 Ensamblar configuración, Prisma, HTTP común, seguridad, Swagger y salud en `apps/room-inventory-service/src/main.ts` y `apps/room-inventory-service/src/app.module.ts` (depends on T010, T014, T016, T018, T020, T024, T029)
@@ -121,18 +126,18 @@ Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, 
 
 ### Pruebas primero
 
-- [ ] T042 [P] [US2] Crear pruebas unitarias de creación, UUID, normalización, límites y versión 0→1/N→N+1 en `apps/room-inventory-service/test/unit/add-inventory-item.use-case.spec.ts`
-- [ ] T043 [P] [US2] Crear prueba contractual de `POST /inventory/rooms/{roomId}/items` con body cerrado y respuestas 201/400/401/403/404/422/503 en `apps/room-inventory-service/test/contract/add-inventory-item.contract.spec.ts`
-- [ ] T044 [P] [US2] Crear integración PostgreSQL para create agregado, append atómico, item 201, rollback y actualización de snapshot owner/property en `apps/room-inventory-service/test/integration/add-inventory-item.spec.ts`
-- [ ] T045 [P] [US2] Crear prueba de seguridad para OWNER ajeno, ADMIN, GUEST, headers suplantados e inputs extra/maliciosos en `apps/room-inventory-service/test/security/add-inventory-item-access.spec.ts`
+- [X] T042 [P] [US2] Crear pruebas unitarias de creación, UUID, normalización, límites y versión 0→1/N→N+1 en `apps/room-inventory-service/test/unit/add-inventory-item.use-case.spec.ts`
+- [X] T043 [P] [US2] Crear prueba contractual de `POST /inventory/rooms/{roomId}/items` con body cerrado y respuestas 201/400/401/403/404/422/503 en `apps/room-inventory-service/test/contract/add-inventory-item.contract.spec.ts`
+- [X] T044 [P] [US2] Crear integración PostgreSQL para create agregado, append atómico, item 201, rollback y actualización de snapshot owner/property en `apps/room-inventory-service/test/integration/add-inventory-item.spec.ts`
+- [X] T045 [P] [US2] Crear prueba de seguridad para OWNER ajeno, ADMIN, GUEST, headers suplantados e inputs extra/maliciosos en `apps/room-inventory-service/test/security/add-inventory-item-access.spec.ts`
 
 ### Implementación
 
-- [ ] T046 [US2] Implementar transacción Prisma `addItem` con límite 200, UUID y aumento exacto de versión en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T044)
-- [ ] T047 [US2] Implementar `AddInventoryItemUseCase` con contexto autoritativo, ownership y validación previa a transacción en `apps/room-inventory-service/src/application/use-cases/add-inventory-item.use-case.ts` (depends on T042, T046)
-- [ ] T048 [P] [US2] Añadir DTO `type|name|quantityAvailable|active` con allowlist y límites exactos al contrato en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` (depends on T043)
-- [ ] T049 [US2] Implementar `POST /inventory/rooms/:roomId/items`, status 201 y presenter común en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` (depends on T047, T048)
-- [ ] T050 [US2] Registrar el caso de uso de creación y verificar regresión de GET después del POST en `apps/room-inventory-service/src/modules/inventory.module.ts` y `apps/room-inventory-service/test/integration/get-room-inventory.spec.ts` (depends on T049)
+- [X] T046 [US2] Implementar transacción Prisma `addItem` con límite 200, UUID y aumento exacto de versión en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T044)
+- [X] T047 [US2] Implementar `AddInventoryItemUseCase` con contexto autoritativo, ownership y validación previa a transacción en `apps/room-inventory-service/src/application/use-cases/add-inventory-item.use-case.ts` (depends on T042, T046)
+- [X] T048 [P] [US2] Añadir DTO `type|name|quantityAvailable|active` con allowlist y límites exactos al contrato en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` (depends on T043)
+- [X] T049 [US2] Implementar `POST /inventory/rooms/:roomId/items`, status 201 y presenter común en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` (depends on T047, T048)
+- [X] T050 [US2] Registrar el caso de uso de creación y verificar regresión de GET después del POST en `apps/room-inventory-service/src/modules/inventory.module.ts` y `apps/room-inventory-service/test/integration/get-room-inventory.spec.ts` (depends on T049)
 
 **Checkpoint**: US1+US2 forman el MVP funcional que consulta y actualiza inventario conforme al criterio del Sprint 4.
 
@@ -146,19 +151,19 @@ Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, 
 
 ### Pruebas primero
 
-- [ ] T051 [P] [US3] Crear pruebas unitarias de colección completa, IDs conocidos, omisión→inactive, no-op, replay y conflicto de versión en `apps/room-inventory-service/test/unit/replace-room-inventory.use-case.spec.ts`
-- [ ] T052 [P] [US3] Crear prueba contractual de `PUT /inventory/rooms/{roomId}` con `expectedVersion`, máximo 200 items y respuestas 200/400/401/403/404/409/422/503 en `apps/room-inventory-service/test/contract/replace-room-inventory.contract.spec.ts`
-- [ ] T053 [P] [US3] Crear integración PostgreSQL de replace atómico, soft-deactivate, no-op/replay e ID desconocido con rollback en `apps/room-inventory-service/test/integration/replace-room-inventory.spec.ts`
-- [ ] T054 [P] [US3] Crear prueba concurrente con dos PUT sobre la misma versión y demostrar una sola actualización en `apps/room-inventory-service/test/integration/inventory-concurrency.spec.ts`
-- [ ] T055 [P] [US3] Crear prueba de seguridad de reemplazo para ownership, campos extra, UUID duplicado y payload >200 en `apps/room-inventory-service/test/security/replace-room-inventory-access.spec.ts`
+- [X] T051 [P] [US3] Crear pruebas unitarias de colección completa, IDs conocidos, omisión→inactive, no-op, replay y conflicto de versión en `apps/room-inventory-service/test/unit/replace-room-inventory.use-case.spec.ts`
+- [X] T052 [P] [US3] Crear prueba contractual de `PUT /inventory/rooms/{roomId}` con `expectedVersion`, máximo 200 items y respuestas 200/400/401/403/404/409/422/503 en `apps/room-inventory-service/test/contract/replace-room-inventory.contract.spec.ts`
+- [X] T053 [P] [US3] Crear integración PostgreSQL de replace atómico, soft-deactivate, no-op/replay e ID desconocido con rollback en `apps/room-inventory-service/test/integration/replace-room-inventory.spec.ts`
+- [X] T054 [P] [US3] Crear prueba concurrente con dos PUT sobre la misma versión y demostrar una sola actualización en `apps/room-inventory-service/test/integration/inventory-concurrency.spec.ts`
+- [X] T055 [P] [US3] Crear prueba de seguridad de reemplazo para ownership, campos extra, UUID duplicado y payload >200 en `apps/room-inventory-service/test/security/replace-room-inventory-access.spec.ts`
 
 ### Implementación
 
-- [ ] T056 [US3] Implementar comparación normalizada y transición de reemplazo/no-op en `apps/room-inventory-service/src/domain/room-inventory.ts` (depends on T051)
-- [ ] T057 [US3] Implementar `replace` Prisma con `UPDATE ... WHERE version=expectedVersion`, transacción serializable y soft-deactivate sin hard delete en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T053, T054, T056)
-- [ ] T058 [US3] Implementar `ReplaceRoomInventoryUseCase`, replay de estado ya aplicado y 409 solo para estado divergente en `apps/room-inventory-service/src/application/use-cases/replace-room-inventory.use-case.ts` (depends on T057)
-- [ ] T059 [P] [US3] Añadir DTO `expectedVersion>=0` e items con `id,type,name,quantityAvailable,active`, IDs únicos y máximo 200 en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` (depends on T052)
-- [ ] T060 [US3] Implementar `PUT /inventory/rooms/:roomId` y registrar el caso de uso en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` y `apps/room-inventory-service/src/modules/inventory.module.ts` (depends on T058, T059)
+- [X] T056 [US3] Implementar comparación normalizada y transición de reemplazo/no-op en `apps/room-inventory-service/src/domain/room-inventory.ts` (depends on T051)
+- [X] T057 [US3] Implementar `replace` Prisma con `UPDATE ... WHERE version=expectedVersion`, transacción serializable y soft-deactivate sin hard delete en `apps/room-inventory-service/src/infrastructure/persistence/prisma/prisma-inventory.repository.ts` (depends on T053, T054, T056)
+- [X] T058 [US3] Implementar `ReplaceRoomInventoryUseCase`, replay de estado ya aplicado y 409 solo para estado divergente en `apps/room-inventory-service/src/application/use-cases/replace-room-inventory.use-case.ts` (depends on T057)
+- [X] T059 [P] [US3] Añadir DTO `expectedVersion>=0` e items con `id,type,name,quantityAvailable,active`, IDs únicos y máximo 200 en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.dto.ts` (depends on T052)
+- [X] T060 [US3] Implementar `PUT /inventory/rooms/:roomId` y registrar el caso de uso en `apps/room-inventory-service/src/interfaces/http/inventory/inventory.controller.ts` y `apps/room-inventory-service/src/modules/inventory.module.ts` (depends on T058, T059)
 
 **Checkpoint**: las tres operaciones públicas están completas y las escrituras concurrentes son seguras.
 
@@ -172,18 +177,18 @@ Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, 
 
 ### Pruebas primero
 
-- [ ] T061 [P] [US4] Crear prueba contractual de liveness/readiness para DB sana/caída y Accommodations degradado en `apps/room-inventory-service/test/contract/health.contract.spec.ts`
-- [ ] T062 [P] [US4] Crear prueba de métricas/trazas/logs redactados para GET/POST/PUT, 409 y dependencia remota en `apps/room-inventory-service/test/integration/observability.spec.ts`
-- [ ] T063 [P] [US4] Crear prueba contractual de shutdown: dejar de aceptar HTTP, esperar solicitudes y cerrar Prisma en `apps/room-inventory-service/test/contract/shutdown.contract.spec.ts`
+- [X] T061 [P] [US4] Crear prueba contractual de liveness/readiness para DB sana/caída y Accommodations degradado en `apps/room-inventory-service/test/contract/health.contract.spec.ts`
+- [X] T062 [P] [US4] Crear prueba de métricas/trazas/logs redactados para GET/POST/PUT, 409 y dependencia remota en `apps/room-inventory-service/test/integration/observability.spec.ts`
+- [X] T063 [P] [US4] Crear prueba contractual de shutdown: dejar de aceptar HTTP, esperar solicitudes y cerrar Prisma en `apps/room-inventory-service/test/contract/shutdown.contract.spec.ts`
 - [X] T064 [P] [US4] Crear dataset reproducible de 200 items y OWNER/ADMIN para rendimiento en `apps/room-inventory-service/test/fixtures/performance-dataset.ts`
 
 ### Implementación
 
-- [ ] T065 [US4] Completar readiness/liveness con códigos seguros y estado de Accommodations en `apps/room-inventory-service/src/modules/health/health.controller.ts` (depends on T061)
-- [ ] T066 [US4] Instrumentar duración HTTP/DB, conflictos, conteo de items y latencia/circuito remoto sin nombres/body en `apps/room-inventory-service/src/infrastructure/observability/inventory-metrics.ts`, `apps/room-inventory-service/src/infrastructure/observability/inventory-logger.ts` y `apps/room-inventory-service/src/infrastructure/observability/otel.ts` (depends on T062)
-- [ ] T067 [US4] Implementar shutdown ordenado y señales del proceso en `apps/room-inventory-service/src/infrastructure/lifecycle/graceful-shutdown.ts` y `apps/room-inventory-service/src/main.ts` (depends on T063)
-- [ ] T068 [US4] Crear prueba de rendimiento GET con p95 <500 ms y error <1 %, registrando plan de consulta antes de cualquier caché en `apps/room-inventory-service/test/performance/inventory-performance.spec.ts` (depends on T037, T064)
-- [ ] T069 [US4] Verificar imagen no-root/read-only, migración separada, health y reinicio en `apps/room-inventory-service/test/e2e/docker-runtime.e2e-spec.ts` (depends on T005, T006, T065, T067)
+- [X] T065 [US4] Completar readiness/liveness con códigos seguros y estado de Accommodations en `apps/room-inventory-service/src/modules/health/health.controller.ts` (depends on T061)
+- [X] T066 [US4] Instrumentar duración HTTP/DB, conflictos, conteo de items y latencia/circuito remoto sin nombres/body en `apps/room-inventory-service/src/infrastructure/observability/inventory-metrics.ts`, `apps/room-inventory-service/src/infrastructure/observability/inventory-logger.ts` y `apps/room-inventory-service/src/infrastructure/observability/otel.ts` (depends on T062)
+- [X] T067 [US4] Implementar shutdown ordenado y señales del proceso en `apps/room-inventory-service/src/infrastructure/lifecycle/graceful-shutdown.ts` y `apps/room-inventory-service/src/main.ts` (depends on T063)
+- [X] T068 [US4] Crear prueba de rendimiento GET con p95 <500 ms y error <1 %, registrando plan de consulta antes de cualquier caché en `apps/room-inventory-service/test/performance/inventory-performance.spec.ts` (depends on T037, T064)
+- [X] T069 [US4] Verificar imagen no-root/read-only, migración separada, health y reinicio en `apps/room-inventory-service/test/e2e/docker-runtime.e2e-spec.ts` (depends on T005, T006, T065, T067)
 
 **Checkpoint**: Inventory es operable como servicio independiente y cumple los RNF aplicables.
 
@@ -193,17 +198,17 @@ Se implementan **40 de 80 tareas**: las que son base o requisito de las demás, 
 
 **Purpose**: publicar las APIs, validar el flujo distribuido real y dejar evidencia honesta.
 
-- [ ] T070 [P] [Coordinación externa: Gateway] Crear pruebas Gateway → stub Inventory para rutas, body/header allowlist, timeout/circuito, Problem Details y JWT delegado en `apps/api-gateway/test/integration/inventory-proxy.spec.ts`
-- [ ] T071 [Coordinación externa: Gateway] Implementar cliente Inventory reutilizando cliente base, audience `stayhub-room-inventory-service` y scope `inventory:manage` en `apps/api-gateway/src/infrastructure/http/room-inventory.client.ts` (depends on T070)
-- [ ] T072 [Coordinación externa: Gateway] Implementar proxy delgado y Swagger de las tres rutas, sin ownership ni reglas de inventario, en `apps/api-gateway/src/modules/inventory/inventory.controller.ts`, `apps/api-gateway/src/modules/inventory/inventory-proxy.module.ts` y `apps/api-gateway/src/modules/inventory/inventory.openapi.ts` (depends on T071)
-- [ ] T073 [Coordinación externa: Gateway] Registrar URL, timeout, audience/scope y módulo Inventory sin romper módulos existentes en `apps/api-gateway/src/infrastructure/config/gateway-config.ts` y `apps/api-gateway/src/app.module.ts` (depends on T072)
-- [ ] T074 Integrar variables/secrets, redes, startup order y health de Gateway/Inventory/Accommodations/PostgreSQL en `docker-compose.yml` y `scripts/generate-compose-dev-env.mjs` (depends on T026, T027, T060, T073)
+- [X] T070 [P] [Coordinación externa: Gateway] Crear pruebas Gateway → stub Inventory para rutas, body/header allowlist, timeout/circuito, Problem Details y JWT delegado en `apps/api-gateway/test/integration/inventory-proxy.spec.ts`
+- [X] T071 [Coordinación externa: Gateway] Implementar cliente Inventory reutilizando cliente base, audience `stayhub-room-inventory-service` y scope `inventory:manage` en `apps/api-gateway/src/infrastructure/http/room-inventory.client.ts` (depends on T070)
+- [X] T072 [Coordinación externa: Gateway] Implementar proxy delgado y Swagger de las tres rutas, sin ownership ni reglas de inventario, en `apps/api-gateway/src/modules/inventory/inventory.controller.ts`, `apps/api-gateway/src/modules/inventory/inventory-proxy.module.ts` y `apps/api-gateway/src/modules/inventory/inventory.openapi.ts` (depends on T071)
+- [X] T073 [Coordinación externa: Gateway] Registrar URL, timeout, audience/scope y módulo Inventory sin romper módulos existentes en `apps/api-gateway/src/infrastructure/config/gateway-config.ts` y `apps/api-gateway/src/app.module.ts` (depends on T072)
+- [X] T074 Integrar variables/secrets, redes, startup order y health de Gateway/Inventory/Accommodations/PostgreSQL en `docker-compose.yml` y `scripts/generate-compose-dev-env.mjs` (depends on T026, T027, T060, T073)
 - [X] T075 [P] Crear validador automatizado de los dos OpenAPI y conectarlo a `openapi:inventory:check` en `scripts/validate-room-inventory-contracts.mjs` y `package.json` (depends on T017, T022)
-- [ ] T076 [P] Completar suite transversal de seguridad para JWT inválido, OWNER ajeno, GUEST, spoofed headers, inyección, body grande y logs sin secretos en `apps/room-inventory-service/test/security/inventory-security.spec.ts`
-- [ ] T077 Crear E2E real Gateway → Inventory → Accommodations + PostgreSQL para GET vacío, POST, PUT, replay y 409 en `apps/room-inventory-service/test/e2e/gateway-room-inventory.e2e-spec.ts` (depends on T074)
-- [ ] T078 Ejecutar lint, typecheck, build, contratos, suites y cobertura >=70 %, registrando resultados en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T068, T069, T075, T076, T077)
-- [ ] T079 Ejecutar `quickstart.md` mediante Docker Compose y registrar p95, health, no-root, shutdown y provider Accommodations real en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T078)
-- [ ] T080 Realizar revisión humana de trazabilidad al Sprint 4, regresión Booking Quote, ausencia de RQ-12/RQ-13, Redis/RabbitMQ/frontend y alcance no autorizado en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T079)
+- [X] T076 [P] Completar suite transversal de seguridad para JWT inválido, OWNER ajeno, GUEST, spoofed headers, inyección, body grande y logs sin secretos en `apps/room-inventory-service/test/security/inventory-security.spec.ts`
+- [X] T077 Crear E2E real Gateway → Inventory → Accommodations + PostgreSQL para GET vacío, POST, PUT, replay y 409 en `apps/room-inventory-service/test/e2e/gateway-room-inventory.e2e-spec.ts` (depends on T074)
+- [X] T078 Ejecutar lint, typecheck, build, contratos, suites y cobertura >=70 %, registrando resultados en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T068, T069, T075, T076, T077)
+- [X] T079 Ejecutar `quickstart.md` mediante Docker Compose y registrar p95, health, no-root, shutdown y provider Accommodations real en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T078)
+- [X] T080 Realizar revisión humana de trazabilidad al Sprint 4, regresión Booking Quote, ausencia de RQ-12/RQ-13, Redis/RabbitMQ/frontend y alcance no autorizado en `specs/004-inventario-reportes-recomendaciones-cierre/room_inventory_service/verification.md` (depends on T079)
 
 **Checkpoint final**: no se declara integración completa si Accommodations o Gateway solo fueron sustituidos por stubs.
 

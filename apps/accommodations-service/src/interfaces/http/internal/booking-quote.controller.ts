@@ -2,7 +2,7 @@ import { BadRequestException, Controller, Get, Param, Query, UseGuards } from '@
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GetBookingQuoteUseCase, type BookingQuote } from '@accommodations/application/properties/get-booking-quote.use-case';
 import { parseUuid } from '@accommodations/domain/shared/uuid';
-import { ServiceAuthGuard } from '../auth/service-auth.guard';
+import { ServiceAuthGuard, ServiceScope } from '../auth/service-auth.guard';
 
 @ApiTags('internal')
 @ApiBearerAuth('serviceJwt')
@@ -12,6 +12,7 @@ export class BookingQuoteController {
   constructor(private readonly quotes: GetBookingQuoteUseCase) {}
 
   @Get(':propertyId/rooms/:roomId/booking-quote')
+  @ServiceScope('accommodations:booking-quote')
   @ApiOperation({ operationId: 'getBookingQuote', summary: 'Authoritative bookable snapshot for Bookings' })
   @ApiParam({ name: 'propertyId', required: true, schema: { type: 'string', format: 'uuid' } })
   @ApiParam({ name: 'roomId', required: true, schema: { type: 'string', format: 'uuid' } })

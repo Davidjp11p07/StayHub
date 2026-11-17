@@ -223,6 +223,12 @@ replaceEnvironment({
   GATEWAY_TLS_KEY_SOURCE: './.artifacts/gateway/tls_key.pem',
   GATEWAY_REDIS_PASSWORD_SOURCE: './.artifacts/gateway/redis_password.txt',
   GATEWAY_SERVICE_PRIVATE_KEY_SOURCE: './.artifacts/gateway/service_private_key.pem',
+  GATEWAY_INVENTORY_BASE_URL: 'http://room-inventory-service:3008',
+  GATEWAY_INVENTORY_SERVICE_AUDIENCE: 'stayhub-room-inventory-service',
+  GATEWAY_INVENTORY_SERVICE_SCOPE: 'inventory:manage',
+  GATEWAY_INVENTORY_TIMEOUT_MS: '5000',
+  GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD: '5',
+  GATEWAY_INVENTORY_CIRCUIT_RESET_MS: '30000',
   AUTH_INBOUND_SERVICE_PUBLIC_KEYS_JSON: gatewayKeysJson,
   AUTH_INBOUND_SERVICE_ISSUER: INBOUND_ISSUER,
   AUTH_INBOUND_SERVICE_AUDIENCE: INBOUND_AUDIENCE,
@@ -265,6 +271,10 @@ replaceEnvironment({
   PAYMENTS_SERVICE_JWT_ISSUER: bookingsIssuer,
   NOTIFICATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,
   ACCOMMODATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: 'stayhub-room-inventory-service',
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: 'room-inventory-accommodations-2026-01',
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE: './secrets/room-inventory-service-public.pem',
+  ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE: 'accommodations:inventory-context',
 });
 
 // Keep host-side secret material private. Compose consumers opt out of Podman's

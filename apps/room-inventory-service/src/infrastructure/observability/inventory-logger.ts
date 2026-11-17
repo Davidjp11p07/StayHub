@@ -32,11 +32,16 @@ export class InventoryLogger implements LoggerService {
   }
 
   public log(message: unknown, context?: string): void { this.write('info', message, context); }
+
+  /** Request-scoped log with an explicit trace id (the span may already be closed when finalizers run). */
+  public logRequest(message: Record<string, unknown>, traceId: string, context?: string): void {
+    this.write('info', message, context, undefined, traceId);
+  }
   public warn(message: unknown, context?: string): void { this.write('warn', message, context); }
   public debug(message: unknown, context?: string): void { this.write('debug', message, context); }
   public error(message: unknown, stack?: string, context?: string): void { this.write('error', message, context, stack); }
 
-  private write(level: InventoryLogLevel, message: unknown, context?: string, stack?: string): void {
+  private write(level: InventoryLogLevel, message: unknown, context?: string, stack?: string, explicitTraceId?: string): void {
     if (ORDER[level] < this.minimum) return;
     const span = trace.getActiveSpan();
     const line = {
@@ -45,7 +50,7 @@ export class InventoryLogger implements LoggerService {
       service: 'room-inventory-service',
       ...(context ? { context } : {}),
       message: redact(message),
-      ...(span ? { traceId: span.spanContext().traceId } : {}),
+      ...(span ? { traceId: span.spanContext().traceId } : explicitTraceId ? { traceId: explicitTraceId } : {}),
       ...(stack ? { errorTrace: '[REDACTED]' } : {}),
     };
     process.stdout.write(`${JSON.stringify(line)}\n`);

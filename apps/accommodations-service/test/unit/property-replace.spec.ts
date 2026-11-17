@@ -80,7 +80,7 @@ describe('ACC-025 replace property use case', () => {
   it('returns NOT_FOUND when the repository yields null', async () => {
     const repo: PropertyRepository = {
       replace: () => Promise.resolve(null), create: () => Promise.reject(new Error('unused')),
-      findById: () => Promise.reject(new Error('unused')), addPhoto: () => Promise.reject(new Error('unused')),
+      findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')), addPhoto: () => Promise.reject(new Error('unused')),
     };
     await expect(new ReplacePropertyUseCase(repo).execute(randomUUID(), owner, parseReplaceProperty(replaceBody()))).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
@@ -91,7 +91,7 @@ describe('ACC-025 replace property use case', () => {
     const stored = { ...existing, version: 2, name: 'Nuevo' };
     const repo: PropertyRepository = {
       replace: (_id, decide) => { plan = decide(existing); return Promise.resolve(stored); },
-      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), addPhoto: () => Promise.reject(new Error('unused')),
+      create: () => Promise.reject(new Error('unused')), findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')), addPhoto: () => Promise.reject(new Error('unused')),
     };
     await expect(new ReplacePropertyUseCase(repo).execute(existing.id, owner, parseReplaceProperty(replaceBody({ name: 'Nuevo', rooms: [{ id: roomId, name: 'Principal', capacity: 2 }] })))).resolves.toBe(stored);
     expect(plan).toMatchObject({ name: 'Nuevo' });

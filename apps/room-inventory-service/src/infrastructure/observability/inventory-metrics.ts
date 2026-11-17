@@ -9,6 +9,8 @@ export class InventoryMetrics {
   private readonly db: Histogram = this.meter.createHistogram('inventory_db_duration_seconds', { unit: 's' });
   private readonly remote: Histogram = this.meter.createHistogram('inventory_accommodations_duration_seconds', { unit: 's' });
   private readonly remoteErrors: Counter = this.meter.createCounter('inventory_accommodations_errors_total');
+  private readonly conflicts: Counter = this.meter.createCounter('inventory_conflicts_total');
+  private readonly items: Histogram = this.meter.createHistogram('inventory_items_per_room');
 
   public httpDuration(seconds: number, attributes: Attributes = {}): void {
     this.http.record(seconds, attributes);
@@ -22,5 +24,14 @@ export class InventoryMetrics {
   public accommodationsCall(seconds: number, outcome: string): void {
     this.remote.record(seconds, { outcome });
     if (outcome !== 'ok' && outcome !== 'not_found') this.remoteErrors.add(1, { outcome });
+  }
+
+  /** `operation`: get | add | replace. Never includes room ids or item names. */
+  public conflict(operation: string): void {
+    this.conflicts.add(1, { operation });
+  }
+
+  public itemCount(count: number, attributes: Attributes = {}): void {
+    this.items.record(count, attributes);
   }
 }

@@ -87,6 +87,11 @@ export class PrismaPropertyRepository implements PropertyRepository {
     return row ? toDomain(row) : null;
   }
 
+  async findByRoomId(roomId: string): Promise<Property | null> {
+    const row = await this.prisma.property.findFirst({ where: { rooms: { some: { id: roomId } } }, include });
+    return row ? toDomain(row) : null;
+  }
+
   async replace(id: string, decide: (current: Property) => ReplacementPlan): Promise<Property | null> {
     return this.prisma.$transaction(async (tx) => {
       const current = await lockAndLoad(tx, id);

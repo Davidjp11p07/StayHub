@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { AddInventoryItemPersistenceInput, ReplaceRoomInventoryPersistenceInput } from '@inventory/application/ports/inventory.repository';
 import type { RoomContext, RoomContextPort } from '@inventory/application/ports/room-context.port';
 import { GetRoomInventoryUseCase } from '@inventory/application/use-cases/get-room-inventory.use-case';
 import { InventoryError } from '@inventory/domain/inventory-errors';
@@ -85,7 +86,11 @@ describe('RoomInventory rules', () => {
 
 describe('GetRoomInventoryUseCase', () => {
   const rooms: jest.Mocked<RoomContextPort> = { getContext: jest.fn<Promise<RoomContext>, [string, string]>(async () => context) };
-  const repository = { findByRoomId: jest.fn<Promise<PersistedRoomInventory | null>, [string]>(async () => null) };
+  const repository = {
+    findByRoomId: jest.fn<Promise<PersistedRoomInventory | null>, [string]>(async () => null),
+    addItem: jest.fn<Promise<PersistedRoomInventory>, [AddInventoryItemPersistenceInput]>(),
+    replace: jest.fn<Promise<PersistedRoomInventory | null>, [ReplaceRoomInventoryPersistenceInput]>(),
+  };
   const useCase = new GetRoomInventoryUseCase(rooms, repository);
   beforeEach(() => { rooms.getContext.mockClear(); repository.findByRoomId.mockClear(); });
 

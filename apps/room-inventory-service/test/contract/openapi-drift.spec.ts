@@ -13,8 +13,12 @@ interface Operation { operationId?: string; parameters?: Array<{ name: string; i
 type Paths = Record<string, Record<string, Operation>>;
 interface Contract { openapi: string; paths: Paths; components: { schemas: Record<string, Record<string, unknown>> } }
 
-/** Implemented in Iteration 1. POST (T049) and PUT (T060) join this list when they exist. */
-const IMPLEMENTED = [{ path: '/inventory/rooms/{roomId}', method: 'get', operationId: 'getRoomInventory' }] as const;
+/** Implemented operations; PUT (T060) joins this list in the next block. */
+const IMPLEMENTED = [
+  { path: '/inventory/rooms/{roomId}', method: 'get', operationId: 'getRoomInventory' },
+  { path: '/inventory/rooms/{roomId}/items', method: 'post', operationId: 'addRoomInventoryItem' },
+  { path: '/inventory/rooms/{roomId}', method: 'put', operationId: 'replaceRoomInventory' },
+] as const;
 
 describe('Room Inventory OpenAPI drift', () => {
   let ctx: InventoryTestApp;

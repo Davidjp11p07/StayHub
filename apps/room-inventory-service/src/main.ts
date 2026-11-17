@@ -5,6 +5,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { INVENTORY_CONFIG } from '@inventory/infrastructure/config/config.module';
 import { loadInventoryConfig, type InventoryConfig } from '@inventory/infrastructure/config/inventory-config';
+import { installGracefulShutdown } from '@inventory/infrastructure/lifecycle/graceful-shutdown';
 import { InventoryLogger } from '@inventory/infrastructure/observability/inventory-logger';
 import { startTelemetry, stopTelemetry } from '@inventory/infrastructure/observability/otel';
 import { configureHttp } from '@inventory/interfaces/http/configure-http';
@@ -26,12 +27,11 @@ async function bootstrap(): Promise<void> {
   app.useBodyParser('json', { limit: '64kb' });
   configureHttp(app);
   configureInventoryOpenApi(app);
-  const close = (): void => {
-    const timer = setTimeout(() => process.exit(1), config.shutdownGraceMs);
-    void app.close().then(stopTelemetry).then(() => { clearTimeout(timer); process.exit(0); }, () => process.exit(1));
-  };
-  process.once('SIGTERM', close);
-  process.once('SIGINT', close);
+  installGracefulShutdown(app, {
+    graceMs: config.shutdownGraceMs,
+    logger: app.get(InventoryLogger),
+    exit: (code) => void stopTelemetry().finally(() => process.exit(code)),
+  });
   await app.listen(config.port, '0.0.0.0');
 }
 
