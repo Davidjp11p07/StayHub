@@ -14,7 +14,10 @@ async function guest() {
   const email = `concurrency-${randomUUID()}@stayhub.test`;
   const password = `Test-${randomUUID()}`;
   const registered = await api('/auth/register', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': randomUUID() }, body: JSON.stringify({ name: 'Reserva concurrencia', email, password, role: 'GUEST' }) });
-  if (!registered.ok) throw new Error(`Registro de prueba falló: ${registered.status}`);
+  if (!registered.ok) {
+    const problem = await registered.json().catch(() => ({}));
+    throw new Error(`Registro de prueba falló: ${registered.status} ${problem.code ?? ''} traceId=${problem.traceId ?? registered.headers.get('x-trace-id') ?? 'desconocido'}`);
+  }
   for (let i = 0; i < 20; i++) {
     const response = await api('/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) });
     if (response.ok) return (await response.json()).accessToken;
@@ -30,6 +33,17 @@ if (!room) throw new Error('La propiedad no tiene habitaciones con precio.');
 const tokens = await Promise.all([guest(), guest()]);
 const date = days => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 const body = JSON.stringify({ propertyId, roomId: room.id, checkIn: date(offset), checkOut: date(offset + 2), guests: 1 });
+async function verifySearch(expected, start = offset) {
+  if (process.env.STAYHUB_TEST_DATED_SEARCH !== '1') return;
+  if (property.rooms.filter(item => item.basePrice).length !== 1) throw new Error('La prueba de búsqueda requiere una propiedad sintética con una habitación.');
+  const query = new URLSearchParams({ q: property.name, checkIn: date(start), checkOut: date(start + 2), guests: '1', pageSize: '100' });
+  const response = await api(`/search?${query}`);
+  if (!response.ok) throw new Error(`Búsqueda fechada: HTTP ${response.status}`);
+  const page = await response.json();
+  if (page.hasNext || page.items.some(item => item.accommodationId === propertyId) !== expected) {
+    throw new Error(`Disponibilidad inesperada para ${date(start)}, esperada: ${expected}`);
+  }
+}
 async function reserve(token) {
   const response = await api('/bookings', {
     method: 'POST',
@@ -46,6 +60,7 @@ async function cancel(result) {
     throw new Error(`Cancelación de la reserva sintética ${result.booking.id} falló: ${response.status}`);
   }
 }
+await verifySearch(true);
 const requests = await Promise.allSettled(Array.from({ length: attempts }, (_, index) => reserve(tokens[index % tokens.length])));
 const outcomes = requests.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
 const created = outcomes.filter(result => result.status === 201);
@@ -55,10 +70,13 @@ try {
     throw new Error(`Resultado inesperado: ${outcomes.map(result => `${result.status}:${result.booking.code || 'OK'}`).join(', ')}. Sin respuesta: ${attempts - outcomes.length}`);
   }
   console.log(`${attempts} intentos simultáneos: una reserva creada y ${conflicts.length} conflictos.`);
+  await verifySearch(false);
+  await verifySearch(true, offset + 2);
 } finally {
   for (const result of created) await cancel(result);
 }
 const nextGuest = tokens.find(token => token !== created[0].token);
+await verifySearch(true);
 const next = await reserve(nextGuest);
 if (next.status !== 201) throw new Error(`La habitación no se pudo volver a reservar: ${next.status}`);
 await cancel(next);

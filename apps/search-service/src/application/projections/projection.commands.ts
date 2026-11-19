@@ -50,6 +50,7 @@ export function toUpsertProjectionCommand(
   return {
     ...base(event),
     kind: "UPSERT",
+    ...(event.data.rooms !== undefined ? { rooms: event.data.rooms } : {}),
     document: {
       accommodationId: event.accommodationId,
       projectionVersion,

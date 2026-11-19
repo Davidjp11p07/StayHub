@@ -108,6 +108,7 @@ export class PrismaProjectionUnitOfWorkAdapter
   ): Promise<void> {
     const document = mutation.document;
     const values = {
+      rooms: mutation.rooms?.map(room => ({ ...room })) ?? Prisma.DbNull,
       projectionVersion: document.projectionVersion,
       published: document.published,
       name: document.name,

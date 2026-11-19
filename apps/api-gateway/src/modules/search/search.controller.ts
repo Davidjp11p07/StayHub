@@ -14,7 +14,7 @@ import { Public } from '@gateway/modules/auth/public.decorator';
  */
 
 const SEARCH_PARAMETERS = [
-  'q', 'location', 'minPrice', 'maxPrice', 'currency', 'checkIn', 'checkOut', 'guests', 'amenities', 'page', 'pageSize',
+  'q', 'location', 'countryCode', 'minPrice', 'maxPrice', 'currency', 'checkIn', 'checkOut', 'guests', 'amenities', 'page', 'pageSize',
 ] as const;
 const SUGGEST_PARAMETERS = ['q', 'limit'] as const;
 const REPEATABLE = new Set<string>(['amenities']);
@@ -31,6 +31,7 @@ export class SearchController {
   @ApiOperation({ operationId: 'searchAccommodations', summary: 'Search published accommodations' })
   @ApiQuery({ name: 'q', required: false, schema: { type: 'string', maxLength: 200 } })
   @ApiQuery({ name: 'location', required: false, schema: { type: 'string', maxLength: 120 } })
+  @ApiQuery({ name: 'countryCode', required: false, schema: { type: 'string', pattern: '^[A-Za-z]{2}$' } })
   @ApiQuery({ name: 'amenities', required: false, schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true })
   @ApiResponse({ status: 200, description: 'Paginated search results.' })
   @ApiResponse({ status: 400, description: 'Invalid or unknown filters.', content: PROBLEM })

@@ -370,6 +370,8 @@ services:
     environment:
       NODE_ENV: production
       SEARCH_PORT: "3004"
+      SEARCH_BOOKINGS_BASE_URL: http://bookings-service:3005
+      SEARCH_AVAILABILITY_PRIVATE_KEY_FILE: /run/secrets/search_availability_private
       SEARCH_DATABASE_URL: ${SEARCH_DATABASE_URL:?required}
       SEARCH_REDIS_URL: ${SEARCH_REDIS_URL:?required}
       SEARCH_RABBITMQ_URL: ${SEARCH_RABBITMQ_URL:?required}
@@ -394,6 +396,7 @@ services:
       SEARCH_LOG_LEVEL: ${SEARCH_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
     networks: [search-internal, services]
+    secrets: [search_availability_private]
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -479,6 +482,7 @@ services:
       BOOKINGS_CANCELLATION_POLICY_VERSION: ${BOOKINGS_CANCELLATION_POLICY_VERSION:?required}
       BOOKINGS_CANCELLATION_POLICY_JSON: ${BOOKINGS_CANCELLATION_POLICY_JSON:?required}
       BOOKINGS_RABBITMQ_URL_FILE: /run/secrets/bookings_rabbitmq_url
+      SEARCH_AVAILABILITY_PUBLIC_KEY_FILE: /run/secrets/search_availability_public
       BOOKINGS_RABBITMQ_EXCHANGE: ${BOOKINGS_RABBITMQ_EXCHANGE:-stayhub.bookings.v1}
       BOOKINGS_RABBITMQ_PAYMENTS_EXCHANGE: ${BOOKINGS_RABBITMQ_PAYMENTS_EXCHANGE:-stayhub.payments}
       BOOKINGS_RABBITMQ_QUEUE: ${BOOKINGS_RABBITMQ_QUEUE:-stayhub.bookings.payment-events.v1}
@@ -488,7 +492,7 @@ services:
       BOOKINGS_SHUTDOWN_GRACE_MS: ${BOOKINGS_SHUTDOWN_GRACE_MS:-10000}
       BOOKINGS_LOG_LEVEL: ${BOOKINGS_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_notifications_service_token, bookings_outbound_service_tokens]
+    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_notifications_service_token, bookings_outbound_service_tokens, search_availability_public]
     networks: [bookings-internal, services]
     read_only: true
     tmpfs: [/tmp]
@@ -816,6 +820,8 @@ volumes:
   inventory_data:
 
 secrets:
+  search_availability_private: {file: ./secrets/search-availability-private.pem}
+  search_availability_public: {file: ./secrets/search-availability-public.pem}
   gateway_tls_cert:
     file: ${GATEWAY_TLS_CERT_SOURCE:-./.artifacts/gateway/tls_cert.pem}
   gateway_tls_key:

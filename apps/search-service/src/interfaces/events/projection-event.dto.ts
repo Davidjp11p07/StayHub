@@ -185,6 +185,7 @@ function validateData(value: unknown): void {
       "latitude",
       "longitude",
       "primaryPhotoUrl",
+      "rooms",
     ],
     required,
     "data",
@@ -224,6 +225,18 @@ function validateData(value: unknown): void {
     }
   }
   availability(data["availability"]);
+  if (data.rooms !== undefined) {
+    if (!Array.isArray(data.rooms)) fail("data.rooms");
+    for (const item of data.rooms) {
+      const room = object(item, "data.rooms");
+      const fields = ["roomId", "capacity", "price", "currency"];
+      exactKeys(room, fields, fields, "data.rooms");
+      if (typeof room.roomId !== "string" || !uuid.test(room.roomId)) fail("data.rooms.roomId");
+      if (typeof room.currency !== "string" || !/^[A-Z]{3}$/u.test(room.currency)) fail("data.rooms.currency");
+      integer(room.capacity, "data.rooms.capacity", 1);
+      finiteNumber(room.price, "data.rooms.price", 0);
+    }
+  }
   dateTime(data["sourceUpdatedAt"], "data.sourceUpdatedAt");
 }
 

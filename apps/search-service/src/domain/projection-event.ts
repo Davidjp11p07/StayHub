@@ -8,7 +8,15 @@ export interface AvailabilityWindowEvent {
   readonly availableCapacity: number;
 }
 
+export interface RoomOffer {
+  readonly roomId: string;
+  readonly capacity: number;
+  readonly price: number;
+  readonly currency: string;
+}
+
 export interface UpsertProjectionData {
+  readonly rooms?: readonly RoomOffer[];
   readonly published: boolean;
   readonly name: string;
   readonly description: string;

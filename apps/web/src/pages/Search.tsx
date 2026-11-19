@@ -64,13 +64,20 @@ export function Search() {
             <div role="alert" className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
               Revisa los filtros de búsqueda.
             </div>
-          ) : search.isError && !data ? (
+          ) : search.isError && (!data || filters.checkIn) ? (
             <div role="alert" className="flex flex-col items-start gap-3 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
               <p>{searchErrorMessage(search.error)}</p>
               <button type="button" onClick={() => { void search.refetch(); }} className="font-semibold underline">Reintentar</button>
             </div>
           ) : !data ? (
             <p role="status" className="text-sm text-gray-500 py-12 text-center">Buscando alojamientos…</p>
+          ) : data.items.length === 0 && data.total > 0 && page > totalPages ? (
+            <div>
+              <p>Esta página está fuera de los resultados. Hay {plural(data.total, 'alojamiento', 'alojamientos')}.</p>
+              <button type="button" onClick={() => apply({ ...filters, page: totalPages })} className="font-semibold underline">
+                Ir a la última página
+              </button>
+            </div>
           ) : data.items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Sin resultados</h3>

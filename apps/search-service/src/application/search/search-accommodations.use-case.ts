@@ -9,6 +9,7 @@ export class SearchAccommodations {
     private readonly cache: SearchCachePort,
   ) {}
   public async execute(query: SearchQuery): Promise<SearchPage> {
+    if (query.checkIn && query.checkOut) return this.index.search(query);
     const generation = await this.index.cacheGeneration();
     const key = this.cache.key(generation, query);
     const cached = await this.cache.get(key);

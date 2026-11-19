@@ -25,4 +25,25 @@ describeWithPostgres('PostgreSqlSearchIndexAdapter', () => {
   });
   it('treats injection text as a parameter', async () => { await expect(adapter.search(createSearchQuery({ q: "hotel'); DROP TABLE search_documents;--" }))).resolves.toBeDefined(); expect(await prisma.searchDocument.count()).toBe(2); });
   it('requires a projected window covering the full half-open interval', async () => { const result = await adapter.search(createSearchQuery({ checkIn: '2026-12-10', checkOut: '2026-12-15', guests: 2 })); expect(result.items).toHaveLength(1); expect(result.availabilityKind).toBe('PROJECTED'); });
+  it('matches dates, guests, currency and price on one room before paginating', async () => {
+    const cheap = { roomId: '30000000-0000-4000-8000-000000000001', capacity: 1, price: 10, currency: 'USD' };
+    const large = { roomId: '30000000-0000-4000-8000-000000000002', capacity: 4, price: 90, currency: 'USD' };
+    const where = { accommodationId: '00000000-0000-4000-8000-000000000001' };
+    await prisma.searchDocument.update({ where, data: { rooms: [cheap, large] } });
+    const available = jest.fn((ids: string[]) => Promise.resolve(ids.filter(id => id === large.roomId)));
+    const live = new PostgreSqlSearchIndexAdapter(prisma as unknown as PrismaService, { available });
+    const stay = { guests: 3, checkIn: '2026-12-10', checkOut: '2026-12-15', currency: 'USD', countryCode: 'co' };
+    try {
+      expect((await live.search(createSearchQuery({ ...stay, maxPrice: 20 }))).total).toBe(0);
+      expect((await live.search(createSearchQuery({ ...stay, countryCode: 'MX' }))).total).toBe(0);
+      const page = await live.search(createSearchQuery(stay));
+      expect(page.items).toMatchObject([{ minNightlyPrice: 90, capacity: 4, currency: 'USD' }]);
+      expect(available).toHaveBeenCalledWith([large.roomId], stay.checkIn, stay.checkOut);
+      expect(await live.search(createSearchQuery({ ...stay, page: 2, pageSize: 1 }))).toMatchObject({ total: 1, items: [] });
+      available.mockResolvedValue([]);
+      expect((await live.search(createSearchQuery(stay))).total).toBe(0);
+    } finally {
+      await prisma.$executeRaw`UPDATE search_documents SET rooms = NULL WHERE "accommodationId" = ${where.accommodationId}::uuid`;
+    }
+  });
 });

@@ -22,6 +22,11 @@ const envPath = join(root, '.env');
 const secretsDirectory = join(root, 'secrets');
 const gatewayArtifacts = join(root, '.artifacts', 'gateway');
 
+if (process.argv.includes('--search-availability-only')) {
+  mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
+  persistentRsaPair('search-availability');
+  process.exit(0);
+}
 ensureDevEnvironment({ root });
 mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
 mkdirSync(gatewayArtifacts, { recursive: true, mode: 0o700 });
@@ -119,6 +124,7 @@ const accessPublicKey = readFileSync(join(secretsDirectory, 'access-public.pem')
 const gatewayPrivateKey = readFileSync(join(secretsDirectory, 'gateway-private.pem'), 'utf8');
 const gatewayPublicKey = createPublicKey(gatewayPrivateKey).export({ type: 'spki', format: 'pem' });
 const bookingsKeys = persistentRsaPair('bookings-service');
+persistentRsaPair('search-availability');
 // Room Inventory signs its own short-lived tokens for Accommodations (secrets/room-inventory-service-*.pem).
 persistentRsaPair('room-inventory-service');
 

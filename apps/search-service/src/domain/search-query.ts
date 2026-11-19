@@ -4,6 +4,7 @@ import { normalizeTerms } from "./projection";
 export interface SearchQuery {
   readonly q?: string;
   readonly location?: string;
+  readonly countryCode?: string;
   readonly minPrice?: number;
   readonly maxPrice?: number;
   readonly currency?: string;
@@ -17,6 +18,7 @@ export interface SearchQuery {
 export interface SearchQueryInput {
   q?: string;
   location?: string;
+  countryCode?: string;
   minPrice?: number;
   maxPrice?: number;
   currency?: string;
@@ -52,6 +54,8 @@ function invalid(field: string, code: string): SearchApplicationError {
 export function createSearchQuery(input: SearchQueryInput): SearchQuery {
   const q = optionalText("q", input.q, 200);
   const location = optionalText("location", input.location, 120);
+  const countryCode = input.countryCode?.trim().toUpperCase();
+  if (countryCode !== undefined && !/^[A-Z]{2}$/u.test(countryCode)) throw invalid("countryCode", "ALPHA_2");
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 20;
   if (!Number.isSafeInteger(page) || page < 1) throw invalid("page", "MIN_1");
@@ -84,6 +88,9 @@ export function createSearchQuery(input: SearchQueryInput): SearchQuery {
     throw invalid("checkIn", "DATES_MUST_APPEAR_TOGETHER");
   if (input.checkIn && input.checkOut && input.checkOut <= input.checkIn)
     throw invalid("checkOut", "MUST_BE_AFTER_CHECK_IN");
+  for (const [field, date] of [["checkIn", input.checkIn], ["checkOut", input.checkOut]] as const) {
+    if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw invalid(field, "DATE_REQUIRED");
+  }
   if (
     input.guests !== undefined &&
     (!Number.isSafeInteger(input.guests) || input.guests < 1)
@@ -93,6 +100,7 @@ export function createSearchQuery(input: SearchQueryInput): SearchQuery {
   return Object.freeze({
     ...(q === undefined ? {} : { q }),
     ...(location === undefined ? {} : { location }),
+    ...(countryCode === undefined ? {} : { countryCode }),
     ...(input.minPrice === undefined ? {} : { minPrice: input.minPrice }),
     ...(input.maxPrice === undefined ? {} : { maxPrice: input.maxPrice }),
     ...(currency === undefined ? {} : { currency }),

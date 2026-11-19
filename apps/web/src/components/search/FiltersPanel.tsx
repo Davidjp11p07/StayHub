@@ -20,11 +20,13 @@ interface FiltersPanelProps {
 }
 
 interface Draft {
+  countryCode: string;
   location: string; checkIn: string; checkOut: string; guests: string;
   minPrice: string; maxPrice: string; currency: string; amenities: string[];
 }
 
 const toDraft = (f: SearchFilters): Draft => ({
+  countryCode: f.countryCode ?? '',
   location: f.location ?? '', checkIn: f.checkIn ?? '', checkOut: f.checkOut ?? '',
   guests: f.guests?.toString() ?? '', minPrice: f.minPrice?.toString() ?? '', maxPrice: f.maxPrice?.toString() ?? '',
   currency: f.currency ?? 'USD', amenities: f.amenities ?? [],
@@ -35,13 +37,14 @@ const num = (v: string) => (v.trim() === '' ? undefined : Number(v));
 function fromDraft(base: SearchFilters, d: Draft): SearchFilters {
   return {
     q: base.q, pageSize: base.pageSize,
+    countryCode: d.countryCode,
     location: d.location, checkIn: d.checkIn, checkOut: d.checkOut, guests: num(d.guests),
     minPrice: num(d.minPrice), maxPrice: num(d.maxPrice), currency: d.currency, amenities: d.amenities,
   };
 }
 
 export function countAdvancedFilters(f: SearchFilters): number {
-  return [f.location, f.checkIn || f.checkOut, f.guests, f.minPrice !== undefined || f.maxPrice !== undefined].filter(Boolean).length
+  return [f.location, f.countryCode, f.checkIn || f.checkOut, f.guests, f.minPrice !== undefined || f.maxPrice !== undefined].filter(Boolean).length
     + (f.amenities?.length ?? 0);
 }
 
@@ -120,6 +123,11 @@ export function FiltersPanel({ filters, onKeywordsChange, onApply, suggestions, 
               <label htmlFor={`${id}-location`} className="text-xs font-semibold text-gray-600">Ubicación</label>
               <input id={`${id}-location`} value={draft.location} onChange={set('location')} placeholder="Ciudad, región o país" className={inputClass(!!shown.location)} {...field('location')} />
               {fieldError('location')}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={`${id}-countryCode`} className="text-xs font-semibold text-gray-600">País (dos letras)</label>
+              <input id={`${id}-countryCode`} value={draft.countryCode} onChange={set('countryCode')} maxLength={2} placeholder="Ej. CO" className={inputClass(!!shown.countryCode)} {...field('countryCode')} />
+              {fieldError('countryCode')}
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor={`${id}-checkIn`} className="text-xs font-semibold text-gray-600">Entrada</label>

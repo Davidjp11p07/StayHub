@@ -5,6 +5,7 @@ import { PrismaService } from '@bookings/infrastructure/persistence/prisma/prism
 import { PrismaPaymentResultUnitOfWork } from '@bookings/infrastructure/persistence/prisma/payment-result.unit-of-work';
 import { PrismaRefundResultUnitOfWork } from '@bookings/infrastructure/persistence/prisma/refund-result.unit-of-work';
 import { PaymentHoldExpiryRepository } from '@bookings/infrastructure/persistence/prisma/payment-hold-expiry.repository';
+import { SearchAvailabilityController } from '@bookings/interfaces/http/internal/search-availability.controller';
 
 describe('payment worker', () => {
   it('marks a successful order', async () => {
@@ -155,6 +156,9 @@ describeDb('payment result and expiration saga', () => {
   it('releases the same room and dates only after the expiry worker persists EXPIRED', async () => {
     const hold = await create('PENDING_PAYMENT', 'PENDING', new Date(Date.now() - 60_000));
     const original = await prisma.booking.findUniqueOrThrow({ where: { id: hold.id } });
+    const occupancy = new SearchAvailabilityController(prisma);
+    const query = { roomIds: [original.roomId], checkIn: '2032-01-01', checkOut: '2032-01-02' };
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [] });
     const replacementId = randomUUID();
     bookingIds.push(replacementId);
     const replacement = {
@@ -166,7 +170,9 @@ describeDb('payment result and expiration saga', () => {
     await expect(prisma.booking.findUniqueOrThrow({ where: { id: hold.id } })).resolves.toMatchObject({
       status: 'EXPIRED', holdExpiresAt: null,
     });
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [original.roomId] });
     await expect(prisma.booking.create({ data: replacement })).resolves.toMatchObject({ id: replacementId });
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [] });
   });
 
   it('applies partial and total refunds without reactivating inventory', async () => {

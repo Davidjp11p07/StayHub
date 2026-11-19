@@ -204,6 +204,7 @@ export interface SearchResponse extends Page<SearchResult> {
 
 /** Query filters for `GET /search`. All filters combine with AND. */
 export interface SearchFilters {
+  countryCode?: string;
   q?: string;
   location?: string;
   minPrice?: number;

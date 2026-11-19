@@ -56,6 +56,7 @@ export function SearchApiDocs(): MethodDecorator & ClassDecorator {
     }),
     ApiQuery({ name: 'q', required: false, schema: { type: 'string', minLength: 1, maxLength: 200 } }),
     ApiQuery({ name: 'location', required: false, schema: { type: 'string', minLength: 1, maxLength: 120 } }),
+    ApiQuery({ name: 'countryCode', required: false, schema: { type: 'string', pattern: '^[A-Za-z]{2}$' } }),
     ApiQuery({ name: 'minPrice', required: false, schema: { type: 'number', minimum: 0 } }),
     ApiQuery({ name: 'maxPrice', required: false, schema: { type: 'number', minimum: 0 } }),
     ApiQuery({ name: 'currency', required: false, schema: { type: 'string', pattern: '^[A-Z]{3}$' } }),

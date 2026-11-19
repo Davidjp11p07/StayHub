@@ -163,6 +163,7 @@ const searchHandler = http.get(`${API}/search`, ({ request }) => {
   const params = new URL(request.url).searchParams;
   const q = params.get('q')?.trim() || undefined;
   const location = params.get('location')?.trim() || undefined;
+  const countryCode = params.get('countryCode')?.toUpperCase();
   const currency = params.get('currency') ?? undefined;
   const minPrice = params.has('minPrice') ? Number(params.get('minPrice')) : undefined;
   const maxPrice = params.has('maxPrice') ? Number(params.get('maxPrice')) : undefined;
@@ -188,6 +189,7 @@ const searchHandler = http.get(`${API}/search`, ({ request }) => {
 
   const results = db.properties
     .filter((p) => p.status === 'PUBLISHED')
+    .filter((p) => !countryCode || p.location.country === countryCode)
     .map((p) => toSearchResult(p, q ? relevance(p, q) : 0))
     .filter((r) => !q || r.relevance > 0)
     .filter((r) => !location || fold(r.location).includes(fold(location)))
