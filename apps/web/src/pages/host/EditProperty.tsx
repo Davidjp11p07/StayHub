@@ -247,6 +247,7 @@ export function EditProperty() {
             </Button>
           </div>
         </form>
+        <section className="mt-8"><h2 className="text-xl font-semibold">Inventario por habitación</h2>{property.rooms.map(room => <p key={room.id} className="mt-2"><a className="underline" href={`/host/inventory/${encodeURIComponent(room.id)}`}>Gestionar inventario de {room.name}</a></p>)}</section>
       </main>
     </div>
   );

@@ -39,6 +39,7 @@ export function Booking() {
   const [errors, setErrors] = useState<string[]>([]);
   const [general, setGeneral] = useState<string>();
   const submitting = useRef(false);
+  const attempt = useRef<{ payload: string; key: string }>();
   const alertRef = useRef<HTMLDivElement>(null);
 
   if (query.isPending) {
@@ -76,9 +77,12 @@ export function Booking() {
     if (found.length) { requestAnimationFrame(() => alertRef.current?.focus()); return; }
 
     submitting.current = true;
-    const idempotencyKey = newIdempotencyKey();
+    const input = { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests };
+    const payload = JSON.stringify(input);
+    if (!attempt.current || attempt.current.payload !== payload) attempt.current = { payload, key: newIdempotencyKey() };
+    const idempotencyKey = attempt.current.key;
     createMutation.mutate(
-      { input: { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests }, idempotencyKey },
+      { input, idempotencyKey },
       {
         onSuccess: (booking) => {
           setDraft({

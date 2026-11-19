@@ -63,17 +63,20 @@ export function Payment() {
   }
 
   const booking = query.data;
-  const alreadyPaid = booking.status === 'CONFIRMED' || booking.paymentStatus === 'CAPTURED';
+  const alreadyPaid = booking.status === 'CONFIRMED';
 
   const pay = () => {
     if (submitting.current) return;
     submitting.current = true;
     setPhase('processing');
     void simulateCharge({ amountMinor: toMinorUnits(booking.total.amount), currency: booking.total.currency, token })
-      .then((charge) => {
+      .then(async (charge) => {
         setResult(charge);
+        if (charge.status === 'APPROVED') {
+          const latest = await query.refetch();
+          if (latest.data?.status === 'CONFIRMED') clearDraft();
+        }
         setPhase(charge.status === 'APPROVED' ? 'paid' : 'failed');
-        if (charge.status === 'APPROVED') clearDraft();
       })
       .finally(() => {
         submitting.current = false;

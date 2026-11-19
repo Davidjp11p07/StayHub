@@ -160,6 +160,20 @@ describe('Booking flow — confirmation', () => {
     expect(screen.getByLabelText('ENTRADA')).toHaveValue('2027-04-01');
   });
 
+  it('reuses the idempotency key when retrying the same reservation', async () => {
+    const keys: Array<string | null> = [];
+    server.use(mock.post('*/api/v1/bookings', ({ request }) => { keys.push(request.headers.get('idempotency-key')); return problem(503, 'UNAVAILABLE'); }));
+    renderBooking();
+    await screen.findByRole('heading', { name: /Casa Azul/ });
+    fill('ENTRADA', '2027-04-01'); fill('SALIDA', '2027-04-03');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
+    await screen.findByText('No pudimos completar la reserva. Intenta nuevamente.');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+  });
+
   it('redirects to login on 401, keeping the destination', async () => {
     token = undefined; // guest in context, but the request carries no bearer → server 401
     renderBooking();

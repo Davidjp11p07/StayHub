@@ -102,6 +102,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                     <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.name}</p>
                     <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
                   </div>
+                  <a href="/profile" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</a>
                   <button
                     onClick={() => { setMenuOpen(false); onNavigate('bookings'); }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"

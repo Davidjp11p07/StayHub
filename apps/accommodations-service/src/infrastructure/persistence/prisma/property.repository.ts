@@ -71,6 +71,11 @@ function translate(error: unknown): never {
 export class PrismaPropertyRepository implements PropertyRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findByOwner(ownerId: string): Promise<Property[]> {
+    const rows = await this.prisma.property.findMany({ where: { ownerId }, include, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+    return rows.map(toDomain);
+  }
+
   async create(property: NewProperty): Promise<Property> {
     return this.prisma.$transaction(async (tx) => {
       await assertKnownFeatures(tx, property.featureCodes);

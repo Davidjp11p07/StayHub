@@ -1,4 +1,7 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Put, Res, ServiceUnavailableException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import type { Response } from 'express';
+import { STORAGE_PORT } from '@accommodations/application/ports/storage.port';
+import { LocalStorageAdapter } from '@accommodations/infrastructure/files/local-storage.adapter';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { PROPERTY_CREATE_BODY, PROPERTY_PHOTO_BODY, PROPERTY_REPLACE_BODY } from '@accommodations/interfaces/openapi/property-bodies';
 import { AddPropertyPhotoUseCase } from '@accommodations/application/photos/add-property-photo.use-case';
@@ -17,6 +20,7 @@ import { parsePhotoFile } from './photo-upload.dto';
 import { PhotoUploadInterceptor } from './photo-upload.interceptor';
 import { parseReplaceProperty } from './replace-property.dto';
 import { presentPhoto, presentProperty, type PhotoView, type PropertyView } from './property.presenter';
+import { PrismaPropertyRepository } from '@accommodations/infrastructure/persistence/prisma/property.repository';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -26,7 +30,35 @@ export class PropertiesController {
     private readonly getProperty: GetPropertyUseCase,
     private readonly replaceProperty: ReplacePropertyUseCase,
     private readonly addPropertyPhoto: AddPropertyPhotoUseCase,
+    private readonly properties: PrismaPropertyRepository,
+    @Inject(STORAGE_PORT) private readonly storage: LocalStorageAdapter,
   ) {}
+
+  @Get(':id/photos/:photoId')
+  @UseGuards(OptionalJwtGuard)
+  async getPhoto(@CurrentPrincipal() viewer: Principal | undefined, @Param('id') id: string, @Param('photoId') photoId: string, @Res() response: Response): Promise<void> {
+    const property = await this.getProperty.execute(parseUuid(id, 'id'), viewer);
+    const photo = property.photos.find(item => item.id === parseUuid(photoId, 'photoId'));
+    if (!photo) throw new NotFoundException();
+    let bytes: Uint8Array;
+    try { bytes = await this.storage.read(photo.storageKey); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new NotFoundException();
+      throw new ServiceUnavailableException();
+    }
+    response.setHeader('Content-Type', photo.mediaType);
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.end(Buffer.from(bytes));
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER')
+  @ApiBearerAuth('bearerAuth')
+  async listMine(@CurrentPrincipal() principal: Principal): Promise<PropertyView[]> {
+    const properties = await this.properties.findByOwner(principal.sub);
+    return properties.map(property => presentProperty(property, principal));
+  }
 
   @Post()
   @HttpCode(201)

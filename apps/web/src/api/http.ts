@@ -1,6 +1,8 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { ApiError, type Problem } from './identity';
 import { session } from './session';
+import { API_BASE_URL } from './base-url';
+export { API_BASE_URL, resolveBaseUrl } from './base-url';
 
 /** What the HTTP client needs from the session. The token is read per request, never stored here. */
 export interface BearerSource {
@@ -11,17 +13,9 @@ export interface BearerSource {
 
 type TrackedConfig = InternalAxiosRequestConfig & { stayhubBearer?: string; stayhubRetried?: boolean };
 
-const DEFAULT_BASE_URL = '/api/v1';
 const TIMEOUT_MS = 15_000;
 
 /** Normalizes `VITE_API_BASE_URL`; the Vite dev proxy forwards the default `/api/v1` to the Gateway. */
-export function resolveBaseUrl(raw: string | undefined): string {
-  const value = raw?.trim();
-  return (value ? value : DEFAULT_BASE_URL).replace(/\/+$/, '');
-}
-
-export const API_BASE_URL = resolveBaseUrl(import.meta.env.VITE_API_BASE_URL);
-
 export function parseRetryAfter(raw: string | null | undefined, now = Date.now()): number | undefined {
   if (!raw) return undefined;
   const seconds = /^\d+$/.test(raw) ? Number(raw) : Math.ceil((Date.parse(raw) - now) / 1000);

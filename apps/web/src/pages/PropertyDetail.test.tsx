@@ -17,8 +17,6 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ ...auth, logout: vi
 beforeEach(() => { auth.currentUser = null; localStorage.removeItem('stayhub_bookings'); });
 afterEach(() => vi.restoreAllMocks());
 
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().split('T')[0]!;
-
 function renderDetail(propertyId: string, props: Partial<{ pendingBooking: PendingBookingData; onBookingRequired: () => void; onBookingConfirmed: () => void }> = {}) {
   const onBookingRequired = props.onBookingRequired ?? vi.fn();
   const onBookingConfirmed = props.onBookingConfirmed ?? vi.fn();
@@ -113,36 +111,13 @@ describe('PropertyDetail', () => {
     expect(await screen.findByText('Este alojamiento aún no tiene reseñas.')).toBeInTheDocument();
   });
 
-  it('asks anonymous visitors to sign in with the selected room, dates and real price', async () => {
-    const { onBookingRequired } = renderDetail(PROPERTY_IDS.villa);
-    await screen.findByRole('heading', { level: 1 });
-    fireEvent.change(screen.getByLabelText('HABITACIÓN'), { target: { value: mockDb.property(PROPERTY_IDS.villa)!.rooms[1]!.id } });
-    fireEvent.change(screen.getByLabelText('ENTRADA'), { target: { value: day(10) } });
-    fireEvent.change(screen.getByLabelText('SALIDA'), { target: { value: day(12) } });
-    fireEvent.click(screen.getByRole('button', { name: /Inicia sesión para reservar/ }));
-    expect(onBookingRequired).toHaveBeenCalledWith(expect.objectContaining({
-      roomId: mockDb.property(PROPERTY_IDS.villa)!.rooms[1]!.id, nights: 2, pricePerNight: 260, accommodationFee: 520, serviceFee: 52, totalPrice: 572,
-    }));
-  });
-
-  it('validates booking dates', async () => {
+  it('routes booking to the server-backed booking flow', async () => {
     renderDetail(PROPERTY_IDS.villa);
     await screen.findByRole('heading', { level: 1 });
-    fireEvent.click(screen.getByRole('button', { name: /reservar/ }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Selecciona la fecha de entrada');
+    expect(screen.getByRole('link', { name: 'Continuar a reservar' })).toHaveAttribute('href', `/property/${PROPERTY_IDS.villa}/book`);
+    expect(localStorage.getItem('stayhub_bookings')).toBeNull();
   });
 
-  it('restores a pending booking after login and confirms it', async () => {
-    auth.currentUser = { id: GUEST_ID, role: 'GUEST', name: 'Ana' };
-    const roomId = mockDb.property(PROPERTY_IDS.casaAzul)!.rooms[0]!.id;
-    const pendingBooking: PendingBookingData = { roomId, checkIn: day(20), checkOut: day(23), guests: 2, nights: 3, pricePerNight: 145, accommodationFee: 435, cleaningFee: 0, serviceFee: 43.5, totalPrice: 478.5 };
-    const { onBookingConfirmed } = renderDetail(PROPERTY_IDS.casaAzul, { pendingBooking });
-    expect(await screen.findByRole('heading', { name: 'Confirma tu reserva' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
-    expect(onBookingConfirmed).toHaveBeenCalled();
-    expect(screen.getByText('¡Reserva confirmada!')).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('stayhub_bookings')!)).toEqual([expect.objectContaining({ roomId, userId: GUEST_ID, totalPrice: 478.5 })]);
-  });
 });
 
 describe('PropertyDetail reviews (FE-038)', () => {

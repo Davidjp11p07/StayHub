@@ -34,7 +34,7 @@ En esa copia local también se probó `qwen3.5:4b`: el puente temporal desactiva
 
 La ventana convierte entre COP, USD, EUR y GBP con las tasas fijas proporcionadas para esta prueba: 1 USD = 3300 COP, 1 EUR = 3626 COP y 1 GBP = 4353 COP. Son referencias manuales, no tasas en tiempo real. El cálculo se hace en la interfaz y rechaza monedas no admitidas; la detección de frases no cubre necesariamente todas las formas de preguntar ni el acceso directo al endpoint.
 
-Las consultas privadas se reconocen en la ventana por expresiones como «mi reserva» o por un identificador UUID. Indica el identificador para consultar una reserva; no hay listado de reservas de huésped en el chat. Al cambiar o cerrar la sesión se limpia la conversación. La búsqueda vacía describe únicamente los resultados disponibles en ese momento, ya que el índice puede tardar en actualizarse.
+Las consultas privadas se reconocen en la ventana por expresiones como «mi reserva» o por un identificador UUID. Con sesión de huésped, «mis reservas» muestra hasta cinco reservas recientes; indica su identificador para consultar fechas y pago. Al cambiar o cerrar la sesión se limpia la conversación. La búsqueda vacía describe únicamente los resultados disponibles en ese momento, ya que el índice puede tardar en actualizarse.
 
 ## Explicación de resultados
 

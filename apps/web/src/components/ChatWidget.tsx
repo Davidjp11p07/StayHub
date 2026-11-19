@@ -8,6 +8,7 @@ type Message = { role: 'user' | 'assistant'; text: string; private?: boolean };
 const BOOKING_ID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 const PRIVATE_BOOKING = /\b(?:mi|mis|mía|mio|propia|personal)\b.*\b(?:reserva|reservas|pago|pagos)\b|\b(?:reserva|reservas|pago|pagos)\b.*\b(?:mi|mis|mía|mio|personal)\b/i;
 type Booking = { propertyName: string; checkIn: string; checkOut: string; status: string; paymentStatus: string; total: { amount: string; currency: string } };
+type BookingSummary = { id: string; propertyName: string; checkIn: string; checkOut: string; status: string };
 const BOOKING_STATUS: Record<string, string> = {
   PENDING_PAYMENT: 'La reserva está pendiente de pago.', CONFIRMED: 'La reserva está confirmada.',
   CHECKED_IN: 'El check-in está registrado.', COMPLETED: 'La estancia está completada.',
@@ -82,9 +83,16 @@ export function ChatWidget() {
       setError(''); setInput(''); failedMessage.current = null;
       setMessages(current => [...current, { role: 'user', text, private: true }]);
       if (!session.accessToken()) { setMessages(current => [...current, { role: 'assistant', text: 'Inicia sesión para consultar tu reserva y su estado de pago.', private: true }]); return; }
-      if (!bookingId) { setMessages(current => [...current, { role: 'assistant', text: 'Indica el identificador de la reserva para consultar sus fechas y estado.', private: true }]); return; }
       const controller = new AbortController(); activeRequest.current = controller; setBusy(true);
       try {
+        if (!bookingId) {
+          const { data } = await http.get<{ items: BookingSummary[]; hasNext: boolean }>('/bookings', { params: { pageSize: 5 }, signal: controller.signal });
+          if (activeRequest.current !== controller) return;
+          const lines = data.items.map(item => `• ${item.propertyName}: ${item.checkIn} a ${item.checkOut}; ${item.status}. ID: ${item.id}`);
+          const reply = lines.length ? `Estas son tus reservas más recientes:\n${lines.join('\n')}\nIndica el ID para consultar su pago y más detalles.${data.hasNext ? ' Hay más reservas en Mis reservas.' : ''}` : 'No tienes reservas en este momento.';
+          setMessages(current => [...current, { role: 'assistant', text: reply, private: true }]);
+          return;
+        }
         const { data } = await http.get<Booking>(`/bookings/${bookingId}`, { signal: controller.signal });
         if (activeRequest.current !== controller) return;
         const bookingMeaning = BOOKING_STATUS[data.status] ?? 'No hay una descripción disponible para este estado.';

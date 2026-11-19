@@ -74,6 +74,14 @@ export class AccommodationsClient {
     return this.call(context, 'GET', propertyPath(propertyId));
   }
 
+  public getPhoto(propertyId: string, photoId: string, context: AccommodationsRequestContext): Promise<ServiceResult> {
+    return this.bearerStore.run(context.bearer ?? '', async () => {
+      const result = await this.base.request({ method: 'GET', path: `${propertyPath(propertyId)}/photos/${encodeURIComponent(photoId)}`, traceId: context.traceId });
+      if (result.status >= 400) throw toRemoteHttpException(result);
+      return result;
+    });
+  }
+
   public createProperty(body: unknown, context: AccommodationsRequestContext): Promise<unknown> {
     return this.call(context, 'POST', '/properties', jsonBody(body));
   }

@@ -15,11 +15,12 @@ import { PropertiesController } from '@accommodations/interfaces/http/properties
 import { BookingQuoteController } from '@accommodations/interfaces/http/internal/booking-quote.controller';
 import { InventoryContextController } from '@accommodations/interfaces/http/internal/inventory-context.controller';
 import { AuthModule } from '../auth/auth.module';
+import { PrismaPropertyRepository } from '@accommodations/infrastructure/persistence/prisma/property.repository';
 
 @Module({
   imports: [AuthModule],
   controllers: [ReportSupplyController, PropertiesController, BookingQuoteController, InventoryContextController],
-  providers: [ReportsSupplyGuard, ReportsSupplyQuery,
+  providers: [ReportsSupplyGuard, ReportsSupplyQuery, PrismaPropertyRepository,
     { provide: STORAGE_PORT, useFactory: (config: AccommodationsConfig): StoragePort => new LocalStorageAdapter(config.photoStorageRoot), inject: [ACCOMMODATIONS_CONFIG] },
     { provide: CreatePropertyUseCase, useFactory: (properties: PropertyRepository): CreatePropertyUseCase => new CreatePropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     { provide: GetPropertyUseCase, useFactory: (properties: PropertyRepository): GetPropertyUseCase => new GetPropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },

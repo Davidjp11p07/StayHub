@@ -116,4 +116,17 @@ describe('ChatWidget', () => {
     expect(fetchMock.mock.calls[0][1].body).not.toContain('794e39f7');
   });
 
+  it('lists only the authenticated user’s bookings without sending them to the model', async () => {
+    vi.spyOn(session, 'accessToken').mockReturnValue('token');
+    const get = vi.spyOn(http, 'get').mockResolvedValue({ data: { items: [{ id: 'booking-id', propertyName: 'Casa privada', checkIn: '2027-01-01', checkOut: '2027-01-03', status: 'CONFIRMED' }], hasNext: false } });
+    const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock);
+    render(<ChatWidget />);
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir asistente' }));
+    fireEvent.change(screen.getByLabelText('Tu pregunta'), { target: { value: 'Mis reservas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText(/Casa privada/)).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/bookings', expect.objectContaining({ params: { pageSize: 5 } }));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
 });

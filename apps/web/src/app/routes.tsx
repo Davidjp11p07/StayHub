@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Home } from '../pages/Home';
 import { Login } from '../pages/Login';
@@ -12,6 +12,8 @@ import { ReviewProperty } from '../pages/booking/ReviewProperty';
 import { PropertyDetail } from '../pages/PropertyDetail';
 import { Register } from '../pages/Register';
 import { Search } from '../pages/Search';
+import { Profile } from '../pages/Profile';
+import { Inventory } from '../pages/host/Inventory';
 import { EditProperty } from '../pages/host/EditProperty';
 import { BookingsReceived } from '../pages/host/BookingsReceived';
 import { HostHome } from '../pages/host/HostHome';
@@ -129,6 +131,7 @@ export const appRoutes: RouteObject[] = [
       { path: paths.login, element: <LoginRoute /> },
       { path: paths.register, element: <RegisterRoute /> },
       { path: paths.search, element: <Search /> },
+      { path: '/profile', element: <Profile /> },
       { path: '/property/:id', element: <PropertyDetailRoute /> },
       // Guest (the page itself prompts anonymous visitors to sign in)
       { path: paths.bookings, element: <MyBookingsRoute /> },
@@ -170,7 +173,8 @@ export const appRoutes: RouteObject[] = [
       { path: paths.hostNew, element: <RequireRole role="OWNER"><PublishProperty /></RequireRole> },
       { path: paths.hostProperties, element: <RequireRole role="OWNER"><MyProperties /></RequireRole> },
       { path: '/host/properties/:id/edit', element: <RequireRole role="OWNER"><EditProperty /></RequireRole> },
-      { path: '*', element: <Navigate to={paths.home} replace /> },
+      { path: '/host/inventory/:roomId', element: <RequireRole role="OWNER"><Inventory /></RequireRole> },
+      { path: '*', element: <main className="p-8"><h1>Página no encontrada</h1><p>No encontramos la página solicitada.</p><a href={paths.home}>Volver al inicio</a></main> },
     ],
   },
 ];

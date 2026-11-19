@@ -10,10 +10,11 @@ import {
   Post,
   Put,
   Req,
+  Res,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 import {
   AccommodationsClient,
@@ -61,6 +62,24 @@ type MultipartRequest = Request & { file?: MulterFile };
 @Controller('properties')
 export class AccommodationsController {
   public constructor(private readonly accommodations: AccommodationsClient) {}
+
+  @Get()
+  @Roles('OWNER')
+  public listMine(@Req() request: Request): Promise<unknown> {
+    if (request.query['mine'] !== 'true' || Object.keys(request.query).length !== 1) throw new BadRequestException({ code: 'INVALID_QUERY_PARAMETER' });
+    return this.accommodations.request('GET', '/properties?mine=true', contextOf(request));
+  }
+
+  @Get(':propertyId/photos/:photoId')
+  @OptionalAuth()
+  public async getPhoto(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const photoId = request.params['photoId'] ?? '';
+    if (!UUID_PATTERN.test(photoId)) throw new BadRequestException({ code: 'VALIDATION_ERROR' });
+    const result = await this.accommodations.getPhoto(propertyIdOf(request), photoId, contextOf(request));
+    response.setHeader('Content-Type', result.headers['content-type'] ?? 'application/octet-stream');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.end(Buffer.from(result.body));
+  }
 
   @Post()
   @HttpCode(201)
