@@ -114,6 +114,9 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                     </svg>
                     Mis reservas
                   </button>
+                  {(currentUser.role === 'OWNER' || currentUser.role === 'ADMIN') && (
+                    <a href={currentUser.role === 'ADMIN' ? '/admin/reports' : '/host/reports'} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Reportes</a>
+                  )}
                   {currentUser.role === 'OWNER' && (
                     <>
                       <button

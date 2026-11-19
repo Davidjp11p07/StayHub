@@ -53,6 +53,9 @@ export interface GatewayConfig {
   readonly bookingsBaseUrl: string;
   readonly accommodationsBaseUrl: string;
   readonly searchBaseUrl: string;
+  readonly reportsBaseUrl?: string;
+  readonly reportsServiceJwt?: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
+  readonly reports?: CircuitPolicy;
   readonly userJwt: UserJwtConfig;
   readonly serviceJwt: ServiceJwtConfig;
   readonly reviewsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
@@ -109,6 +112,9 @@ export function loadGatewayConfig(
     bookingsBaseUrl: url(environment, 'GATEWAY_BOOKINGS_BASE_URL', ['http:', 'https:']),
     accommodationsBaseUrl: url(environment, 'GATEWAY_ACCOMMODATIONS_BASE_URL', ['http:', 'https:']),
     searchBaseUrl: url(environment, 'GATEWAY_SEARCH_BASE_URL', ['http:', 'https:']),
+    reportsBaseUrl: environment.GATEWAY_REPORTS_BASE_URL ? url(environment, 'GATEWAY_REPORTS_BASE_URL', ['http:', 'https:']) : 'http://reports-service:3011',
+    reportsServiceJwt: {audience: optional(environment, 'GATEWAY_REPORTS_SERVICE_AUDIENCE', 'stayhub-reports-service'), scope: 'reports:read'},
+    reports: {timeoutMs:15000,failureThreshold:5,resetMs:30000},
     userJwt: {
       publicKeys: publicKeys(environment, 'GATEWAY_JWT_PUBLIC_KEYS_JSON'),
       issuer: required(environment, 'GATEWAY_JWT_ISSUER'),

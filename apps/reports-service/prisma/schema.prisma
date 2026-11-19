@@ -1,0 +1,16 @@
+generator client {
+ provider = "prisma-client-js"
+ output = "../src/infrastructure/persistence/generated/client"
+ binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+datasource db {
+ provider = "postgresql"
+ url = env("REPORTS_DATABASE_URL")
+}
+model ReportSnapshot {
+ key String @id @db.Char(64)
+ ownerId String @db.Uuid
+ payload Json @db.JsonB
+ generatedAt DateTime @db.Timestamptz(6)
+ @@index([ownerId, generatedAt])
+}

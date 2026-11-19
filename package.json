@@ -150,7 +150,22 @@
     "dev:services:down": "docker compose -f docker-compose.services.yml down",
     "test:services:smoke": "node scripts/services-smoke.mjs",
     "test:unir:e2e": "node scripts/unir-e2e.mjs",
-    "token:services": "node scripts/services-dev-token.mjs"
+    "token:services": "node scripts/services-dev-token.mjs",
+    "build:reports": "npm --prefix apps/reports-service run build",
+    "lint:reports": "npm --prefix apps/reports-service run lint",
+    "typecheck:reports": "npm --prefix apps/reports-service run typecheck",
+    "test:reports": "npm --prefix apps/reports-service test",
+    "test:reports:coverage": "npm --prefix apps/reports-service run test:coverage",
+    "prisma:reports:generate": "npm --prefix apps/reports-service run prisma:generate",
+    "openapi:reports:check": "npm --prefix apps/reports-service run openapi:validate",
+    "env:reports:demo": "node scripts/reports-demo-env.mjs",
+    "env:reports:live": "node scripts/reports-live-env.mjs",
+    "dev:reports:demo:up": "npm run env:reports:demo && docker compose -f docker-compose.reports.yml up -d --build --wait",
+    "dev:reports:demo:down": "docker compose -f docker-compose.reports.yml down",
+    "seed:reports:demo": "node scripts/reports-demo-seed.mjs",
+    "token:reports:demo": "node scripts/reports-demo-token.mjs",
+    "test:reports:smoke": "node scripts/reports-smoke.mjs",
+    "dev:reports:up": "npm run env:reports:live && docker compose -f docker-compose.yml -f docker-compose.reports.integration.yml up -d --build --wait"
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^5.2.0",

@@ -1,0 +1,55 @@
+# Add Reports to the existing stack: docker compose -f docker-compose.yml -f docker-compose.reports.integration.yml up -d --build
+services:
+  reports-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-live/reports-db.env
+    networks: [reports-internal]
+    volumes: [reports_data:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_reports -d reports_db'], interval: 5s, timeout: 3s, retries: 20}
+  reports-migrate:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: migration}
+    env_file: .artifacts/reports-live/reports.env
+    networks: [reports-internal]
+    depends_on: {reports-db: {condition: service_healthy}}
+    restart: 'no'
+  reports-service:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-live/reports.env
+    secrets: [reports_user_public, reports_gateway_public, reports_source_private]
+    networks: [reports-internal, services]
+    ports: ['127.0.0.1:3011:3011']
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    depends_on:
+      reports-migrate: {condition: service_completed_successfully}
+      bookings-service: {condition: service_healthy}
+      payments-service: {condition: service_healthy}
+      accommodations-service: {condition: service_healthy}
+  bookings-service:
+    environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
+    secrets: [reports_source_public]
+  payments-service:
+    environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
+    secrets: [reports_source_public]
+  accommodations-service:
+    environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
+    secrets: [reports_source_public]
+  api-gateway:
+    environment:
+      GATEWAY_REPORTS_BASE_URL: http://reports-service:3011
+      GATEWAY_REPORTS_SERVICE_AUDIENCE: stayhub-reports-service
+    depends_on: {reports-service: {condition: service_healthy}}
+networks: {reports-internal: {}}
+volumes: {reports_data: {}}
+secrets:
+  reports_user_public: {file: .artifacts/reports-live/user-public.pem}
+  reports_gateway_public: {file: .artifacts/reports-live/gateway-public.pem}
+  reports_source_private: {file: .artifacts/reports-live/source-private.pem}
+  reports_source_public: {file: .artifacts/reports-live/source-public.pem}

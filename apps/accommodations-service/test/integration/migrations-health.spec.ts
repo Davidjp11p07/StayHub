@@ -17,7 +17,7 @@ describe('ACC-010/012 migrations, readiness and database constraints', () => {
   it('applies exactly the versioned migrations required by readiness', async () => {
     const rows = await h.db.$queryRaw<{ migration_name: string }[]>`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY migration_name`;
     expect(rows.map((row) => row.migration_name)).toEqual([...REQUIRED_MIGRATIONS]);
-    expect(REQUIRED_MIGRATIONS).toEqual(['202611040001_create_accommodations', '202611040002_seed_feature_catalog']);
+    expect(REQUIRED_MIGRATIONS).toEqual(['202611040001_create_accommodations', '202611040002_seed_feature_catalog', '202611150001_report_supply']);
   });
 
   it('readiness requires every migration to be applied', async () => {

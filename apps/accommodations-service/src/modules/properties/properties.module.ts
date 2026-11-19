@@ -1,4 +1,6 @@
+import { ReportsSupplyQuery } from '@accommodations/infrastructure/persistence/prisma/reports-supply.query';
 import { Module } from '@nestjs/common';
+import { ReportSupplyController, ReportsSupplyGuard } from '@accommodations/interfaces/http/internal/report-supply.controller';
 import { PROPERTY_REPOSITORY, type PropertyRepository } from '@accommodations/application/ports/property.repository';
 import { STORAGE_PORT, type StoragePort } from '@accommodations/application/ports/storage.port';
 import { AddPropertyPhotoUseCase } from '@accommodations/application/photos/add-property-photo.use-case';
@@ -14,8 +16,8 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [AuthModule],
-  controllers: [PropertiesController, BookingQuoteController],
-  providers: [
+  controllers: [ReportSupplyController, PropertiesController, BookingQuoteController],
+  providers: [ReportsSupplyGuard, ReportsSupplyQuery,
     { provide: STORAGE_PORT, useFactory: (config: AccommodationsConfig): StoragePort => new LocalStorageAdapter(config.photoStorageRoot), inject: [ACCOMMODATIONS_CONFIG] },
     { provide: CreatePropertyUseCase, useFactory: (properties: PropertyRepository): CreatePropertyUseCase => new CreatePropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     { provide: GetPropertyUseCase, useFactory: (properties: PropertyRepository): GetPropertyUseCase => new GetPropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },

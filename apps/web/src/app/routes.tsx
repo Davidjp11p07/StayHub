@@ -15,6 +15,7 @@ import { Search } from '../pages/Search';
 import { EditProperty } from '../pages/host/EditProperty';
 import { BookingsReceived } from '../pages/host/BookingsReceived';
 import { HostHome } from '../pages/host/HostHome';
+import { Reports } from '../pages/host/Reports';
 import { MyProperties } from '../pages/host/MyProperties';
 import { PublishProperty } from '../pages/host/PublishProperty';
 import type { PendingBookingData } from '../types';
@@ -162,6 +163,8 @@ export const appRoutes: RouteObject[] = [
         ),
       },
       // Owner
+      { path: '/host/reports', element: <RequireRole role="OWNER"><Reports /></RequireRole> },
+      { path: '/admin/reports', element: <RequireRole role="ADMIN"><Reports /></RequireRole> },
       { path: paths.host, element: <RequireRole role="OWNER"><HostHome /></RequireRole> },
       { path: paths.hostBookings, element: <RequireRole role="OWNER"><BookingsReceived /></RequireRole> },
       { path: paths.hostNew, element: <RequireRole role="OWNER"><PublishProperty /></RequireRole> },
