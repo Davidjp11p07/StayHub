@@ -17,10 +17,10 @@
     "node": ">=20 <21"
   },
   "scripts": {
-    "build": "npm run build:gateway && npm run build:auth && npm run build:users && npm run build:search && npm run build:bookings && npm run build:reviews && npm run build:web",
-    "lint": "npm run lint:gateway && npm run lint:auth && npm run lint:users && npm run lint:search && npm run lint:bookings && npm run lint:reviews && npm run lint:web",
-    "typecheck": "npm run typecheck:gateway && npm run typecheck:auth && npm run typecheck:users && npm run typecheck:search && npm run typecheck:bookings && npm run typecheck:reviews && npm run typecheck:web",
-    "test": "npm run test:gateway && npm run test:auth && npm run test:users && npm run test:search && npm run test:bookings && npm run test:reviews && npm run test:web",
+    "build": "npm run build:gateway && npm run build:auth && npm run build:users && npm run build:accommodations && npm run build:search && npm run build:bookings && npm run build:reviews && npm run build:payments && npm run build:notifications && npm run build:web",
+    "lint": "npm run lint:gateway && npm run lint:auth && npm run lint:users && npm run lint:accommodations && npm run lint:search && npm run lint:bookings && npm run lint:reviews && npm run lint:payments && npm run lint:notifications && npm run lint:web",
+    "typecheck": "npm run typecheck:gateway && npm run typecheck:auth && npm run typecheck:users && npm run typecheck:accommodations && npm run typecheck:search && npm run typecheck:bookings && npm run typecheck:reviews && npm run typecheck:payments && npm run typecheck:notifications && npm run typecheck:web",
+    "test": "npm run test:gateway && npm run test:auth && npm run test:users && npm run test:accommodations && npm run test:search && npm run test:bookings && npm run test:reviews && npm run test:payments && npm run test:notifications && npm run test:web",
     "build:gateway": "npm run build --workspace @stayhub/api-gateway",
     "lint:gateway": "npm run lint --workspace @stayhub/api-gateway",
     "typecheck:gateway": "npm run typecheck --workspace @stayhub/api-gateway",
