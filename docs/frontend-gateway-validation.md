@@ -34,3 +34,38 @@ Para cerrar esa verificación: disponer del motor Docker operativo, completar vo
 La ejecución amplia de Gateway encontró fallos ajenos a esta integración: suites de registro/login que requieren Redis real y divergencias históricas de Problem/FieldError en el contrato Users. El archivo .github/workflows/ci.yml ya contiene marcadores de conflicto sin resolver; no se modificó ni se afirma que CI esté verde.
 
 AGENT.md se actualizó localmente; continúa ignorado por la regla existente de .gitignore. Los Pact generados durante las pruebas se restauraron al contenido inicial; no forman parte de esta implementación.
+
+## Verificación end-to-end en HTTP — 2026-11-18
+
+Entorno: Windows, Node 20.20.2, npm 10.8.2, Docker 29.9.3. Se levantó la cadena completa en **HTTP plano** y se cerró la verificación que antes quedaba pendiente.
+
+### Cadena levantada (todo HTTP)
+
+- `npm run dev:swagger -- --build` → auth-service (3001) y users-service (3002) `ready`.
+- `npm run dev:backend -- --build` → accommodations (3003), search (3004), bookings (3005), payments (3006), reviews (3007), notifications (3009), todos `ready`.
+- `npm run dev:gateway` → Gateway en `http://127.0.0.1:8080` con `GATEWAY_PROTOCOL=http`.
+- `npm run dev:web` → Vite en `http://localhost:5173`, proxy `/api` → `http://127.0.0.1:8080`.
+
+### Evidencia
+
+| Comprobación | Resultado |
+| --- | --- |
+| `GET http://127.0.0.1:8080/health/ready` | 200 `{"status":"ready","checks":{"config":true,"tls":true,"redis":true,"destinations":true}}` (los 6 downstream resuelven). |
+| `GET https://127.0.0.1:8080/...` | Falla la conexión: el Gateway sirve solo HTTP (confirma modo HTTP plano, sin TLS). |
+| `npm run smoke:local` | **15/15 pasos OK** contra `http://127.0.0.1:8080/api/v1`: register/login OWNER+GUEST, perfil, crear/publicar propiedad, foto multipart, búsqueda, sugerencias, reseñas, reserva (`PENDING_PAYMENT`→`CONFIRMED`) e historial. |
+| Navegador→proxy Vite→Gateway: `GET /api/v1/search?q=Casa` | 200 con cuerpo real de search-service (`items/page/pageSize/total`), no mock. |
+| Navegador→proxy: `POST /api/v1/auth/register` + `/auth/login` | 201 y 200 con `userId` real y `accessToken` (Auth+Users vía Gateway). |
+| Mocks | `apps/web/.env.local` con `VITE_API_MOCKS=false`; el worker MSW no se carga (`main.tsx` lo condiciona a `VITE_API_MOCKS==='true'`). |
+| `npm run typecheck:web` | Aprobado. |
+| `npm run build:web` | Aprobado (187 módulos, build de producción). |
+
+### Pago
+
+El pago permanece **simulado en el cliente** (`apps/web/src/api/payments.ts`, `simulateCharge`). No se añadió ninguna llamada de pago al Gateway; `payments-service` sigue siendo interno y solo lo invoca `bookings-service`.
+
+### Notas y pendientes
+
+- La búsqueda devuelve 0 resultados en el primer smoke porque la proyección depende de eventos (RabbitMQ) de accommodations; es esperado en un arranque limpio.
+- `npm run test:web` tiene 11 pruebas en rojo (de 320) por `Test timed out in 5000ms` en suites de subida de fotos multipart con MSW (`src/api/properties-write.test.ts`, `src/pages/host/PublishProperty.test.tsx`, `test/e2e/catalog.e2e.test.tsx`). Son timeouts preexistentes del entorno de test (MSW + FormData en jsdom), no relacionados con esta integración; `typecheck` y `build` del web pasan.
+- Arranque de Vite en Windows: fue necesario instalar los binarios nativos opcionales `@rollup/rollup-win32-x64-msvc` y `lightningcss-win32-x64-msvc` (bug npm de optionalDependencies, npm/cli#4828).
+- Hueco abierto H2: el frontend consume `GET /properties?mine=true` (listado del propietario) que el contrato de accommodations aún no expone; ese flujo permanece con mock hasta que el servicio/Gateway lo publiquen.
