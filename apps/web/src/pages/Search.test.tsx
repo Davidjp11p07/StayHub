@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { http as mock } from 'msw';
+import { http as mock, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '../../test/msw/server';
 import { problem } from '../../test/msw/handlers';
@@ -106,6 +106,12 @@ describe('Search page', () => {
     expect(await screen.findByRole('heading', { name: 'Sin resultados' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar búsqueda' }));
     await waitFor(() => expect(resultTitles()).toHaveLength(6));
+  });
+
+  it('explains that an empty date search may have incomplete availability data', async () => {
+    server.use(mock.get('*/api/v1/search', () => HttpResponse.json({ items: [], page: 1, pageSize: 20, total: 0, hasNext: false, availabilityKind: 'PROJECTED' })));
+    renderSearch('?checkIn=2027-06-01&checkOut=2027-06-03');
+    expect(await screen.findByText(/La información de disponibilidad puede estar incompleta/)).toBeInTheDocument();
   });
 
   it('shows a safe error and retries on demand', async () => {

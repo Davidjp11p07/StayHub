@@ -47,6 +47,7 @@ describeDb('payment result and expiration saga', () => {
     await prisma.processedEvent.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.notificationWork.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: bookingIds } } });
+    await prisma.paymentWork.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.bookingTransition.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.booking.deleteMany({ where: { id: { in: bookingIds } } });
     await prisma.$disconnect();
@@ -68,6 +69,39 @@ describeDb('payment result and expiration saga', () => {
     eventId, eventType: 'payment.v1.approved' as const, schemaVersion: 1 as const, occurredAt: new Date().toISOString(),
     paymentId: booking.paymentOrderId, bookingId: booking.id, payerUserId: randomUUID(), amountMinor: 1000, currency: 'USD',
   });
+
+  it('queues the saved partial refund once for approval after cancellation', async () => {
+    const booking = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    await prisma.bookingTransition.create({ data: { id: randomUUID(), bookingId: booking.id, fromStatus: 'PENDING_PAYMENT', toStatus: 'CANCELLED_BY_GUEST', actorType: 'GUEST', reasonCode: 'CANCELLED_BY_GUEST', metadata: { refundAmount: '5.00' } } });
+    const event = approved(booking); eventIds.push(event.eventId);
+    await paymentResults.apply(event, '7'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).paymentStatus).toBe('REFUND_PENDING');
+    expect((await prisma.paymentWork.findFirstOrThrow({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).amount.toFixed(2)).toBe('5.00');
+    await expect(paymentResults.apply(event, '7'.repeat(64))).resolves.toBe('DUPLICATE');
+    expect(await prisma.paymentWork.count({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).toBe(1);
+  });
+
+  it('marks historical cancellations without a saved amount for review', async () => {
+    const booking = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    const event = approved(booking); eventIds.push(event.eventId);
+    await paymentResults.apply(event, '8'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).paymentStatus).toBe('REVIEW_REQUIRED');
+    expect(await prisma.paymentWork.count({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).toBe(0);
+  });
+
+  it('handles owner cancellation and a zero-refund guest decision', async () => {
+    const owner = await create('CANCELLED_BY_OWNER', 'PENDING', null);
+    const ownerEvent = approved(owner); eventIds.push(ownerEvent.eventId);
+    await paymentResults.apply(ownerEvent, '9'.repeat(64));
+    expect((await prisma.paymentWork.findFirstOrThrow({ where: { bookingId: owner.id, operation: 'REQUEST_REFUND' } })).amount.toFixed(2)).toBe('10.00');
+    const guest = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    await prisma.bookingTransition.create({ data: { id: randomUUID(), bookingId: guest.id, fromStatus: 'PENDING_PAYMENT', toStatus: 'CANCELLED_BY_GUEST', actorType: 'GUEST', reasonCode: 'CANCELLED_BY_GUEST', metadata: { refundAmount: '0.00' } } });
+    const guestEvent = approved(guest); eventIds.push(guestEvent.eventId);
+    await paymentResults.apply(guestEvent, 'a'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: guest.id } })).paymentStatus).toBe('CAPTURED');
+    expect(await prisma.paymentWork.count({ where: { bookingId: guest.id, operation: 'REQUEST_REFUND' } })).toBe(0);
+  });
+
 
   it('confirms exactly once with outbox and notification work, and treats replays idempotently', async () => {
     const booking = await create();

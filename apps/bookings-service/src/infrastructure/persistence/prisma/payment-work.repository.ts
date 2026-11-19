@@ -21,7 +21,7 @@ export class PaymentWorkRepository implements PaymentWorkPort, RefundWorkPort {
     await this.prisma.$transaction(async (tx) => {
       const work = await tx.paymentWork.findUniqueOrThrow({ where: { id } });
       await tx.paymentWork.update({ where: { id }, data: { status: 'SUCCEEDED', lastErrorCode: null } });
-      await tx.booking.updateMany({ where: { id: work.bookingId, paymentStatus: { not: 'REFUNDED' } }, data: { paymentStatus: 'REFUND_PENDING' } });
+      await tx.booking.updateMany({ where: { id: work.bookingId, paymentStatus: 'CAPTURED' }, data: { paymentStatus: 'REFUND_PENDING' } });
     });
   }
   public async retry(id: string, attempts: number, code: string): Promise<void> { const dead = attempts >= 5; await this.prisma.paymentWork.update({ where: { id }, data: { status: dead ? 'DEAD' : 'FAILED_RETRYABLE', lastErrorCode: code, nextAttemptAt: new Date(Date.now() + Math.min(60_000, 1000 * 2 ** attempts)) } }); }

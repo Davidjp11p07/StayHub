@@ -1,0 +1,23 @@
+const { chromium } = require('playwright');
+let browser;
+(async () => {
+  const web = process.env.STAYHUB_WEB_URL || 'http://localhost:5173';
+  const city = process.env.STAYHUB_TEST_CITY || 'Bogotá';
+  const propertyId = process.env.STAYHUB_TEST_PROPERTY_ID;
+  const name = process.env.STAYHUB_TEST_PROPERTY_NAME;
+  if (!propertyId || !name) throw Error('Define STAYHUB_TEST_PROPERTY_ID y STAYHUB_TEST_PROPERTY_NAME para una propiedad publicada de prueba.');
+  browser = await chromium.launch({ ...(process.env.STAYHUB_BROWSER_PATH ? { executablePath: process.env.STAYHUB_BROWSER_PATH } : { channel: 'chrome' }), headless: true });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${web}/search?location=${encodeURIComponent(city)}`);
+  const card = page.getByRole('link').filter({ hasText: name });
+  await card.waitFor({ timeout: 30000 });
+  const photo = card.getByRole('img', { name });
+  await photo.scrollIntoViewIfNeeded();
+  await page.waitForFunction(img => img.complete && img.naturalWidth > 0, await photo.elementHandle(), { timeout: 30000 });
+  await page.screenshot({ path: '.artifacts/search-verified.png' });
+  await card.click();
+  await page.waitForURL(`**/property/${propertyId}`);
+  await page.getByRole('heading', { name }).waitFor({ timeout: 30000 });
+  console.log('Búsqueda por ciudad, foto y detalle: OK');
+  await browser.close();
+})().catch(async error => { console.error(error.message); await browser?.close(); process.exitCode = 1; });

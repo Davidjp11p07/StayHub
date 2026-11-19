@@ -28,7 +28,29 @@ describe('ChatController local model', () => {
     const request = { socket: { remoteAddress: '127.0.0.1' }, headers: {} } as unknown as Request;
     const result = await controller.chat({ message: 'Busco en Bogotá' }, request);
     expect(result.reply).toContain('No encontré alojamientos');
-    expect(result.reply).toContain('estimada');
+    expect(result.explanation).toContain('estimada');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('answers counts from Search rather than asking the model to invent a result', async () => {
+    const config = { redis: { namespace: 'test' }, trustedProxyCidrs: [] } as unknown as GatewayConfig;
+    const controller = new ChatController(config, { eval: jest.fn().mockResolvedValue(1) }, { context: jest.fn().mockResolvedValue(JSON.stringify({ total: 4, filters: { location: 'Bogotá' }, items: [] })) } as never);
+    const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+    const request = { socket: { remoteAddress: '127.0.0.1' }, headers: {} } as unknown as Request;
+    const result = await controller.chat({ message: '¿Cuántos inmuebles hay en Bogotá?' }, request);
+    expect(result.reply).toContain('4 alojamientos publicados en Bogotá');
+    expect(result.explanation).toContain('Resultados recuperados: 4');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not invent a count when Search is unavailable', async () => {
+    const config = { redis: { namespace: 'test' }, trustedProxyCidrs: [] } as unknown as GatewayConfig;
+    const controller = new ChatController(config, { eval: jest.fn().mockResolvedValue(1) }, { context: jest.fn().mockResolvedValue('La búsqueda no está disponible') } as never);
+    const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+    const request = { socket: { remoteAddress: '127.0.0.1' }, headers: {} } as unknown as Request;
+    const result = await controller.chat({ message: '¿Cuántos inmuebles hay en Bogotá?' }, request);
+    expect(result.reply).toContain('No pude consultar');
+    expect(result.explanation).toContain('no se obtuvo un resultado verificable');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

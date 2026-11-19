@@ -22,6 +22,6 @@ describe('chat search explanation', () => {
     expect(result).toContain('2027-01-01 a 2027-01-03');
     expect(result).toContain('disponibilidad es estimada');
     expect(result).not.toContain('precio máximo');
-    expect(explainCatalog({ filters: {} })).toBe('');
+    expect(explainCatalog({ filters: {} })).toContain('No se aplicaron filtros');
   });
 });

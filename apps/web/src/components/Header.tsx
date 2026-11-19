@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLegacyNavigate } from '../app/navigation';
+import { http } from '../api/http';
 
 interface HeaderProps {
   /** Defaults to router navigation. */
@@ -33,7 +34,26 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
   const onNavigate = navigateProp ?? routerNavigate;
   const { currentUser, logout, profileUnavailable, retryProfile, error, logoutFailed } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>();
+  const [photoRevision, setPhotoRevision] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const refresh = () => setPhotoRevision(value => value + 1);
+    window.addEventListener('stayhub:profile-photo-updated', refresh);
+    return () => window.removeEventListener('stayhub:profile-photo-updated', refresh);
+  }, []);
+  useEffect(() => {
+    const userId = currentUser?.id;
+    setPhotoUrl(undefined);
+    if (!userId) return;
+    const abort = new AbortController();
+    let objectUrl: string | undefined;
+    void http.get<Blob>(`/users/${userId}/profile/photo`, { responseType: 'blob', signal: abort.signal })
+      .then(({ data }) => { if (!abort.signal.aborted) { objectUrl = URL.createObjectURL(data); setPhotoUrl(objectUrl); } })
+      .catch(() => undefined);
+    return () => { abort.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [currentUser?.id, photoRevision]);
 
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -86,7 +106,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                 className="flex items-center gap-2 border border-gray-300 rounded-full px-3 py-1.5 hover:shadow-md transition-shadow"
               >
                 <div className="w-8 h-8 rounded-full bg-[#E31C5F] flex items-center justify-center text-white text-sm font-bold">
-                  {currentUser.name.charAt(0).toUpperCase()}
+                  {photoUrl ? <img src={photoUrl} alt="Foto de perfil" className="w-full h-full rounded-full object-cover" /> : currentUser.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-sm font-medium text-gray-800 hidden sm:block max-w-32 truncate">
                   {currentUser.name.split(' ')[0]}

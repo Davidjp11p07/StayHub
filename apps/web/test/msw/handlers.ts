@@ -588,6 +588,7 @@ const userReviewsHandler = http.get(`${API}/reviews/user/:userId`, ({ request, p
 });
 
 export const handlers = [
+  http.get(`${API}/users/:userId/profile/photo`, () => problem(404, 'NOT_FOUND')),
   createReviewHandler,
   userReviewsHandler,
   suggestHandler,

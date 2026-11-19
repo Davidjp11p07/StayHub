@@ -7,6 +7,10 @@ import { DomainError } from '@bookings/domain/shared/domain-error';
 import { PrismaService } from './prisma.service';
 import { mapBooking } from './booking.repository';
 
+export function calculateRefundAmount(total: Prisma.Decimal, percent: number): Prisma.Decimal {
+  return new Prisma.Decimal(total).mul(percent).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+}
+
 @Injectable()
 export class PrismaCancelGuestBookingUnitOfWork implements CancelGuestBookingUnitOfWork {
   public constructor(private readonly prisma: PrismaService) {}
@@ -23,9 +27,10 @@ export class PrismaCancelGuestBookingUnitOfWork implements CancelGuestBookingUni
       } });
       if (changed.count !== 1) throw new DomainError('STATE_CONFLICT');
 
+      const refundAmount = calculateRefundAmount(current.totalAmount, input.decision.refundPercent);
       await tx.bookingTransition.create({ data: {
         id: randomUUID(), bookingId: current.id, fromStatus: current.status, toStatus: 'CANCELLED_BY_GUEST', actorType: 'GUEST', actorId: input.actorId, reasonCode: 'CANCELLED_BY_GUEST',
-        metadata: { policyVersion: input.decision.policyVersion, refundMode: input.decision.refundMode },
+        metadata: { policyVersion: input.decision.policyVersion, refundMode: input.decision.refundMode, refundAmount: refundAmount.toFixed(2) },
       } });
       await tx.cancellationDecision.create({ data: {
         id: randomUUID(), bookingId: current.id, policyVersion: input.decision.policyVersion, actorType: 'GUEST', eligible: input.decision.eligible, refundMode: input.decision.refundMode,
@@ -33,10 +38,11 @@ export class PrismaCancelGuestBookingUnitOfWork implements CancelGuestBookingUni
       await tx.outboxEvent.create({ data: {
         id: randomUUID(), aggregateId: current.id, eventType: 'booking.v1.cancelled', payload: { bookingId: current.id, cancelledBy: 'GUEST' },
       } });
-      if (input.decision.refundMode !== 'NONE' && current.paymentStatus === 'CAPTURED' && current.paymentOrderId) {
+      if (refundAmount.greaterThan(0) && current.paymentStatus === 'CAPTURED' && current.paymentOrderId) {
         await tx.paymentWork.create({ data: {
-          id: randomUUID(), bookingId: current.id, operation: 'REQUEST_REFUND', idempotencyKey: `booking:${current.id}:refund`, amount: new Prisma.Decimal(current.totalAmount), currency: current.currency,
+          id: randomUUID(), bookingId: current.id, operation: 'REQUEST_REFUND', idempotencyKey: `booking:${current.id}:refund`, amount: refundAmount, currency: current.currency,
         } });
+        await tx.booking.update({ where: { id: current.id }, data: { paymentStatus: 'REFUND_PENDING' } });
       }
 
       const row = await tx.booking.findUniqueOrThrow({ where: { id: current.id } });

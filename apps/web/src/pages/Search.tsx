@@ -74,7 +74,9 @@ export function Search() {
           ) : data.items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Sin resultados</h3>
-              <p className="text-gray-500 text-sm mb-6">No encontramos alojamientos con esos filtros. Prueba ampliando la búsqueda.</p>
+              <p className="text-gray-500 text-sm mb-6">{data.availabilityKind === 'PROJECTED'
+                ? 'No encontramos disponibilidad proyectada para esas fechas. La información de disponibilidad puede estar incompleta; prueba buscar sin fechas y consulta el alojamiento.'
+                : 'No encontramos alojamientos con esos filtros. Prueba ampliando la búsqueda.'}</p>
               <button type="button" onClick={() => apply({})} className="h-10 px-5 rounded-xl border border-gray-300 text-sm font-medium hover:border-gray-400">
                 Limpiar búsqueda
               </button>

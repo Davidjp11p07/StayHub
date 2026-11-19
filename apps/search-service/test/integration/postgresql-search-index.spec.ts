@@ -13,6 +13,16 @@ describeWithPostgres('PostgreSqlSearchIndexAdapter', () => {
     const result = await adapter.search(createSearchQuery({ q: 'hotel piscina', location: 'Bogotá', minPrice: 100000, maxPrice: 300000, currency: 'COP', guests: 4, amenities: ['wifi', 'piscina'] }));
     expect(result.items).toHaveLength(1); expect(result.items[0]?.name).toBe('Casa Bogotá');
   });
+  it('matches a city with or without accents', async () => {
+    const result = await adapter.search(createSearchQuery({ location: 'Bogota' }));
+    expect(result.items.map(item => item.name)).toContain('Casa Bogotá');
+  });
+  it('keeps the filtered total when the requested page is beyond the last result', async () => {
+    const result = await adapter.search(createSearchQuery({ location: 'Bogotá', page: 2, pageSize: 1 }));
+    expect(result.items).toHaveLength(0);
+    expect(result.total).toBe(1);
+    expect(result.hasNext).toBe(false);
+  });
   it('treats injection text as a parameter', async () => { await expect(adapter.search(createSearchQuery({ q: "hotel'); DROP TABLE search_documents;--" }))).resolves.toBeDefined(); expect(await prisma.searchDocument.count()).toBe(2); });
   it('requires a projected window covering the full half-open interval', async () => { const result = await adapter.search(createSearchQuery({ checkIn: '2026-12-10', checkOut: '2026-12-15', guests: 2 })); expect(result.items).toHaveLength(1); expect(result.availabilityKind).toBe('PROJECTED'); });
 });

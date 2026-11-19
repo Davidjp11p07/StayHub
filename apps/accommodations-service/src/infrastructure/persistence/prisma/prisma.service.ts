@@ -2,7 +2,7 @@ import { Inject, Injectable, type OnModuleInit, type OnModuleDestroy } from '@ne
 import { Prisma, PrismaClient } from '../generated/prisma';
 import { ACCOMMODATIONS_CONFIG, type AccommodationsConfig } from '../../config/accommodations-config';
 
-export const REQUIRED_MIGRATIONS: readonly string[] = ['202611040001_create_accommodations', '202611040002_seed_feature_catalog', '202611150001_report_supply'];
+export const REQUIRED_MIGRATIONS: readonly string[] = ['202611040001_create_accommodations', '202611040002_seed_feature_catalog', '202611150001_report_supply', '202611190001_search_outbox'];
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

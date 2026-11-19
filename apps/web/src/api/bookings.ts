@@ -55,11 +55,12 @@ export async function getBooking(id: string, signal?: AbortSignal): Promise<Book
   return data;
 }
 
-export function useBooking(id: string | undefined) {
+export function useBooking(id: string | undefined, pollPending = false) {
   return useQuery({
     queryKey: bookingKeys.detail(id ?? ''),
     queryFn: ({ signal }) => getBooking(id ?? '', signal),
     enabled: id !== undefined,
+    refetchInterval: (query) => pollPending && query.state.data?.status === 'PENDING_PAYMENT' ? 2_000 : false,
   });
 }
 

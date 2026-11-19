@@ -4,7 +4,7 @@ import { session } from '../api/session';
 import { currencyReply } from './chatCurrency';
 import './ChatWidget.css';
 
-type Message = { role: 'user' | 'assistant'; text: string; private?: boolean };
+type Message = { role: 'user' | 'assistant'; text: string; private?: boolean; explanation?: string };
 const BOOKING_ID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
 const PRIVATE_BOOKING = /\b(?:mi|mis|mía|mio|propia|personal)\b.*\b(?:reserva|reservas|pago|pagos)\b|\b(?:reserva|reservas|pago|pagos)\b.*\b(?:mi|mis|mía|mio|personal)\b/i;
 type Booking = { propertyName: string; checkIn: string; checkOut: string; status: string; paymentStatus: string; total: { amount: string; currency: string } };
@@ -71,7 +71,7 @@ export function ChatWidget() {
   function showHelp(item: typeof HELP[number]) {
     if (busy) return;
     setError('');
-    setMessages(current => [...current, { role: 'user', text: item.question }, { role: 'assistant', text: item.answer }]);
+    setMessages(current => [...current, { role: 'user', text: item.question }, { role: 'assistant', text: item.answer, explanation: 'Fuente: instrucciones de uso incluidas en esta aplicación.' }]);
   }
 
   async function send(event: FormEvent) {
@@ -90,7 +90,7 @@ export function ChatWidget() {
           if (activeRequest.current !== controller) return;
           const lines = data.items.map(item => `• ${item.propertyName}: ${item.checkIn} a ${item.checkOut}; ${item.status}. ID: ${item.id}`);
           const reply = lines.length ? `Estas son tus reservas más recientes:\n${lines.join('\n')}\nIndica el ID para consultar su pago y más detalles.${data.hasNext ? ' Hay más reservas en Mis reservas.' : ''}` : 'No tienes reservas en este momento.';
-          setMessages(current => [...current, { role: 'assistant', text: reply, private: true }]);
+          setMessages(current => [...current, { role: 'assistant', text: reply, private: true, explanation: 'Fuente consultada: Bookings. Se muestran como máximo las cinco reservas más recientes de tu cuenta.' }]);
           return;
         }
         const { data } = await http.get<Booking>(`/bookings/${bookingId}`, { signal: controller.signal });
@@ -98,7 +98,7 @@ export function ChatWidget() {
         const bookingMeaning = BOOKING_STATUS[data.status] ?? 'No hay una descripción disponible para este estado.';
         const paymentMeaning = PAYMENT_STATUS[data.paymentStatus] ?? 'No hay una descripción disponible para este estado.';
         const reply = `Reserva en ${data.propertyName}\nEntrada: ${data.checkIn}\nSalida: ${data.checkOut}\nEstado de la reserva: ${data.status}. ${bookingMeaning}\nEstado del pago registrado en la reserva: ${data.paymentStatus}. ${paymentMeaning}\nTotal: ${data.total.amount} ${data.total.currency}\nFuente: datos de la reserva consultada en Bookings. El estado del pago es el registrado allí; no incluye la causa de un fallo.`;
-        setMessages(current => [...current, { role: 'assistant', text: reply, private: true }]);
+        setMessages(current => [...current, { role: 'assistant', text: reply, private: true, explanation: 'Fuente consultada: Bookings, para el identificador de reserva indicado.' }]);
       } catch {
         if (activeRequest.current === controller && !controller.signal.aborted) setMessages(current => [...current, { role: 'assistant', text: 'No pude consultar esa reserva. Comprueba el identificador y que pertenezca a tu cuenta, o inténtalo más tarde.', private: true }]);
       } finally { if (activeRequest.current === controller) { activeRequest.current = null; setBusy(false); } }
@@ -108,7 +108,7 @@ export function ChatWidget() {
     if (conversion) {
       setError(''); setInput('');
       failedMessage.current = null;
-      setMessages(current => [...current, { role: 'user', text }, { role: 'assistant', text: conversion }]);
+      setMessages(current => [...current, { role: 'user', text }, { role: 'assistant', text: conversion, explanation: 'Conversión calculada en la aplicación a partir de un precio anterior y tasas fijas de referencia indicadas en la respuesta.' }]);
       return;
     }
     const retry = failedMessage.current === text;
@@ -127,7 +127,8 @@ export function ChatWidget() {
       const data: unknown = await response.json();
       if (!data || typeof data !== 'object' || !('reply' in data) || typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('Invalid response');
       if (activeRequest.current !== controller) return;
-      setMessages(current => [...current, { role: 'assistant', text: data.reply as string }]);
+      const explanation = 'explanation' in data && typeof data.explanation === 'string' ? data.explanation : undefined;
+      setMessages(current => [...current, { role: 'assistant', text: data.reply as string, ...(explanation ? { explanation } : {}) }]);
     } catch {
       if (activeRequest.current === controller && !controller.signal.aborted) { setError(errorMessage()); setInput(text); failedMessage.current = text; }
     } finally {
@@ -142,7 +143,7 @@ export function ChatWidget() {
         <div className="flex items-center gap-1"><button type="button" onClick={clear} className="rounded-lg px-2 py-2 text-xs hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Limpiar</button><button type="button" aria-label="Cerrar chat" onClick={() => setOpen(false)} className="rounded-lg px-2 py-1 text-xl hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">×</button></div>
       </div>
       <div className="flex-1 overflow-y-auto overscroll-contain p-4">
-        <div aria-live="polite" aria-relevant="additions text" className="space-y-3">{messages.map((message, index) => <p key={index} className={`whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${message.role === 'user' ? 'ml-8 bg-gray-900 text-white' : 'mr-8 bg-gray-100 text-gray-800'}`}><span className="sr-only">{message.role === 'user' ? 'Tú: ' : 'Asistente: '}</span>{message.text}</p>)}{busy && <p role="status" className="text-sm text-gray-500">Buscando una respuesta… Esto puede tardar unos segundos.</p>}</div>
+        <div aria-live="polite" aria-relevant="additions text" className="space-y-3">{messages.map((message, index) => <div key={index} className={`whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${message.role === 'user' ? 'ml-8 bg-gray-900 text-white' : 'mr-8 bg-gray-100 text-gray-800'}`}><p><span className="sr-only">{message.role === 'user' ? 'Tú: ' : 'Asistente: '}</span>{message.text}</p>{message.role === 'assistant' && <details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">¿Cómo llegué a esta respuesta?</summary><p className="mt-1 text-xs">{message.explanation ?? 'No hay fuentes adicionales registradas para esta respuesta.'}</p></details>}</div>)}{busy && <p role="status" className="text-sm text-gray-500">Buscando una respuesta… Esto puede tardar unos segundos.</p>}</div>
         {messages.length === 1 && <div aria-label="Preguntas frecuentes" className="mt-4 flex flex-wrap gap-2">{HELP.map(item => <button key={item.question} type="button" disabled={busy} onClick={() => showHelp(item)} className="rounded-full border border-gray-300 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50">{item.question}</button>)}</div>}
         {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error} Tu pregunta sigue en el cuadro para que puedas reenviarla.</p>}
         <div ref={endRef} />

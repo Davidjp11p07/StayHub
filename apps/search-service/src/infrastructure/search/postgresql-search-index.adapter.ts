@@ -49,7 +49,7 @@ export class PostgreSqlSearchIndexAdapter implements SearchIndexPort {
     const conditions: Prisma.Sql[] = [Prisma.sql`d."published" = TRUE`];
     if (query.location)
       conditions.push(
-        Prisma.sql`(d."city" ILIKE ${`%${query.location}%`} OR d."region" ILIKE ${`%${query.location}%`} OR d."countryCode" ILIKE ${query.location})`,
+        Prisma.sql`(translate(d."city", 'áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU') ILIKE translate(${`%${query.location}%`}, 'áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU') OR translate(d."region", 'áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU') ILIKE translate(${`%${query.location}%`}, 'áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU') OR d."countryCode" ILIKE ${query.location})`,
       );
     if (query.currency)
       conditions.push(Prisma.sql`d."currency" = ${query.currency}`);
@@ -89,11 +89,17 @@ export class PostgreSqlSearchIndexAdapter implements SearchIndexPort {
       primaryPhotoUrl: row.primaryPhotoUrl,
       relevance: Number(row.relevance),
     }));
+    // Window counts are absent when OFFSET skips every row. Preserve the true total
+    // for out-of-range pages instead of reporting that the catalog is empty.
+    const total = rows[0]?.total ?? (offset > 0
+      ? (await observeDependency("postgresql", "search-count", () => this.prisma.$queryRaw<{ total: bigint }[]>(Prisma.sql`
+          SELECT count(*) AS total FROM "search_documents" d WHERE ${Prisma.join(conditions, " AND ")}`)))[0]?.total ?? 0n
+      : 0n);
     return createSearchPage(
       items,
       query.page,
       query.pageSize,
-      Number(rows[0]?.total ?? 0n),
+      Number(total),
       Boolean(query.checkIn),
     );
   }

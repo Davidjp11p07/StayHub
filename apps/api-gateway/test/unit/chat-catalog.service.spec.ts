@@ -8,6 +8,27 @@ describe('ChatCatalogService', () => {
   const originalFetch = global.fetch;
   afterEach(() => { global.fetch = originalFetch; jest.restoreAllMocks(); });
 
+  it('does not treat a city or generic property noun as a name in a count', async () => {
+    const fetchMock = jest.fn<Promise<unknown>, [string, RequestInit]>()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ items: [], total: 4 }) });
+    global.fetch = fetchMock as typeof fetch;
+    const service = new ChatCatalogService({ serviceJwt: {} } as GatewayConfig, {} as ReviewsClient);
+    await service.context('¿Cuántos inmuebles hay en Bogotá?', []);
+    const searchUrl = new URL(fetchMock.mock.calls[0]![0]);
+    expect(searchUrl.searchParams.has('q')).toBe(false);
+    expect(searchUrl.searchParams.get('location')).toBe('Bogotá');
+  });
+
+  it.each(['cuantos inmbuebles hay en total', 'cuantos inmbuebles hay en total en todo stayhub', 'no, en todo stayhub'])('counts the whole catalog without carrying a city into "%s"', async message => {
+    const fetchMock = jest.fn<Promise<unknown>, [string, RequestInit]>().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [], total: 7 }) });
+    global.fetch = fetchMock as typeof fetch;
+    const service = new ChatCatalogService({ serviceJwt: {} } as GatewayConfig, {} as ReviewsClient);
+    const data = JSON.parse(await service.context(message, ['Usuario: cuantos inmuebles hay en bogota?'])) as { filters: object; total: number };
+    expect(data).toMatchObject({ filters: {}, total: 7 });
+    expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.has('location')).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('filters public search by explicit dates and loads only public property and review data', async () => {
     const id = '550e8400-e29b-41d4-a716-446655440000';
     const reviews = { listProperty: jest.fn().mockResolvedValue({ total: 1, items: [{ rating: 5, comment: 'Bien', userId: 'private' }] }) };

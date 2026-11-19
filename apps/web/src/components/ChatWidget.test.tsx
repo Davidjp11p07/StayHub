@@ -7,6 +7,17 @@ import { http } from '../api/http';
 describe('ChatWidget', () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+  it('shows the verifiable source under the answer', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: 'Hay 4 alojamientos en Bogotá.', explanation: 'Fuente consultada: Search. Resultados recuperados: 4.' }) }));
+    render(<ChatWidget />);
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir asistente' }));
+    fireEvent.change(screen.getByLabelText('Tu pregunta'), { target: { value: '¿Cuántos inmuebles hay en Bogotá?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText('Hay 4 alojamientos en Bogotá.')).toBeInTheDocument();
+    expect(screen.getByText('Fuente consultada: Search. Resultados recuperados: 4.')).toBeInTheDocument();
+    expect(screen.getAllByText('¿Cómo llegué a esta respuesta?')).toHaveLength(2);
+  });
+
   it('offers verified help without a network request and clears the conversation', () => {
     const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock);
     render(<ChatWidget />);

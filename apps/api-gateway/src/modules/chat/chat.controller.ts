@@ -7,6 +7,7 @@ import { ChatCatalogService } from './chat-catalog.service';
 import { TrustedOriginService } from '@gateway/infrastructure/security/trusted-origin.service';
 import { Public } from '@gateway/modules/auth/public.decorator';
 import { explainCatalog, type CatalogExplanationData } from './chat-explanation';
+import { isCountQuestion, isGlobalCount } from './chat-intent';
 
 class ChatDto {
   @IsString() @MinLength(1) @MaxLength(1000) message!: string;
@@ -18,7 +19,7 @@ export class ChatController {
   constructor(@Inject(GATEWAY_CONFIG) private readonly config: GatewayConfig, @Inject(GATEWAY_REDIS) private readonly redis: RedisScriptPort, private readonly catalog: ChatCatalogService) {}
 
   @Public() @Post()
-  async chat(@Body() body: ChatDto, @Req() request: Request): Promise<{ reply: string }> {
+  async chat(@Body() body: ChatDto, @Req() request: Request): Promise<{ reply: string; explanation?: string }> {
     const origin = new TrustedOriginService(this.config.trustedProxyCidrs).resolve(request.socket.remoteAddress, request.headers['x-forwarded-for']);
     try {
       const count = await this.redis.eval("local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],60) end; return n", 1, `${this.config.redis.namespace}:chat:${origin}`);
@@ -29,6 +30,7 @@ export class ChatController {
       throw new ServiceUnavailableException('El asistente no está disponible.');
     }
     const catalog = await this.catalog.context(body.message, body.history ?? []);
+    const countQuestion = isCountQuestion(body.message) || isGlobalCount(body.message, body.history ?? []);
     // Do not ask a small model to interpret an empty search result or a missing currency.
     let explanation = '';
     try {
@@ -36,10 +38,16 @@ export class ChatController {
       const filters = data.filters ?? {};
       explanation = explainCatalog(data);
       if (filters.missingCurrency === true) {
-        return { reply: 'No se aplicó el filtro de precio porque falta la moneda. ¿En qué moneda está tu presupuesto? Indica COP, USD, EUR, MXN o ARS.' };
+        return { reply: 'No se aplicó el filtro de precio porque falta la moneda. ¿En qué moneda está tu presupuesto? Indica COP, USD, EUR, MXN o ARS.', explanation };
       }
+      if (countQuestion && typeof data.total === 'number') {
+        if (!isGlobalCount(body.message, body.history ?? []) && /\ben\s+\p{L}/iu.test(body.message) && typeof filters.location !== 'string') return { reply: '¿En qué ciudad quieres consultar el número de alojamientos?', explanation };
+        const location = typeof filters.location === 'string' ? ` en ${filters.location}` : '';
+        return { reply: `Hay ${data.total} alojamiento${data.total === 1 ? '' : 's'} publicado${data.total === 1 ? '' : 's'}${location} en el catálogo de búsqueda.`, explanation };
+      }
+      if (countQuestion) return { reply: 'No pude consultar el número de alojamientos en este momento.', explanation };
       if (data.total === 0 && Object.keys(filters).some(key => key !== 'currency')) {
-        return { reply: `No encontré alojamientos con esos filtros en este momento. Puedes probar otras fechas o ampliar la búsqueda.${explanation ? `\n\n${explanation}` : ''}` };
+        return { reply: 'No encontré alojamientos con esos filtros en este momento. Puedes probar otras fechas o ampliar la búsqueda.', explanation };
       }
       if (typeof filters.checkIn === 'string' && typeof filters.checkOut === 'string' && data.availabilityKind === 'PROJECTED' && Array.isArray(data.items) && data.items.length > 0) {
         const lines = data.items.slice(0, 5).map(item => {
@@ -48,9 +56,11 @@ export class ChatController {
           const price = typeof item.minNightlyPrice === 'number' && typeof item.currency === 'string' ? `: desde ${item.minNightlyPrice} ${item.currency} por noche` : ': tarifa no disponible';
           return `• ${name}${place}${price}`;
         });
-        return { reply: `Para ${filters.checkIn} a ${filters.checkOut} encontré estos alojamientos:\n${lines.join('\n')}\nLa disponibilidad es estimada y se confirma al reservar. Las tarifas son por noche; el total puede variar.\n\n${explanation}` };
+        return { reply: `Para ${filters.checkIn} a ${filters.checkOut} encontré estos alojamientos:\n${lines.join('\n')}\nLa disponibilidad es estimada y se confirma al reservar. Las tarifas son por noche; el total puede variar.`, explanation };
       }
-    } catch { /* The catalog can contain an unavailable-source message. */ }
+    } catch {
+      if (countQuestion) return { reply: 'No pude consultar el número de alojamientos en este momento.', explanation: 'Se intentó consultar Search, pero no se obtuvo un resultado verificable.' };
+    }
     try {
       const base = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/u, '');
       const response = await fetch(`${base}/api/chat`, {
@@ -66,7 +76,7 @@ export class ChatController {
       const data = await response.json() as { message?: { content?: string } };
       const reply = data.message?.content?.trim();
       if (!reply) throw new Error('Empty response');
-      return { reply: explanation ? `${reply}\n\n${explanation}` : reply };
+      return explanation ? { reply, explanation } : { reply };
     } catch { throw new ServiceUnavailableException('El asistente no está disponible en este momento.'); }
   }
 }

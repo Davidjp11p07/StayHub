@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Home } from '../pages/Home';
+import { Information } from '../pages/Information';
 import { Login } from '../pages/Login';
 import { MyBookings } from '../pages/MyBookings';
 import { MyReviews } from '../pages/MyReviews';
@@ -128,6 +129,7 @@ export const appRoutes: RouteObject[] = [
     children: [
       // Public
       { path: paths.home, element: <Home /> },
+      { path: '/info/:topic', element: <Information /> },
       { path: paths.login, element: <LoginRoute /> },
       { path: paths.register, element: <RegisterRoute /> },
       { path: paths.search, element: <Search /> },

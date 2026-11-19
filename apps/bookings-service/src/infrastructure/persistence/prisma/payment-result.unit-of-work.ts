@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { PaymentResultEvent, PaymentResultUnitOfWork } from '@bookings/application/ports/payment-saga.port';
 import { DomainError } from '@bookings/domain/shared/domain-error';
 import { PrismaService } from './prisma.service';
+import { Prisma } from '../generated/client';
 
 function dateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -19,6 +20,7 @@ export class PrismaPaymentResultUnitOfWork implements PaymentResultUnitOfWork {
         return 'DUPLICATE';
       }
 
+      await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${event.bookingId}::uuid FOR UPDATE`;
       const booking = await tx.booking.findUnique({ where: { id: event.bookingId } });
       if (!booking) throw new DomainError('PAYMENT_BOOKING_MISMATCH');
       if (!booking.paymentOrderId) throw new DomainError('PAYMENT_BOOKING_NOT_READY');
@@ -27,6 +29,19 @@ export class PrismaPaymentResultUnitOfWork implements PaymentResultUnitOfWork {
       let outcome = 'IGNORED_TERMINAL';
 
       if (event.eventType === 'payment.v1.approved') {
+        if ((booking.status === 'CANCELLED_BY_GUEST' || booking.status === 'CANCELLED_BY_OWNER') && (booking.paymentStatus === 'PENDING' || booking.paymentStatus === 'REVIEW_REQUIRED')) {
+          const transition = await tx.bookingTransition.findFirst({ where: { bookingId: booking.id, toStatus: booking.status }, orderBy: { occurredAt: 'desc' } });
+          const metadata = transition?.metadata as { refundAmount?: unknown } | undefined;
+          const amount = booking.status === 'CANCELLED_BY_OWNER' ? booking.totalAmount : typeof metadata?.refundAmount === 'string' && /^\d+(\.\d{1,2})?$/.test(metadata.refundAmount) ? new Prisma.Decimal(metadata.refundAmount) : null;
+          if (amount && amount.greaterThanOrEqualTo(0) && amount.lessThanOrEqualTo(booking.totalAmount)) {
+            if (amount.greaterThan(0)) await tx.paymentWork.upsert({ where: { bookingId_operation: { bookingId: booking.id, operation: 'REQUEST_REFUND' } }, update: {}, create: { id: crypto.randomUUID(), bookingId: booking.id, operation: 'REQUEST_REFUND', idempotencyKey: `booking:${booking.id}:refund`, amount, currency: booking.currency } });
+            await tx.booking.update({ where: { id: booking.id }, data: { paymentStatus: amount.greaterThan(0) ? 'REFUND_PENDING' : 'CAPTURED', version: { increment: 1 } } });
+            outcome = 'APPLIED';
+          } else {
+            await tx.booking.update({ where: { id: booking.id }, data: { paymentStatus: 'REVIEW_REQUIRED', version: { increment: 1 } } });
+            outcome = 'REVIEW_REQUIRED';
+          }
+        }
         if (booking.status === 'PENDING_PAYMENT') {
           const changed = await tx.booking.updateMany({
             where: { id: booking.id, status: 'PENDING_PAYMENT' },

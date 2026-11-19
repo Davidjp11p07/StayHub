@@ -2,17 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Header } from '../components/Header';
 import { useAuth } from '../context/AuthContext';
 import { http } from '../api/http';
-import type { Profile as ProfileData } from '../api/identity';
+import { ApiError, type Profile as ProfileData } from '../api/identity';
 
 export function Profile() {
   const { currentUser, retryProfile } = useAuth();
   const [profile, setProfile] = useState<ProfileData>();
+  const [photoUrl, setPhotoUrl] = useState<string>();
+  const [photoError, setPhotoError] = useState(false);
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState<File>();
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const userId = currentUser?.id;
+  const profileVersion = profile?.version;
   useEffect(() => {
     if (!userId) return;
     const abort = new AbortController();
@@ -20,6 +23,23 @@ export function Profile() {
     void http.get<ProfileData>(`/users/${userId}/profile`, { signal: abort.signal }).then(({ data }) => { setProfile(data); setName(data.name); }).catch(() => { if (!abort.signal.aborted) setError('No pudimos cargar el perfil.'); });
     return () => abort.abort();
   }, [userId]);
+  useEffect(() => {
+    if (!userId || profileVersion === undefined) return;
+    const abort = new AbortController();
+    let objectUrl: string | undefined;
+    setPhotoUrl(undefined);
+    setPhotoError(false);
+    void http.get<Blob>(`/users/${userId}/profile/photo`, { responseType: 'blob', signal: abort.signal })
+      .then(({ data }) => {
+        if (abort.signal.aborted) return;
+        objectUrl = URL.createObjectURL(data);
+        setPhotoUrl(objectUrl);
+      })
+      .catch((failure: unknown) => {
+        if (!abort.signal.aborted && !(failure instanceof ApiError && failure.status === 404)) setPhotoError(true);
+      });
+    return () => { abort.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [userId, profileVersion]);
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!profile || !currentUser || busy) return;
@@ -32,6 +52,7 @@ export function Profile() {
     try {
       const { data } = await http.patch<ProfileData>(`/users/${currentUser.id}/profile`, form);
       setProfile(data); setName(data.name); setPhoto(undefined); setMessage('Perfil actualizado.');
+      if (photo) window.dispatchEvent(new Event('stayhub:profile-photo-updated'));
       await retryProfile();
     } catch { setError('No pudimos guardar el perfil. Si cambió en otra sesión, vuelve a cargar la página.'); }
     finally { setBusy(false); }
@@ -40,6 +61,8 @@ export function Profile() {
   return <><Header /><main className="mx-auto max-w-xl p-8"><h1 className="text-2xl font-bold">Mi perfil</h1>
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
     {!profile ? <p>Cargando perfil…</p> : <form onSubmit={event => { void save(event); }} className="mt-4 space-y-4">
+      {photoUrl && <img src={photoUrl} alt="Foto de perfil" className="h-24 w-24 rounded-full object-cover" />}
+      {photoError && <p role="status" className="text-sm text-gray-600">No pudimos cargar tu foto de perfil.</p>}
       <label className="block">Nombre<input className="block w-full border p-2" value={name} maxLength={100} onChange={event => setName(event.target.value)} /></label>
       <p>Correo: {profile.email}</p>
       <label className="block">Foto JPEG o PNG<input className="block" type="file" accept="image/jpeg,image/png" onChange={event => setPhoto(event.target.files?.[0])} /></label>

@@ -100,3 +100,15 @@ model ReportSupplyVersion {
  roomIds Json @db.JsonB
  @@index([ownerId, capturedAt, id])
 }
+
+/// Committed catalog snapshots waiting for confirmed Search event delivery.
+model SearchProjectionOutbox {
+  id          BigInt    @id @default(autoincrement())
+  eventId     String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId  String    @db.Uuid
+  eventType   String
+  data        Json?     @db.JsonB
+  photoId     String?   @db.Uuid
+  occurredAt  DateTime  @default(now()) @db.Timestamptz(6)
+  publishedAt DateTime? @db.Timestamptz(6)
+}

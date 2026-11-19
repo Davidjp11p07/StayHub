@@ -233,10 +233,13 @@ services:
       ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID:-room-inventory-accommodations-2026-01}
       ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE: /run/secrets/accommodations_inventory_service_public
       ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE: ${ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE:-accommodations:inventory-context}
+      ACCOMMODATIONS_SEARCH_RABBITMQ_URL: ${SEARCH_RABBITMQ_URL:?required}
+      ACCOMMODATIONS_SEARCH_EXCHANGE: ${SEARCH_RABBITMQ_EXCHANGE:-stayhub.search.v1}
+      ACCOMMODATIONS_SEARCH_PUBLIC_API_URL: ${ACCOMMODATIONS_SEARCH_PUBLIC_API_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
     secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public, accommodations_inventory_service_public]
     volumes: [accommodations_photos:/var/lib/stayhub/accommodations/photos]
-    networks: [accommodations-internal, services]
+    networks: [accommodations-internal, services, search-events]
     restart: unless-stopped
     depends_on:
       accommodations-migrate: { condition: service_completed_successfully }
@@ -339,7 +342,7 @@ services:
       RABBITMQ_DEFAULT_USER: stayhub_search
       RABBITMQ_DEFAULT_PASS: ${SEARCH_RABBITMQ_PASSWORD:?required}
       RABBITMQ_DEFAULT_VHOST: /search
-    networks: [search-internal]
+    networks: [search-internal, search-events]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -782,6 +785,8 @@ networks:
   users-internal:
     internal: true
   search-internal:
+    internal: true
+  search-events:
     internal: true
   payments-internal:
     internal: true

@@ -1,6 +1,7 @@
 type Item = { name?: unknown; location?: unknown; capacity?: unknown; minNightlyPrice?: unknown; currency?: unknown; amenities?: unknown };
 export interface CatalogExplanationData {
   total?: number;
+  filterSource?: 'text' | 'ollama' | 'global';
   filters?: Record<string, unknown>;
   availabilityKind?: string | null;
   items?: Item[];
@@ -20,8 +21,13 @@ export function explainCatalog(data: CatalogExplanationData): string {
     if (typeof f.maxPrice === 'number') criteria.push(`precio máximo: ${f.maxPrice} ${f.currency}`);
   }
   if (Array.isArray(f.amenities) && f.amenities.every(a => typeof a === 'string') && f.amenities.length) criteria.push(`servicios: ${f.amenities.join(', ')}`);
-  if (!criteria.length) return '';
-  const lines = [`Filtros enviados al buscador: ${criteria.join('; ')}.`];
+  const lines = ['Fuente consultada: Search (catálogo público de alojamientos).'];
+  if (data.filterSource === 'ollama') lines.push('Se intentó extraer los filtros con Ollama y se comprobaron contra el texto de la consulta.');
+  if (data.filterSource === 'text') lines.push('La ubicación se tomó directamente del texto de la pregunta.');
+  if (data.filterSource === 'global') lines.push('La pregunta solicitó el catálogo completo.');
+  if (Array.isArray(data.details) && data.details.some(detail => detail && typeof detail === 'object')) lines.push('También se consultaron Accommodations y Reviews para una muestra de hasta tres resultados.');
+  if (typeof data.total === 'number') lines.push(`Resultados recuperados: ${data.total}.`);
+  lines.push(criteria.length ? `Filtros enviados al buscador: ${criteria.join('; ')}.` : 'No se aplicaron filtros de búsqueda.');
   if (Array.isArray(data.items) && data.items.length) {
     lines.push('Datos publicados de algunos resultados:');
     for (const item of data.items.slice(0, 3)) {

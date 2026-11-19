@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { GATEWAY_CONFIG, type GatewayConfig } from '@gateway/infrastructure/config/gateway-config';
 import { ReviewsClient } from '@gateway/infrastructure/http/reviews.client';
 import { issueServiceToken } from '@gateway/infrastructure/service-auth/service-token.provider';
+import { isCountQuestion, isGlobalCount, simpleCityCount } from './chat-intent';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -19,7 +20,10 @@ export class ChatCatalogService {
   async context(message: string, history: string[]): Promise<string> {
     // Only prior user turns may supply search filters; assistant replies are not evidence.
     const conversation = [...history.filter(turn => turn.startsWith('Usuario: ')).map(turn => turn.slice(9)), message].join('\n');
-    const filters = await this.extractFilters(conversation);
+    const explicitCity = simpleCityCount(message);
+    const globalCount = isGlobalCount(message, history);
+    const filters: SearchFilters = globalCount ? {} : explicitCity ? { location: explicitCity } : await this.extractFilters(conversation);
+    if (isCountQuestion(message) && !/\b(?:llamad[oa]s?|nombre)\b/iu.test(message)) delete filters.q;
     const params = new URLSearchParams({ pageSize: '10' });
     if (filters.q) params.set('q', filters.q);
     if (filters.location) params.set('location', filters.location);
@@ -40,7 +44,7 @@ export class ChatCatalogService {
       const page = await response.json() as { items?: Array<Record<string, unknown>>; total?: number; availabilityKind?: string | null };
       if (!Array.isArray(page.items)) throw new Error('Invalid search response');
       const items = page.items.slice(0, 10).map(({ accommodationId, name, location, minNightlyPrice, currency, capacity, amenities }) => ({ accommodationId, name, location, minNightlyPrice, currency, capacity, amenities }));
-      const details = await Promise.all(items.slice(0, 3).map(async item => {
+      const details = await Promise.all((isCountQuestion(message) || globalCount ? [] : items.slice(0, 3)).map(async item => {
         if (typeof item.accommodationId !== 'string' || !UUID.test(item.accommodationId)) return null;
         const id = item.accommodationId;
         const accommodationBase = (process.env.CHAT_ACCOMMODATIONS_BASE_URL || 'http://127.0.0.1:3003').replace(/\/$/u, '');
@@ -51,7 +55,7 @@ export class ChatCatalogService {
         return { id, property: property ? { name: property.name, description: property.description, location: property.location, rooms: property.rooms, features: property.features } : null,
           reviews: reviews ? { total: reviews.total, items: reviews.items.map(({ rating, comment }) => ({ rating, comment })) } : null };
       }));
-      return JSON.stringify({ filters, total: page.total, availabilityKind: page.availabilityKind, items, details, note: 'Los resultados son una muestra; la disponibilidad PROJECTED es estimada y no confirma una reserva. Ausencia de datos no demuestra que una propiedad esté bloqueada. Si missingCurrency es true, el precio no se filtró: pide la moneda. Si property o reviews son null, esa fuente no está disponible.' });
+      return JSON.stringify({ filters, filterSource: globalCount ? 'global' : explicitCity ? 'text' : 'ollama', total: page.total, availabilityKind: page.availabilityKind, items, details, note: 'Los resultados son una muestra; la disponibilidad PROJECTED es estimada y no confirma una reserva. Ausencia de datos no demuestra que una propiedad esté bloqueada. Si missingCurrency es true, el precio no se filtró: pide la moneda. Si property o reviews son null, esa fuente no está disponible.' });
     } catch {
       return 'La búsqueda de alojamientos no está disponible. No se puede determinar la disponibilidad ni las fechas bloqueadas.';
     }
