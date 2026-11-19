@@ -88,6 +88,12 @@ services:
       GATEWAY_TLS_CERT_FILE: /run/secrets/gateway_tls_cert
       GATEWAY_TLS_KEY_FILE: /run/secrets/gateway_tls_key
       GATEWAY_TLS_MIN_VERSION: ${GATEWAY_TLS_MIN_VERSION:-TLSv1.2}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      CHAT_SEARCH_BASE_URL: http://search-service:3004
+      CHAT_ACCOMMODATIONS_BASE_URL: http://accommodations-service:3003
+      CHAT_SEARCH_AUDIENCE: ${SEARCH_SERVICE_JWT_AUDIENCE:-stayhub-search-service}
+      CHAT_SEARCH_SCOPE: ${SEARCH_SERVICE_JWT_SCOPE:-search:invoke}
       GATEWAY_AUTH_BASE_URL: ${GATEWAY_AUTH_BASE_URL:-http://auth-service:3001}
       GATEWAY_USERS_BASE_URL: ${GATEWAY_USERS_BASE_URL:-http://users-service:3002}
       GATEWAY_REVIEWS_BASE_URL: ${GATEWAY_REVIEWS_BASE_URL:-http://reviews-service:3007}

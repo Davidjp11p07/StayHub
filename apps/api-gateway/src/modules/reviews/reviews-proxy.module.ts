@@ -19,5 +19,6 @@ import { ReviewsController } from './reviews.controller';
       inject: [GATEWAY_CONFIG, ReviewsServiceTokenProvider],
     },
   ],
+  exports: [ReviewsClient],
 })
 export class ReviewsProxyModule {}
