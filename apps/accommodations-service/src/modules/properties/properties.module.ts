@@ -7,21 +7,24 @@ import { AddPropertyPhotoUseCase } from '@accommodations/application/photos/add-
 import { CreatePropertyUseCase } from '@accommodations/application/properties/create-property.use-case';
 import { GetPropertyUseCase } from '@accommodations/application/properties/get-property.use-case';
 import { GetBookingQuoteUseCase } from '@accommodations/application/properties/get-booking-quote.use-case';
+import { GetInventoryContextUseCase } from '@accommodations/application/properties/get-inventory-context.use-case';
 import { ReplacePropertyUseCase } from '@accommodations/application/properties/replace-property.use-case';
 import { ACCOMMODATIONS_CONFIG, type AccommodationsConfig } from '@accommodations/infrastructure/config/accommodations-config';
 import { LocalStorageAdapter } from '@accommodations/infrastructure/files/local-storage.adapter';
 import { PropertiesController } from '@accommodations/interfaces/http/properties/properties.controller';
 import { BookingQuoteController } from '@accommodations/interfaces/http/internal/booking-quote.controller';
+import { InventoryContextController } from '@accommodations/interfaces/http/internal/inventory-context.controller';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [AuthModule],
-  controllers: [ReportSupplyController, PropertiesController, BookingQuoteController],
+  controllers: [ReportSupplyController, PropertiesController, BookingQuoteController, InventoryContextController],
   providers: [ReportsSupplyGuard, ReportsSupplyQuery,
     { provide: STORAGE_PORT, useFactory: (config: AccommodationsConfig): StoragePort => new LocalStorageAdapter(config.photoStorageRoot), inject: [ACCOMMODATIONS_CONFIG] },
     { provide: CreatePropertyUseCase, useFactory: (properties: PropertyRepository): CreatePropertyUseCase => new CreatePropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     { provide: GetPropertyUseCase, useFactory: (properties: PropertyRepository): GetPropertyUseCase => new GetPropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     { provide: GetBookingQuoteUseCase, useFactory: (properties: PropertyRepository): GetBookingQuoteUseCase => new GetBookingQuoteUseCase(properties), inject: [PROPERTY_REPOSITORY] },
+    { provide: GetInventoryContextUseCase, useFactory: (properties: PropertyRepository): GetInventoryContextUseCase => new GetInventoryContextUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     { provide: ReplacePropertyUseCase, useFactory: (properties: PropertyRepository): ReplacePropertyUseCase => new ReplacePropertyUseCase(properties), inject: [PROPERTY_REPOSITORY] },
     {
       provide: AddPropertyPhotoUseCase,

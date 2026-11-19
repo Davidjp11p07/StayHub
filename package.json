@@ -11,7 +11,8 @@
     "apps/bookings-service",
     "apps/reviews-service",
     "apps/web",
-    "apps/payments-service"
+    "apps/payments-service",
+    "apps/room-inventory-service"
   ],
   "engines": {
     "node": ">=20 <21"
@@ -165,7 +166,20 @@
     "seed:reports:demo": "node scripts/reports-demo-seed.mjs",
     "token:reports:demo": "node scripts/reports-demo-token.mjs",
     "test:reports:smoke": "node scripts/reports-smoke.mjs",
-    "dev:reports:up": "npm run env:reports:live && docker compose -f docker-compose.yml -f docker-compose.reports.integration.yml up -d --build --wait"
+    "dev:reports:up": "npm run env:reports:live && docker compose -f docker-compose.yml -f docker-compose.reports.integration.yml up -d --build --wait",
+    "build:inventory": "npm run build --workspace @stayhub/room-inventory-service",
+    "lint:inventory": "npm run lint --workspace @stayhub/room-inventory-service",
+    "typecheck:inventory": "npm run typecheck --workspace @stayhub/room-inventory-service",
+    "test:inventory": "npm run test --workspace @stayhub/room-inventory-service",
+    "test:inventory:unit": "npm run test:unit --workspace @stayhub/room-inventory-service",
+    "test:inventory:integration": "npm run test:integration --workspace @stayhub/room-inventory-service",
+    "test:inventory:contract": "npm run test:contract --workspace @stayhub/room-inventory-service",
+    "test:inventory:security": "npm run test:security --workspace @stayhub/room-inventory-service",
+    "test:inventory:coverage": "npm run test:coverage --workspace @stayhub/room-inventory-service",
+    "prisma:inventory:generate": "npm run prisma:generate --workspace @stayhub/room-inventory-service",
+    "prisma:inventory:validate": "npm run prisma:validate --workspace @stayhub/room-inventory-service",
+    "prisma:inventory:migrate:deploy": "npm run prisma:migrate:deploy --workspace @stayhub/room-inventory-service",
+    "openapi:inventory:check": "node scripts/validate-room-inventory-contracts.mjs && npm run test:contract --workspace @stayhub/room-inventory-service -- --runTestsByPath test/contract/openapi-drift.spec.ts test/contract/accommodations-context.consumer.spec.ts"
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^5.2.0",

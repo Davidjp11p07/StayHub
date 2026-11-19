@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: StayHub Room Inventory Service API
+  version: 1.0.0
+  description: Administración de productos y servicios disponibles por habitación para el Sprint 4.
+servers:
+  - url: http://room-inventory-service:3008
+security:
+  - delegatedJwt: []
+paths:
+  /inventory/rooms/{roomId}:
+    get:
+      operationId: getRoomInventory
+      summary: Consultar inventario de una habitación
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '200':
+          description: Inventario actual; habitación sin items usa versión 0
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomInventory' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    put:
+      operationId: replaceRoomInventory
+      summary: Reemplazar de forma versionada el inventario de una habitación
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceInventoryRequest' }
+      responses:
+        '200':
+          description: Inventario reemplazado o replay idempotente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomInventory' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /inventory/rooms/{roomId}/items:
+    post:
+      operationId: addRoomInventoryItem
+      summary: Agregar un producto o servicio
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddInventoryItemRequest' }
+      responses:
+        '201':
+          description: Item agregado e inventario versionado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomInventory' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+components:
+  securitySchemes:
+    delegatedJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT interno RS256 del Gateway con sub, role, audience y scope inventory:manage.
+  parameters:
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    InventoryItemType:
+      type: string
+      enum: [PRODUCT, SERVICE]
+    AddInventoryItemRequest:
+      type: object
+      additionalProperties: false
+      required: [type, name, quantityAvailable, active]
+      properties:
+        type: { $ref: '#/components/schemas/InventoryItemType' }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityAvailable: { type: integer, minimum: 0, maximum: 1000000 }
+        active: { type: boolean }
+    ReplaceInventoryItem:
+      type: object
+      additionalProperties: false
+      required: [id, type, name, quantityAvailable, active]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/InventoryItemType' }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityAvailable: { type: integer, minimum: 0, maximum: 1000000 }
+        active: { type: boolean }
+    ReplaceInventoryRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, items]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 200
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/ReplaceInventoryItem' }
+    # Explicit object (not allOf over ReplaceInventoryItem): that schema has additionalProperties: false,
+    # so an allOf would reject createdAt/updatedAt and no response with items could ever validate.
+    InventoryItem:
+      type: object
+      additionalProperties: false
+      required: [id, type, name, quantityAvailable, active, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/InventoryItemType' }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        quantityAvailable: { type: integer, minimum: 0, maximum: 1000000 }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RoomInventory:
+      type: object
+      additionalProperties: false
+      required: [roomId, propertyId, version, items, createdAt, updatedAt]
+      properties:
+        roomId: { type: string, format: uuid }
+        propertyId: { type: string, format: uuid }
+        version: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/InventoryItem' }
+        createdAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, code, traceId]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        code: { type: string }
+        detail: { type: string }
+        traceId: { type: string }
+  responses:
+    BadRequest:
+      description: DTO, UUID o item desconocido inválido
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Unauthorized:
+      description: JWT ausente o inválido
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Forbidden:
+      description: Rol u ownership no autorizado
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    NotFound:
+      description: Habitación inexistente u oculta
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Conflict:
+      description: Versión de inventario desactualizada
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Unprocessable:
+      description: Límite del dominio excedido
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Unavailable:
+      description: PostgreSQL o Accommodations no disponible
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }

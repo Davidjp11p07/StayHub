@@ -52,7 +52,7 @@ describe('ACC-017 create property use case', () => {
     const created: NewProperty[] = [];
     const repo: PropertyRepository = {
       create: (property) => { created.push(property); return Promise.resolve(stored); },
-      findById: () => Promise.reject(new Error('unused')),
+      findById: () => Promise.reject(new Error('unused')), findByRoomId: () => Promise.reject(new Error('unused')),
       replace: () => Promise.reject(new Error('unused')),
       addPhoto: () => Promise.reject(new Error('unused')),
     };

@@ -6,7 +6,6 @@ services:
     command: ["redis-server", "--requirepass", "${GATEWAY_REDIS_PASSWORD}"]
     secrets:
       - gateway_redis_password
-    security_opt: [label=disable]
     networks: [stayhub-internal]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/gateway_redis_password)\" ping | grep PONG"]
@@ -49,7 +48,7 @@ services:
       target: build
     command: ["npm", "run", "prisma:migrate:deploy", "--workspace", "@stayhub/auth-service"]
     env_file: ${AUTH_ENV_FILE:-.env}
-    networks: [stayhub-internal]
+    networks: [stayhub-internal, services]
     depends_on:
       auth-db:
         condition: service_healthy
@@ -60,7 +59,7 @@ services:
       context: .
       dockerfile: infra/docker/auth/Dockerfile
     env_file: ${AUTH_ENV_FILE:-.env}
-    networks: [stayhub-internal]
+    networks: [stayhub-internal, services]
     depends_on:
       auth-db:
         condition: service_healthy
@@ -81,7 +80,7 @@ services:
       dockerfile: infra/docker/gateway/Dockerfile
       target: runtime
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       GATEWAY_PROTOCOL: https
       GATEWAY_PORT: "8080"
       GATEWAY_API_PREFIX: /api/v1
@@ -100,6 +99,7 @@ services:
       GATEWAY_BOOKINGS_BASE_URL: ${GATEWAY_BOOKINGS_BASE_URL:-http://bookings-service:3005}
       GATEWAY_ACCOMMODATIONS_BASE_URL: ${GATEWAY_ACCOMMODATIONS_BASE_URL:-http://accommodations-service:3003}
       GATEWAY_SEARCH_BASE_URL: ${GATEWAY_SEARCH_BASE_URL:-http://search-service:3004}
+      GATEWAY_INVENTORY_BASE_URL: ${GATEWAY_INVENTORY_BASE_URL:-http://room-inventory-service:3008}
       GATEWAY_JWT_PUBLIC_KEYS_JSON: ${GATEWAY_JWT_PUBLIC_KEYS_JSON:?required}
       GATEWAY_JWT_ISSUER: ${GATEWAY_JWT_ISSUER:?required}
       GATEWAY_JWT_AUDIENCE: ${GATEWAY_JWT_AUDIENCE:?required}
@@ -115,6 +115,8 @@ services:
       GATEWAY_BOOKINGS_SERVICE_SCOPE: ${GATEWAY_BOOKINGS_SERVICE_SCOPE:-bookings:invoke}
       GATEWAY_SEARCH_SERVICE_AUDIENCE: ${GATEWAY_SEARCH_SERVICE_AUDIENCE:-stayhub-search-service}
       GATEWAY_SEARCH_SERVICE_SCOPE: ${GATEWAY_SEARCH_SERVICE_SCOPE:-search:invoke}
+      GATEWAY_INVENTORY_SERVICE_AUDIENCE: ${GATEWAY_INVENTORY_SERVICE_AUDIENCE:-stayhub-room-inventory-service}
+      GATEWAY_INVENTORY_SERVICE_SCOPE: ${GATEWAY_INVENTORY_SERVICE_SCOPE:-inventory:manage}
       GATEWAY_REDIS_URL: ${GATEWAY_REDIS_URL:?required}
       GATEWAY_REDIS_PASSWORD_FILE: /run/secrets/gateway_redis_password
       GATEWAY_REDIS_NAMESPACE: ${GATEWAY_REDIS_NAMESPACE:-gateway:edge}
@@ -146,6 +148,9 @@ services:
       GATEWAY_SEARCH_TIMEOUT_MS: ${GATEWAY_SEARCH_TIMEOUT_MS:-3000}
       GATEWAY_SEARCH_CIRCUIT_FAILURE_THRESHOLD: ${GATEWAY_SEARCH_CIRCUIT_FAILURE_THRESHOLD:-5}
       GATEWAY_SEARCH_CIRCUIT_RESET_MS: ${GATEWAY_SEARCH_CIRCUIT_RESET_MS:-30000}
+      GATEWAY_INVENTORY_TIMEOUT_MS: ${GATEWAY_INVENTORY_TIMEOUT_MS:-5000}
+      GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD: ${GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD:-5}
+      GATEWAY_INVENTORY_CIRCUIT_RESET_MS: ${GATEWAY_INVENTORY_CIRCUIT_RESET_MS:-30000}
       GATEWAY_INTROSPECTION_TIMEOUT_MS: ${GATEWAY_INTROSPECTION_TIMEOUT_MS:-2000}
       GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT: ${GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT:?required}
       GATEWAY_OTEL_SERVICE_NAME: ${GATEWAY_OTEL_SERVICE_NAME:-stayhub-api-gateway}
@@ -160,7 +165,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true, label=disable]
+    security_opt: [no-new-privileges:true]
     restart: always
     healthcheck:
       test: ["CMD", "node", "-e", "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';fetch('https://127.0.0.1:8080/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -174,6 +179,7 @@ services:
       reviews-service: { condition: service_healthy }
       bookings-service: { condition: service_healthy }
       accommodations-service: { condition: service_healthy }
+      room-inventory-service: { condition: service_healthy }
       search-service: { condition: service_healthy }
 
   accommodations-db:
@@ -183,7 +189,6 @@ services:
       POSTGRES_USER: stayhub_accommodations
       POSTGRES_PASSWORD_FILE: /run/secrets/accommodations_db_password
     secrets: [accommodations_db_password]
-    security_opt: [label=disable]
     volumes: [accommodations_data:/var/lib/postgresql/data]
     networks: [accommodations-internal]
     restart: unless-stopped
@@ -201,7 +206,6 @@ services:
     environment:
       ACCOMMODATIONS_DATABASE_URL_FILE: /run/secrets/accommodations_database_url
     secrets: [accommodations_database_url]
-    security_opt: [label=disable]
     networks: [accommodations-internal]
     restart: "no"
     depends_on:
@@ -225,9 +229,12 @@ services:
       ACCOMMODATIONS_SERVICE_JWT_KID: ${ACCOMMODATIONS_SERVICE_JWT_KID:?required}
       ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY_FILE: /run/secrets/accommodations_service_public
       ACCOMMODATIONS_BOOKING_QUOTE_SCOPE: ${ACCOMMODATIONS_BOOKING_QUOTE_SCOPE:-accommodations:booking-quote}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER:-stayhub-room-inventory-service}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID:-room-inventory-accommodations-2026-01}
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE: /run/secrets/accommodations_inventory_service_public
+      ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE: ${ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE:-accommodations:inventory-context}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public]
-    security_opt: [label=disable]
+    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public, accommodations_inventory_service_public]
     volumes: [accommodations_photos:/var/lib/stayhub/accommodations/photos]
     networks: [accommodations-internal, services]
     restart: unless-stopped
@@ -246,7 +253,6 @@ services:
       POSTGRES_USER: users
       POSTGRES_PASSWORD_FILE: /run/secrets/users_db_password
     secrets: [users_db_password]
-    security_opt: [label=disable]
     volumes: [users_data:/var/lib/postgresql/data]
     networks: [users-internal]
     restart: unless-stopped
@@ -264,7 +270,6 @@ services:
     environment:
       USERS_DATABASE_URL_FILE: /run/secrets/users_database_url
     secrets: [users_database_url]
-    security_opt: [label=disable]
     networks: [users-internal]
     restart: 'no'
     depends_on:
@@ -292,7 +297,6 @@ services:
       USERS_MAX_PHOTO_BYTES: '5000000'
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
     secrets: [users_database_url, users_access_public, users_service_public]
-    security_opt: [label=disable]
     networks: [users-internal, services]
     restart: unless-stopped
     healthcheck:
@@ -409,7 +413,6 @@ services:
       POSTGRES_USER: stayhub_bookings
       POSTGRES_PASSWORD_FILE: /run/secrets/bookings_db_password
     secrets: [bookings_db_password]
-    security_opt: [label=disable]
     volumes: [bookings_data:/var/lib/postgresql/data]
     networks: [bookings-internal]
     restart: unless-stopped
@@ -441,7 +444,6 @@ services:
     environment:
       BOOKINGS_DATABASE_URL_FILE: /run/secrets/bookings_database_url
     secrets: [bookings_database_url]
-    security_opt: [label=disable]
     networks: [bookings-internal]
     restart: "no"
     depends_on:
@@ -488,7 +490,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true, label=disable]
+    security_opt: [no-new-privileges:true]
     restart: always
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3005/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -509,7 +511,6 @@ services:
       POSTGRES_USER: stayhub_reviews
       POSTGRES_PASSWORD_FILE: /run/secrets/reviews_db_password
     secrets: [reviews_db_password]
-    security_opt: [label=disable]
     volumes: [reviews_data:/var/lib/postgresql/data]
     networks: [reviews-internal]
     restart: unless-stopped
@@ -527,7 +528,6 @@ services:
     environment:
       REVIEWS_DATABASE_URL_FILE: /run/secrets/reviews_database_url
     secrets: [reviews_database_url]
-    security_opt: [label=disable]
     networks: [reviews-internal]
     restart: "no"
     depends_on:
@@ -560,7 +560,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true, label=disable]
+    security_opt: [no-new-privileges:true]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3007/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -577,7 +577,6 @@ services:
       POSTGRES_USER: stayhub_payments
       POSTGRES_PASSWORD_FILE: /run/secrets/payments_db_password
     secrets: [payments_db_password]
-    security_opt: [label=disable]
     volumes: [payments_db_data:/var/lib/postgresql/data]
     networks: [payments-internal]
     restart: unless-stopped
@@ -595,7 +594,6 @@ services:
     environment:
       PAYMENTS_DATABASE_URL_FILE: /run/secrets/payments_database_url
     secrets: [payments_database_url]
-    security_opt: [label=disable]
     networks: [payments-internal]
     restart: 'no'
     depends_on:
@@ -632,7 +630,6 @@ services:
       - payments_service_jwt_public
       - payments_token_hmac_secret
       - bookings_rabbitmq_url
-    security_opt: [label=disable]
     networks: [payments-internal, bookings-internal, services]
     restart: always
     healthcheck:
@@ -652,7 +649,6 @@ services:
       POSTGRES_USER: stayhub_notifications
       POSTGRES_PASSWORD_FILE: /run/secrets/notifications_db_password
     secrets: [notifications_db_password]
-    security_opt: [label=disable]
     volumes: [notifications_data:/var/lib/postgresql/data]
     networks: [notifications-internal]
     restart: unless-stopped
@@ -670,7 +666,6 @@ services:
     environment:
       NOTIFICATIONS_DATABASE_URL_FILE: /run/secrets/notifications_database_url
     secrets: [notifications_database_url]
-    security_opt: [label=disable]
     networks: [notifications-internal]
     restart: "no"
     depends_on:
@@ -696,7 +691,6 @@ services:
       NOTIFICATIONS_SEND_SCOPE: ${NOTIFICATIONS_SEND_SCOPE:-notifications:send}
       NOTIFICATIONS_EMAIL_MODE: ${NOTIFICATIONS_EMAIL_MODE:-stub}
     secrets: [notifications_database_url, notifications_access_public, notifications_service_public]
-    security_opt: [label=disable]
     networks: [notifications-internal, services]
     restart: unless-stopped
     depends_on:
@@ -707,6 +701,79 @@ services:
       timeout: 5s
       retries: 20
 
+  # Room Inventory (Sprint 4): products/services per room. Room ownership comes from Accommodations over REST.
+  inventory-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: stayhub_inventory
+      POSTGRES_PASSWORD_FILE: /run/secrets/inventory_db_password
+    secrets: [inventory_db_password]
+    volumes: [inventory_data:/var/lib/postgresql/data]
+    networks: [inventory-internal]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stayhub_inventory -d inventory_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  room-inventory-migrate:
+    build:
+      context: .
+      dockerfile: infra/docker/room-inventory/Dockerfile
+      target: migration
+    environment:
+      INVENTORY_DATABASE_URL_FILE: /run/secrets/inventory_database_url
+    secrets: [inventory_database_url]
+    networks: [inventory-internal]
+    restart: "no"
+    depends_on:
+      inventory-db: { condition: service_healthy }
+
+  room-inventory-service:
+    build:
+      context: .
+      dockerfile: infra/docker/room-inventory/Dockerfile
+      target: runtime
+    environment:
+      NODE_ENV: production
+      INVENTORY_PORT: "3008"
+      INVENTORY_DATABASE_URL_FILE: /run/secrets/inventory_database_url
+      INVENTORY_JWT_PUBLIC_KEYS_JSON: ${INVENTORY_JWT_PUBLIC_KEYS_JSON:?required}
+      INVENTORY_JWT_ISSUER: ${INVENTORY_JWT_ISSUER:?required}
+      INVENTORY_JWT_AUDIENCE: ${INVENTORY_JWT_AUDIENCE:-stayhub-room-inventory-service}
+      INVENTORY_JWT_SCOPE: ${INVENTORY_JWT_SCOPE:-inventory:manage}
+      INVENTORY_ACCOMMODATIONS_URL: ${INVENTORY_ACCOMMODATIONS_URL:-http://accommodations-service:3003}
+      INVENTORY_ACCOMMODATIONS_TIMEOUT_MS: ${INVENTORY_ACCOMMODATIONS_TIMEOUT_MS:-2000}
+      INVENTORY_ACCOMMODATIONS_CIRCUIT_FAILURE_THRESHOLD: ${INVENTORY_ACCOMMODATIONS_CIRCUIT_FAILURE_THRESHOLD:-5}
+      INVENTORY_ACCOMMODATIONS_CIRCUIT_RESET_MS: ${INVENTORY_ACCOMMODATIONS_CIRCUIT_RESET_MS:-30000}
+      INVENTORY_SERVICE_PRIVATE_KEY_FILE: /run/secrets/inventory_service_private_key
+      INVENTORY_SERVICE_JWT_KID: ${INVENTORY_SERVICE_JWT_KID:-room-inventory-accommodations-2026-01}
+      INVENTORY_SERVICE_JWT_ISSUER: ${INVENTORY_SERVICE_JWT_ISSUER:-stayhub-room-inventory-service}
+      INVENTORY_ACCOMMODATIONS_AUDIENCE: ${INVENTORY_ACCOMMODATIONS_AUDIENCE:-stayhub-accommodations-service}
+      INVENTORY_ACCOMMODATIONS_SCOPE: ${INVENTORY_ACCOMMODATIONS_SCOPE:-accommodations:inventory-context}
+      INVENTORY_SERVICE_TOKEN_TTL_SECONDS: ${INVENTORY_SERVICE_TOKEN_TTL_SECONDS:-60}
+      INVENTORY_MAX_ITEMS_PER_ROOM: ${INVENTORY_MAX_ITEMS_PER_ROOM:-200}
+      INVENTORY_MAX_QUANTITY: ${INVENTORY_MAX_QUANTITY:-1000000}
+      INVENTORY_SHUTDOWN_GRACE_MS: ${INVENTORY_SHUTDOWN_GRACE_MS:-10000}
+      INVENTORY_LOG_LEVEL: ${INVENTORY_LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
+    secrets: [inventory_database_url, inventory_service_private_key]
+    networks: [inventory-internal, services]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3008/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      room-inventory-migrate: { condition: service_completed_successfully }
+      accommodations-service: { condition: service_healthy }
 networks:
   stayhub-edge:
     internal: true
@@ -728,6 +795,8 @@ networks:
     internal: true
   notifications-internal:
     internal: true
+  inventory-internal:
+    internal: true
 
 volumes:
   auth-db-data:
@@ -739,6 +808,7 @@ volumes:
   accommodations_data:
   accommodations_photos:
   notifications_data:
+  inventory_data:
 
 secrets:
   gateway_tls_cert:
@@ -763,6 +833,12 @@ secrets:
     file: ${BOOKINGS_DATABASE_URL_FILE:?required}
   bookings_rabbitmq_url:
     file: ${BOOKINGS_RABBITMQ_URL_FILE:?required}
+  inventory_db_password:
+    file: ${INVENTORY_DB_PASSWORD_FILE:-./secrets/inventory-db-password.txt}
+  inventory_database_url:
+    file: ${INVENTORY_DATABASE_URL_FILE:-./secrets/inventory-database-url.txt}
+  inventory_service_private_key:
+    file: ${INVENTORY_SERVICE_PRIVATE_KEY_SOURCE:-./secrets/room-inventory-service-private.pem}
   reviews_db_password:
     file: ${REVIEWS_DB_PASSWORD_FILE:?required}
   reviews_database_url:
@@ -788,6 +864,8 @@ secrets:
     file: ${ACCOMMODATIONS_JWT_PUBLIC_KEY_FILE:?required}
   accommodations_service_public:
     file: ${ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY_FILE:?required}
+  accommodations_inventory_service_public:
+    file: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE:-./secrets/room-inventory-service-public.pem}
   bookings_notifications_service_token:
     file: ${BOOKINGS_NOTIFICATIONS_SERVICE_TOKEN_FILE:?required}
   bookings_outbound_service_tokens:

@@ -218,6 +218,30 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /internal/v1/rooms/{roomId}/inventory-context:
+    get:
+      tags: [Properties]
+      operationId: getRoomInventoryContext
+      summary: Obtener contexto autoritativo mínimo de una habitación para Room Inventory
+      security:
+        - serviceJwt: []
+      parameters:
+        - { name: roomId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Habitación y propiedad con owner y estado; sin nombres, precios ni ubicación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomInventoryContext'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearerAuth:
@@ -228,7 +252,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT (RS256)
-      description: Service JWT de Bookings con scope `accommodations:booking-quote`.
+      description: Service JWT interno con scope por endpoint (`accommodations:booking-quote` o `accommodations:inventory-context`).
   parameters:
     PropertyId:
       name: id
@@ -289,6 +313,26 @@ components:
         roomUpdatedAt:
           type: string
           format: date-time
+    RoomInventoryContext:
+      type: object
+      additionalProperties: false
+      required: [roomId, propertyId, ownerId, propertyStatus, roomExists]
+      properties:
+        roomId:
+          type: string
+          format: uuid
+        propertyId:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        propertyStatus:
+          type: string
+          enum: [DRAFT, PUBLISHED, UNPUBLISHED]
+        roomExists:
+          type: boolean
+          enum: [true]
     PropertyCreate:
       type: object
       additionalProperties: false

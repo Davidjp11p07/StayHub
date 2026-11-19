@@ -6,6 +6,7 @@ import { toRemoteHttpException } from '@gateway/infrastructure/http/remote-probl
 import {
   ServiceClientBase,
   type HttpFetch,
+  type HttpMethod,
   type ServiceResult,
 } from '@gateway/infrastructure/http/service-client.base';
 
@@ -25,12 +26,18 @@ const ACCOMMODATIONS_DEPENDENCY = 'accommodations';
 
 export interface AccommodationsRequestContext {
   readonly traceId: string;
-  /** Bearer validado por el guard; cadena vacía para lecturas anónimas. */
-  readonly bearer: string;
+  /** Bearer validado por el guard; vacío/undefined para lecturas anónimas. */
+  readonly bearer: string | undefined;
 }
 
 export interface AccommodationsMultipart {
   readonly body: Uint8Array;
+  readonly contentType: string;
+}
+
+/** Compatibilidad con el contrato anterior del adaptador. */
+export interface AccommodationsBody {
+  readonly bytes: Uint8Array;
   readonly contentType: string;
 }
 
@@ -87,13 +94,24 @@ export class AccommodationsClient {
     return this.call(context, 'POST', `${propertyPath(propertyId)}/photos`, multipart);
   }
 
+  /** API genérica conservada para consumidores y pruebas existentes. */
+  public request<T>(
+    method: HttpMethod,
+    path: string,
+    context: AccommodationsRequestContext,
+    body?: AccommodationsBody,
+  ): Promise<T> {
+    const payload = body === undefined ? undefined : { body: body.bytes, contentType: body.contentType };
+    return this.call(context, method, path, payload) as Promise<T>;
+  }
+
   private call(
     context: AccommodationsRequestContext,
-    method: 'GET' | 'POST' | 'PUT',
+    method: HttpMethod,
     path: string,
     payload?: AccommodationsMultipart,
   ): Promise<unknown> {
-    return this.bearerStore.run(context.bearer, async () => {
+    return this.bearerStore.run(context.bearer ?? '', async () => {
       let result: ServiceResult;
       try {
         result = await this.base.request({

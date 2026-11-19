@@ -17,6 +17,7 @@ import type { Request } from 'express';
 
 import {
   AccommodationsClient,
+  type AccommodationsBody,
   type AccommodationsMultipart,
   type AccommodationsRequestContext,
 } from '@gateway/infrastructure/http/accommodations.client';
@@ -45,6 +46,7 @@ import {
  */
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+export const PROPERTY_PHOTO_MAX_BYTES = PHOTO_MAX_BYTES;
 const MULTER_FILE_LIMIT = PHOTO_MAX_BYTES + 1;
 
 interface MulterFile {
@@ -127,6 +129,26 @@ function photoMultipart(file: MulterFile | undefined): AccommodationsMultipart {
       `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimetype}\r\n\r\n`,
     ),
     file.buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  return { body: new Uint8Array(body), contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
+/** Helper conservado para las pruebas y consumidores existentes del adaptador. */
+export function multipart(file: Pick<MulterFile, 'buffer' | 'mimetype'>): AccommodationsBody {
+  const value = buildPhotoMultipart(file.buffer, file.mimetype, undefined);
+  return { bytes: value.body, contentType: value.contentType };
+}
+
+function buildPhotoMultipart(buffer: Buffer, mimetypeValue: string, originalname: string | undefined): AccommodationsMultipart {
+  const boundary = `stayhub${randomUUID().replace(/-/g, '')}`;
+  const filename = safeFilename(originalname);
+  const mimetype = /^[\w.+-]+\/[\w.+-]+$/u.test(mimetypeValue) ? mimetypeValue : 'application/octet-stream';
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimetype}\r\n\r\n`,
+    ),
+    buffer,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
   return { body: new Uint8Array(body), contentType: `multipart/form-data; boundary=${boundary}` };

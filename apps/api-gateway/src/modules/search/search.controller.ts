@@ -18,6 +18,7 @@ const SEARCH_PARAMETERS = [
 ] as const;
 const SUGGEST_PARAMETERS = ['q', 'limit'] as const;
 const REPEATABLE = new Set<string>(['amenities']);
+const MAX_LIST_ITEMS = 20;
 const PROBLEM = { 'application/problem+json': { schema: { $ref: '#/components/schemas/Problem' } } };
 
 @ApiTags('Search')
@@ -62,5 +63,34 @@ function allowedQuery(request: Request, names: readonly string[]): string {
     output.append(name, value);
   }
   const query = output.toString();
+  return query === '' ? '' : `?${query}`;
+}
+
+/**
+ * Compatibilidad con las pruebas y consumidores previos que construyen la consulta desde
+ * `request.query`. Las rutas HTTP usan `allowedQuery` para conservar el orden y los repetidos
+ * de la URL original.
+ */
+export function forwardQuery(request: Request, scalars: readonly string[], lists: readonly string[]): string {
+  const known = new Set([...scalars, ...lists]);
+  if (Object.keys(request.query).some((key) => !known.has(key))) {
+    throw new BadRequestException({ code: 'UNKNOWN_QUERY_PARAMETER' });
+  }
+  const params = new URLSearchParams();
+  for (const name of scalars) {
+    const value = request.query[name];
+    if (typeof value === 'string') params.set(name, value);
+    else if (value !== undefined) throw new BadRequestException({ code: 'INVALID_QUERY_PARAMETER' });
+  }
+  for (const name of lists) {
+    const value = request.query[name];
+    if (value === undefined) continue;
+    const values = Array.isArray(value) ? value : [value];
+    if (values.length > MAX_LIST_ITEMS || values.some((item) => typeof item !== 'string')) {
+      throw new BadRequestException({ code: 'INVALID_QUERY_PARAMETER' });
+    }
+    for (const item of values as string[]) params.append(name, item);
+  }
+  const query = params.toString();
   return query === '' ? '' : `?${query}`;
 }

@@ -37,7 +37,7 @@ describe('ACC-021 visibility policy', () => {
 describe('ACC-021 get property use case', () => {
   function repo(found: Property | null): PropertyRepository {
     return {
-      findById: () => Promise.resolve(found), create: () => Promise.reject(new Error('unused')),
+      findById: () => Promise.resolve(found), findByRoomId: () => Promise.resolve(found), create: () => Promise.reject(new Error('unused')),
       replace: () => Promise.reject(new Error('unused')), addPhoto: () => Promise.reject(new Error('unused')),
     };
   }
