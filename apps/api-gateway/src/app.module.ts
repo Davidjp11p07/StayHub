@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChatModule } from './modules/chat/chat.module';
 import { ReportsProxyModule } from '@gateway/modules/reports/reports-proxy.module';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 
@@ -26,6 +27,7 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
  */
 @Module({
   imports: [
+    ChatModule,
     GatewayConfigModule,
     GatewayRedisModule,
     GatewayAuthModule,
