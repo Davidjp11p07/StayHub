@@ -152,6 +152,23 @@ describeDb('payment result and expiration saga', () => {
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('PENDING_PAYMENT');
   });
 
+  it('releases the same room and dates only after the expiry worker persists EXPIRED', async () => {
+    const hold = await create('PENDING_PAYMENT', 'PENDING', new Date(Date.now() - 60_000));
+    const original = await prisma.booking.findUniqueOrThrow({ where: { id: hold.id } });
+    const replacementId = randomUUID();
+    bookingIds.push(replacementId);
+    const replacement = {
+      ...original, id: replacementId, guestId: randomUUID(), paymentOrderId: randomUUID(),
+      holdExpiresAt: new Date(Date.now() + 60_000),
+    };
+    await expect(prisma.booking.create({ data: replacement })).rejects.toThrow(/bookings_no_overlap|23P01/u);
+    await expiry.expire(100);
+    await expect(prisma.booking.findUniqueOrThrow({ where: { id: hold.id } })).resolves.toMatchObject({
+      status: 'EXPIRED', holdExpiresAt: null,
+    });
+    await expect(prisma.booking.create({ data: replacement })).resolves.toMatchObject({ id: replacementId });
+  });
+
   it('applies partial and total refunds without reactivating inventory', async () => {
     const booking = await create('CANCELLED_BY_GUEST', 'REFUND_PENDING', null);
     const partial = {
