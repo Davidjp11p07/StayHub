@@ -37,3 +37,16 @@
 AUTH-S2S Reviews verificado para autenticación y rechazo de reservas inexistentes. Reviews y Bookings reconstruidos. 15 pruebas focalizadas y typecheck de Reviews aprobados. El gateway devolvió 404 BOOKING_NOT_ELIGIBLE. Pendiente probar publicación con estancia completada. Para preparar el nuevo secreto en un checkout existente: node scripts/generate-compose-dev-env.mjs --reviews-eligibility-only.
 
 REG-503 CORREGIDO-Y-VERIFICADO para solicitudes idénticas simultáneas. E2E por gateway: 201/201 y replay con el mismo ID, 409 al cambiar el contenido, dos claves independientes con 201/201. Chrome: registro y login. 9 pruebas Auth, 18 web, typecheck y lint Auth aprobados. Auth reconstruido, sin migraciones. Causa del incidente histórico con claves distintas aún sin confirmar. Prueba reproducible: node scripts/e2e-registration-concurrency.mjs con NODE_EXTRA_CA_CERTS apuntando al certificado local.
+
+## PAY-04 — Compensación tardía verificada en integración local
+
+El 20 de noviembre de 2026 (UTC), el gateway aceptó dos reservas sintéticas y su cancelación. Payments usó la pasarela simulada local. La consulta de los historiales de Bookings y Payments mostró la siguiente secuencia.
+
+| Reserva | Cancelación UTC | Aprobación UTC | Reembolso UTC |
+| --- | --- | --- | --- |
+| d1d7b12e-560b-48c7-b595-7adf0870dc33 | 00:26:02.221 | 00:26:03.139 | 00:26:04.606 |
+| d27f2c00-32d1-48d0-a9fd-ec94780b5882 | 00:26:02.437 | 00:26:03.265 | 00:26:04.713 |
+
+Cada reserva conservó CANCELLED_BY_GUEST, sin transición a CONFIRMED. Para cada una, la política fijó 318.000 COP, Bookings completó un único REQUEST_REFUND en un intento y Payments registró una sola devolución por el total. La ejecución usó scripts/e2e-booking-concurrency.mjs con la propiedad 2b626617-a318-48e6-b63e-b1582f3342ab y un desplazamiento de 343 días. El orden temporal se verificó por consulta posterior, no está garantizado en cada ejecución del script.
+
+Siguiente unidad pendiente: REQ-05, verificación autorizada y publicación de inmuebles.

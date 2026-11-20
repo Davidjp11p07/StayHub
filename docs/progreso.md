@@ -191,3 +191,16 @@ Reviews firma con su propia clave por solicitud. Bookings acepta esa identidad �
 ### REG-503 — registro concurrente
 
 Auth observaba la concesión ocupada y respondía 503 inmediatamente. Ahora espera de forma acotada fuera de la transacción y confirma que Users tiene la identidad activa. El reconciliador recibe su primer turno tras el intervalo reservado a la solicitud inicial. Pasaron 9 pruebas Auth, 18 web, tipos y lint Auth. El gateway confirmó dos 201 con el mismo ID, replay persistido y 409 para el cambio de contenido. Dos altas independientes y registro/login en Chrome pasaron. El 503 histórico con claves distintas sigue sin causa confirmada.
+
+## PAY-04 — Compensación tardía verificada en integración local
+
+El 20 de noviembre de 2026 (UTC), el gateway aceptó dos reservas sintéticas y su cancelación. Payments usó la pasarela simulada local. La consulta de los historiales de Bookings y Payments mostró la siguiente secuencia.
+
+| Reserva | Cancelación UTC | Aprobación UTC | Reembolso UTC |
+| --- | --- | --- | --- |
+| d1d7b12e-560b-48c7-b595-7adf0870dc33 | 00:26:02.221 | 00:26:03.139 | 00:26:04.606 |
+| d27f2c00-32d1-48d0-a9fd-ec94780b5882 | 00:26:02.437 | 00:26:03.265 | 00:26:04.713 |
+
+Cada reserva conservó CANCELLED_BY_GUEST, sin transición a CONFIRMED. Para cada una, la política fijó 318.000 COP, Bookings completó un único REQUEST_REFUND en un intento y Payments registró una sola devolución por el total. La ejecución usó scripts/e2e-booking-concurrency.mjs con la propiedad 2b626617-a318-48e6-b63e-b1582f3342ab y un desplazamiento de 343 días. El orden temporal se verificó por consulta posterior, no está garantizado en cada ejecución del script.
+
+Siguiente unidad pendiente: REQ-05, verificación autorizada y publicación de inmuebles.
