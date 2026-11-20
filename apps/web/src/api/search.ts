@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { http } from './http';
 import { ApiError } from './identity';
 import {
-  CURRENCY_PATTERN, SEARCH_LIMITS,
+  CURRENCY_PATTERN, SEARCH_LIMITS, isCountryCode,
   type SearchFilters, type SearchResponse, type SearchResult, type SearchSuggestion, type SearchSuggestResponse,
 } from '../types/catalog';
 
@@ -50,7 +50,7 @@ export type SearchValidation = Partial<Record<keyof SearchFilters, string>>;
 export function validateSearchFilters(filters: SearchFilters): SearchValidation {
   const f = normalizeSearchFilters(filters);
   const errors: SearchValidation = {};
-  if (f.countryCode && !/^[A-Z]{2}$/u.test(f.countryCode)) errors.countryCode = 'Usa el código de dos letras del país.';
+  if (f.countryCode && !isCountryCode(f.countryCode)) errors.countryCode = 'Usa el código de dos letras del país.';
   if (f.q && f.q.length > SEARCH_LIMITS.qMaxLength) errors.q = `Usa hasta ${SEARCH_LIMITS.qMaxLength} caracteres.`;
   if (f.location && f.location.length > SEARCH_LIMITS.locationMaxLength) errors.location = `Usa hasta ${SEARCH_LIMITS.locationMaxLength} caracteres.`;
   if (f.minPrice !== undefined && f.minPrice < 0) errors.minPrice = 'El precio mínimo no puede ser negativo.';

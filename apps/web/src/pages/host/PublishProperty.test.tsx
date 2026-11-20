@@ -48,6 +48,7 @@ describe('PublishProperty form', () => {
     server.events.on('request:start', ({ request }) => { if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/properties')) listener(); });
     renderForm();
     fill('Capacidad', '0');
+    fill(/País/, 'ZZ');
     fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     expect(screen.getByText('Revisa los campos marcados antes de continuar.')).toBeInTheDocument();
     for (const message of [

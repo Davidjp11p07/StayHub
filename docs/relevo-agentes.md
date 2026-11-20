@@ -88,3 +88,6 @@ Chrome, gateway y servicios locales: dos huéspedes, dos noches, 240.000 COP de 
 Pasaron las 346 pruebas web, 96 unitarias y 88 de contrato de Bookings, dos casos adicionales de importes, dos de Gateway y dos de regresión del reporte de Payments. Tipos y lint verificados. Pasarela de desarrollo simulada, servicios locales activos. Reproducible con STAYHUB_TEST_BROWSER=1 y el certificado local mediante node scripts/e2e-verifier-session.mjs.
 
 Siguiente unidad: REQ-01 + REQ-02, país, ciudad y coordenadas. Primer comando: rg -n "COUNTRY_PATTERN|parseLocation|LocationMap|longitude" apps/web/src apps/accommodations-service/src.
+
+REQ-01 parcial. Alta y edición de alojamientos y filtro web de país validan códigos ISO 3166-1 alpha-2 asignados. 26 pruebas del dominio y 34 web aprobadas, tipos de ambos componentes correctos. Chrome contra Vite aceptó CO y AR y rechazó ZZ en el módulo servido. Sin migraciones. Pendiente verificar por gateway tras reconstruir Accommodations y completar ciudades y selector del mapa.
+Siguiente comando: rg -n 'countryCode|country_code' apps/search-service/src apps/api-gateway/src. Comprobar contrato del filtro API y compatibilidad con URLs históricas. Esta unidad no inició procesos persistentes.

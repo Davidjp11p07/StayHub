@@ -1,3 +1,4 @@
+import isISO31661Alpha2 from 'validator/lib/isISO31661Alpha2';
 /**
  * Transport contracts consumed by the web client through the Gateway (`/api/v1`).
  *
@@ -71,7 +72,9 @@ export const CATALOG_LIMITS = {
 export const AMOUNT_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
 export const ZERO_AMOUNT_PATTERN = /^0+(\.0{1,2})?$/;
 export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
-export const COUNTRY_PATTERN = /^[A-Z]{2}$/;
+export function isCountryCode(value: string): boolean {
+  return /^[A-Z]{2}$/.test(value) && isISO31661Alpha2(value);
+}
 
 export interface Location {
   addressLine: string;

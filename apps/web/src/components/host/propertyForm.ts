@@ -1,6 +1,6 @@
 import { validatePhotoFile } from '../../api/properties';
 import {
-  AMOUNT_PATTERN, CATALOG_LIMITS, COUNTRY_PATTERN, CURRENCY_PATTERN, ZERO_AMOUNT_PATTERN,
+  AMOUNT_PATTERN, CATALOG_LIMITS, isCountryCode, CURRENCY_PATTERN, ZERO_AMOUNT_PATTERN,
   type PropertyCreate, type PropertyType,
 } from '../../types/catalog';
 
@@ -52,7 +52,7 @@ export function validatePropertyForm(form: PropertyFormState, photos: PhotoDraft
   else if (tooLong(form.city, CATALOG_LIMITS.cityMaxLength)) e['location.city'] = `Usa hasta ${CATALOG_LIMITS.cityMaxLength} caracteres.`;
   if (!form.region.trim()) e['location.region'] = 'La región o estado es obligatorio.';
   else if (tooLong(form.region, CATALOG_LIMITS.regionMaxLength)) e['location.region'] = `Usa hasta ${CATALOG_LIMITS.regionMaxLength} caracteres.`;
-  if (!COUNTRY_PATTERN.test(form.country.trim())) e['location.country'] = 'Usa el código de país de 2 letras (p. ej. CO, MX, ES).';
+  if (!isCountryCode(form.country.trim())) e['location.country'] = 'Usa el código de país de 2 letras (p. ej. CO, MX, ES).';
   if (tooLong(form.postalCode, CATALOG_LIMITS.postalCodeMaxLength)) e['location.postalCode'] = `Usa hasta ${CATALOG_LIMITS.postalCodeMaxLength} caracteres.`;
 
   const lat = form.latitude.trim(); const lon = form.longitude.trim();
