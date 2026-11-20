@@ -22,6 +22,11 @@ const envPath = join(root, '.env');
 const secretsDirectory = join(root, 'secrets');
 const gatewayArtifacts = join(root, '.artifacts', 'gateway');
 
+if (process.argv.includes('--reviews-eligibility-only')) {
+  mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
+  persistentRsaPair('reviews-eligibility');
+  process.exit(0);
+}
 if (process.argv.includes('--search-availability-only')) {
   mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
   persistentRsaPair('search-availability');
@@ -123,6 +128,7 @@ ensureTlsCertificate();
 const accessPublicKey = readFileSync(join(secretsDirectory, 'access-public.pem'), 'utf8');
 const gatewayPrivateKey = readFileSync(join(secretsDirectory, 'gateway-private.pem'), 'utf8');
 const gatewayPublicKey = createPublicKey(gatewayPrivateKey).export({ type: 'spki', format: 'pem' });
+persistentRsaPair('reviews-eligibility');
 const bookingsKeys = persistentRsaPair('bookings-service');
 persistentRsaPair('search-availability');
 // Room Inventory signs its own short-lived tokens for Accommodations (secrets/room-inventory-service-*.pem).

@@ -183,3 +183,7 @@ Pasaron 54 unitarias, 60 de contrato y 14 de integración PostgreSQL de Search; 
 ### Credenciales de Bookings y registro concurrente
 
 AUTH-S2S (Bookings): firma RS256 bajo demanda con expiración de 240 s. Contenedor reconstruido sin montar tokens estáticos. Pasaron 5 pruebas de adaptadores y Chrome confirmó reserva, pago, conflicto, cancelación y REFUNDED. REG-503 reproducido con una clave simultánea: 201 y 503, repetición 201 con el mismo ID. El caso con claves distintas sigue sin causa confirmada. Siguiente acción: revisar el manejo de claimOne busy en RegisterAccountUseCase.execute y la credencial de Reviews.
+
+### AUTH-S2S — Reviews y Bookings
+
+Reviews firma con su propia clave por solicitud. Bookings acepta esa identidad únicamente para elegibilidad. Pasaron 15 pruebas, incluida expiración tras 240 segundos, nueva emisión y fallo al retirar la clave del emisor. Tras recrear ambos servicios, POST /reviews por el gateway con huésped sintético y reserva inexistente devolvió 404 BOOKING_NOT_ELIGIBLE. La publicación positiva queda pendiente. REG-503 sigue abierto.

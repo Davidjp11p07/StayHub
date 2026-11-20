@@ -481,6 +481,7 @@ services:
       BOOKINGS_CANCELLATION_POLICY_VERSION: ${BOOKINGS_CANCELLATION_POLICY_VERSION:?required}
       BOOKINGS_CANCELLATION_POLICY_JSON: ${BOOKINGS_CANCELLATION_POLICY_JSON:?required}
       BOOKINGS_RABBITMQ_URL_FILE: /run/secrets/bookings_rabbitmq_url
+      REVIEWS_ELIGIBILITY_PUBLIC_KEY_FILE: /run/secrets/reviews_eligibility_public
       SEARCH_AVAILABILITY_PUBLIC_KEY_FILE: /run/secrets/search_availability_public
       BOOKINGS_RABBITMQ_EXCHANGE: ${BOOKINGS_RABBITMQ_EXCHANGE:-stayhub.bookings.v1}
       BOOKINGS_RABBITMQ_PAYMENTS_EXCHANGE: ${BOOKINGS_RABBITMQ_PAYMENTS_EXCHANGE:-stayhub.payments}
@@ -491,7 +492,7 @@ services:
       BOOKINGS_SHUTDOWN_GRACE_MS: ${BOOKINGS_SHUTDOWN_GRACE_MS:-10000}
       BOOKINGS_LOG_LEVEL: ${BOOKINGS_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_outbound_private, search_availability_public]
+    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_outbound_private, search_availability_public, reviews_eligibility_public]
     networks: [bookings-internal, services]
     read_only: true
     tmpfs: [/tmp]
@@ -557,11 +558,11 @@ services:
       REVIEWS_GATEWAY_JWT_SCOPE: ${REVIEWS_GATEWAY_JWT_SCOPE:-reviews:read}
       REVIEWS_BOOKINGS_BASE_URL: ${REVIEWS_BOOKINGS_BASE_URL:-http://bookings-service:3005}
       REVIEWS_BOOKINGS_TIMEOUT_MS: ${REVIEWS_BOOKINGS_TIMEOUT_MS:-1500}
-      REVIEWS_BOOKINGS_SERVICE_TOKEN_FILE: /run/secrets/reviews_bookings_service_token
+      REVIEWS_ELIGIBILITY_PRIVATE_KEY_FILE: /run/secrets/reviews_eligibility_private
       REVIEWS_SHUTDOWN_GRACE_MS: ${REVIEWS_SHUTDOWN_GRACE_MS:-10000}
       REVIEWS_LOG_LEVEL: ${REVIEWS_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [reviews_database_url, reviews_bookings_service_token]
+    secrets: [reviews_database_url, reviews_eligibility_private]
     networks: [reviews-internal, services]
     read_only: true
     tmpfs: [/tmp]
@@ -819,6 +820,8 @@ volumes:
   inventory_data:
 
 secrets:
+  reviews_eligibility_private: {file: ./secrets/reviews-eligibility-private.pem}
+  reviews_eligibility_public: {file: ./secrets/reviews-eligibility-public.pem}
   bookings_outbound_private: {file: ./secrets/bookings-service-private.pem}
   search_availability_private: {file: ./secrets/search-availability-private.pem}
   search_availability_public: {file: ./secrets/search-availability-public.pem}
@@ -854,8 +857,6 @@ secrets:
     file: ${REVIEWS_DB_PASSWORD_FILE:?required}
   reviews_database_url:
     file: ${REVIEWS_DATABASE_URL_FILE:?required}
-  reviews_bookings_service_token:
-    file: ${REVIEWS_BOOKINGS_SERVICE_TOKEN_FILE:?required}
 
   payments_db_password:
     file: ${PAYMENTS_DB_PASSWORD_FILE:?required}
@@ -877,10 +878,6 @@ secrets:
     file: ${ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY_FILE:?required}
   accommodations_inventory_service_public:
     file: ${ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE:-./secrets/room-inventory-service-public.pem}
-  bookings_notifications_service_token:
-    file: ${BOOKINGS_NOTIFICATIONS_SERVICE_TOKEN_FILE:?required}
-  bookings_outbound_service_tokens:
-    file: ${BOOKINGS_OUTBOUND_SERVICE_TOKENS_JSON_FILE:?required}
   notifications_db_password:
     file: ${NOTIFICATIONS_DB_PASSWORD_FILE:?required}
   notifications_database_url:
