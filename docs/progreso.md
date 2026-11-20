@@ -349,3 +349,5 @@ Auth / recuperación de caché anterior a una revocación. Una sesión sintétic
 Supervisión local verificada: 26 saludables, diez migraciones con salida 0 y políticas coincidentes. Un proceso desechable siguió unhealthy con cero reinicios al fallar la sonda; tras salir, Docker lo reinició y recuperó healthy con contador 1. Gateway live, ready y Search respondieron 200.
 
 Logs de producción. Política 10m y tres archivos resuelta en los 36 servicios. El ensayo aislado conservó las últimas 21832 de 40000 líneas sin huecos. Contenedor de prueba retirado.
+
+Azure / secretos. Modelo de producción resuelto con archivos sintéticos: 39 recursos existentes y usados, 50 montajes en 25 servicios. Se documentaron también las entradas por entorno, comandos y archivos env_file, el orden de rotación y las verificaciones por familia. Sin cambios de credenciales.
