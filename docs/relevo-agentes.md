@@ -96,3 +96,8 @@ REQ-01 en curso. Se prepara la reconstrucción local de Search y Accommodations 
 
 REQ-01, filtro de país verificado. Search acepta códigos ISO asignados con ambas capitalizaciones. En Chrome, el enlace guardado con countryCode=co mostró alojamientos de Bogotá. El gateway devolvió los mismos identificadores y total para CO y co, y HTTP 400 para ZZ tanto en búsqueda como en el alta por propietario. Prueba reproducible: node scripts/e2e-country-filter.cjs. Pasaron 13 pruebas unitarias y 9 de contrato. Search y Accommodations reconstruidos y saludables.
 Siguiente unidad: normalización de ciudades por país y región en sugerencias. Primer comando: rg -n 'normalizeTerms|suggestions|city' apps/search-service/src. El selector de mapa continúa pendiente.
+
+REQ-01: en verificación la agrupación de sugerencias de ciudad por país y región. Reconstrucción local de Search sin migraciones.
+
+REQ-01, sugerencias de ciudad. Search agrupa variantes de tilde y mayúsculas por ciudad, región y país. Cuando hay homónimos añade región y país a la opción. En PostGIS aislado, cuatro alojamientos de prueba generaron tres opciones y sus búsquedas devolvieron respectivamente uno, uno y dos alojamientos. Pasaron 9 pruebas de integración. Chrome mostró la sugerencia Bogota y una tarjeta del catálogo local después de abrir su búsqueda (HTTP 200). Search reconstruido y saludable; sin migración.
+Siguiente unidad: selector de coordenadas para alta y edición (REQ-02). Primer comando: rg -n 'LocationMap|property-latitude|property-longitude' apps/web/src. Pendiente comprobar equivalencias en el chatbot.

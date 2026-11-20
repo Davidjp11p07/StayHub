@@ -30,6 +30,12 @@ interface SearchRow {
   total: bigint;
 }
 
+function locationKey(value: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`translate(lower(regexp_replace(btrim(${value}), '[[:space:]]+', ' ', 'g')), 'áéíóúü', 'aeiouu')`;
+}
+
+const cityLabel = Prisma.sql`concat_ws(', ', nullif(btrim(d.city), ''), nullif(btrim(d.region), ''), d."countryCode")`;
+
 interface SuggestionRow {
   text: string;
   type: SuggestionType;
@@ -64,7 +70,9 @@ export class PostgreSqlSearchIndexAdapter implements SearchIndexPort {
       : Prisma.sql`0.0`;
     if (query.q)
       conditions.push(
-        Prisma.sql`d."searchVector" @@ websearch_to_tsquery('simple', ${query.q})`,
+        query.q.includes(',')
+          ? Prisma.sql`(d."searchVector" @@ websearch_to_tsquery('simple', ${query.q}) OR ${locationKey(cityLabel)} = ${locationKey(Prisma.sql`${query.q}::text`)})`
+          : Prisma.sql`(d."searchVector" @@ websearch_to_tsquery('simple', ${query.q}) OR ${locationKey(Prisma.sql`d.city`)} = ${locationKey(Prisma.sql`${query.q}::text`)})`,
       );
     const offset = (query.page - 1) * query.pageSize;
     const roomFilters = [Prisma.sql`r.capacity >= ${query.guests ?? 1}`];
@@ -137,18 +145,22 @@ export class PostgreSqlSearchIndexAdapter implements SearchIndexPort {
   ): Promise<readonly SearchSuggestion[]> {
     const rows = await observeDependency("postgresql", "suggest", () =>
       this.prisma.$queryRaw<SuggestionRow[]>(Prisma.sql`
-        WITH candidates AS (
+        WITH cities AS (
+          SELECT ${locationKey(Prisma.sql`d.city`)} AS city_key,
+            min(btrim(d.city) COLLATE "C") AS city, min(${cityLabel} COLLATE "C") AS label
+          FROM search_documents d
+          WHERE d.published AND similarity(${locationKey(Prisma.sql`d.city`)}, ${locationKey(Prisma.sql`${query.q}::text`)}) >= ${similarityThreshold}
+          GROUP BY 1, ${locationKey(Prisma.sql`d.region`)}, d."countryCode"
+        ), candidates AS (
           SELECT d."name" AS text, 'PROPERTY'::text AS type,
             similarity(d."name", ${query.q})::float8 AS score
           FROM "search_documents" d
           WHERE d."published" = TRUE
             AND similarity(d."name", ${query.q}) >= ${similarityThreshold}
           UNION ALL
-          SELECT d."city" AS text, 'LOCATION'::text AS type,
-            similarity(d."city", ${query.q})::float8 AS score
-          FROM "search_documents" d
-          WHERE d."published" = TRUE
-            AND similarity(d."city", ${query.q}) >= ${similarityThreshold}
+          SELECT CASE WHEN count(*) OVER (PARTITION BY city_key) > 1 THEN label ELSE city END,
+            'LOCATION'::text, similarity(city_key, ${locationKey(Prisma.sql`${query.q}::text`)})::float8
+          FROM cities
         ), deduplicated AS (
           SELECT min(text COLLATE "C") AS text, type, max(score)::float8 AS score
           FROM candidates

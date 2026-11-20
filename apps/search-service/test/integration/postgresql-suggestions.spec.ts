@@ -1,5 +1,6 @@
 import { PrismaClient } from '../../src/infrastructure/persistence/generated/client';
 import { PostgreSqlSearchIndexAdapter } from '../../src/infrastructure/search/postgresql-search-index.adapter';
+import { createSearchQuery } from '../../src/domain/search-query';
 import { createSuggestionQuery } from '../../src/domain/suggestion';
 import {
   describeWithPostgres,
@@ -48,6 +49,22 @@ describeWithPostgres('PostgreSQL suggestions', () => {
       expect(row).not.toHaveProperty('addressSummary');
       expect(row).not.toHaveProperty('accommodationId');
     }
+  });
+
+  it('groups accent variants locally and distinguishes homonyms across regions and countries', async () => {
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO search_documents ("accommodationId","projectionVersion","published","name","description","countryCode","region","city","minNightlyPrice","currency","capacity","sourceUpdatedAt")
+      SELECT gen_random_uuid(),1,true,'Prueba','visible',country,region,city,100,'COP',2,NOW()
+      FROM (VALUES ('CO','Norte','San José'),('CO','norte','San Jose'),('CO','Sur','San José'),('CR','Norte','San José')) v(country,region,city)
+    `);
+    const locations = (await adapter.suggest(createSuggestionQuery({ q: 'san jose' }), 0.95))
+      .filter(row => row.type === 'LOCATION');
+    expect(locations).toHaveLength(3);
+    const totals = [];
+    for (const location of locations) {
+      totals.push((await adapter.search(createSearchQuery({ q: location.text }))).total);
+    }
+    expect(totals.sort()).toEqual([1, 1, 2]);
   });
 
   it('applies the configurable threshold and selects no personal fields', async () => {
