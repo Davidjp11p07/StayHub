@@ -337,3 +337,5 @@ Recuperación Azure. Inventario de solo lectura: 10 volúmenes PostgreSQL, 1 de 
 Ensayo de recuperación de Accommodations: pg_dump y restauración transaccional en base nueva sin puertos. Nueve tablas, 65 filas y tres propiedades coincidieron. Tres fotos, 210 bytes, referencias, SHA-256 y permisos coincidentes. Manifiesto local excluido de Git. Origen y destino sintéticos detenidos.
 
 Restauración Accommodations / HTTP. Dos rutas anónimas devolvieron 404 con el estado original y 200 con una muestra publicada en una segunda restauración desechable. Se cotejaron UUID, nombre, referencia, tipo, tamaño y SHA-256 de la foto con el manifiesto. Contenedores de prueba cerrados.
+
+Recuperación conjunta de Bookings y Payments desde un corte sin escritores: 17 tablas públicas, 84 filas y tres reservas reembolsadas cotejadas con sus pagos y reembolsos. Neto cero por reserva. Volcados locales y manifiesto conservados. Ensayo detenido.
