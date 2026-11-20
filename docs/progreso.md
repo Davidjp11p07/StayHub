@@ -331,3 +331,5 @@ Azure. Topología documentada en docs/despliegue-azure.md: NGINX en Ubuntu, SPA 
 Azure. Override de producción verificado con config en la copia aislada: 36 servicios, solo Gateway en 127.0.0.1:8080, dos montajes TLS cotejados con los archivos y destinos del gateway, CIDR y URL pública aplicados. Las cuatro omisiones de variables requeridas fallaron por separado. Ensayo de configuración con certificados sintéticos.
 
 Azure / proxy HTTPS aislado. NGINX y Chrome verificaron ruta profunda, foto pública, 404 JSON, login y refresh. HTTP 308; SAN interno incorrecto 502 y restaurado 200. Reserva de 300001 COP y reembolso conciliados. Proxy y segunda pila detenidos; integración con 26 saludables.
+
+Recuperación Azure. Inventario de solo lectura: 10 volúmenes PostgreSQL, 1 de fotos y 5 anónimos de Redis/RabbitMQ. Documentados el punto de corte, los volcados por servicio, la protección de archivos y la verificación funcional de una restauración aislada. Sin copias de datos ni restauraciones en esta unidad.
