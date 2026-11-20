@@ -9,9 +9,11 @@ import { ProblemDetailsFilter } from '@gateway/interfaces/http/problem.filter';
 import { TraceInterceptor } from '@gateway/interfaces/http/trace.interceptor';
 import { GatewayValidationPipe } from '@gateway/interfaces/http/validation.pipe';
 import { GatewayAuthModule } from '@gateway/modules/auth/gateway-auth.module';
+import { AccommodationsProxyModule } from '@gateway/modules/accommodations/accommodations-proxy.module';
 import { HealthModule } from '@gateway/modules/health/health.module';
 import { ReviewsProxyModule } from '@gateway/modules/reviews/reviews-proxy.module';
 import { BookingsProxyModule } from '@gateway/modules/bookings/bookings-proxy.module';
+import { SearchProxyModule } from '@gateway/modules/search/search-proxy.module';
 import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
 
 /**
@@ -33,7 +35,8 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
     UsersProxyModule,
     ReviewsProxyModule,
     BookingsProxyModule,
-    ReportsProxyModule,
+    AccommodationsProxyModule,
+    SearchProxyModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },

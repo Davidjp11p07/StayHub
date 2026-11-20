@@ -54,10 +54,13 @@ export interface GatewayConfig {
   readonly reportsBaseUrl?: string;
   readonly reportsServiceJwt?: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly reports?: CircuitPolicy;
+  readonly accommodationsBaseUrl: string;
+  readonly searchBaseUrl: string;
   readonly userJwt: UserJwtConfig;
   readonly serviceJwt: ServiceJwtConfig;
   readonly reviewsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly bookingsServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
+  readonly searchServiceJwt: Pick<ServiceJwtConfig, 'audience' | 'scope'>;
   readonly redis: RedisConfig;
   readonly trustedProxyCidrs: readonly string[];
   readonly registerRateLimit: RateLimitPolicy;
@@ -69,6 +72,8 @@ export interface GatewayConfig {
   readonly users: CircuitPolicy;
   readonly reviews: CircuitPolicy;
   readonly bookings: CircuitPolicy;
+  readonly accommodations: CircuitPolicy;
+  readonly search: CircuitPolicy;
   readonly introspectionTimeoutMs: number;
   readonly otlpEndpoint: string;
   readonly otelServiceName: string;
@@ -108,6 +113,8 @@ export function loadGatewayConfig(
     reportsBaseUrl: environment.GATEWAY_REPORTS_BASE_URL ? url(environment, 'GATEWAY_REPORTS_BASE_URL', ['http:', 'https:']) : 'http://reports-service:3011',
     reportsServiceJwt: {audience: optional(environment, 'GATEWAY_REPORTS_SERVICE_AUDIENCE', 'stayhub-reports-service'), scope: 'reports:read'},
     reports: {timeoutMs:15000,failureThreshold:5,resetMs:30000},
+    accommodationsBaseUrl: url(environment, 'GATEWAY_ACCOMMODATIONS_BASE_URL', ['http:', 'https:']),
+    searchBaseUrl: url(environment, 'GATEWAY_SEARCH_BASE_URL', ['http:', 'https:']),
     userJwt: {
       publicKeys: publicKeys(environment, 'GATEWAY_JWT_PUBLIC_KEYS_JSON'),
       issuer: required(environment, 'GATEWAY_JWT_ISSUER'),
@@ -128,6 +135,10 @@ export function loadGatewayConfig(
     bookingsServiceJwt: {
       audience: required(environment, 'GATEWAY_BOOKINGS_SERVICE_AUDIENCE'),
       scope: required(environment, 'GATEWAY_BOOKINGS_SERVICE_SCOPE'),
+    },
+    searchServiceJwt: {
+      audience: required(environment, 'GATEWAY_SEARCH_SERVICE_AUDIENCE'),
+      scope: required(environment, 'GATEWAY_SEARCH_SERVICE_SCOPE'),
     },
     redis: {
       url: url(environment, 'GATEWAY_REDIS_URL', ['redis:', 'rediss:']),
@@ -156,6 +167,8 @@ export function loadGatewayConfig(
     users: circuit(environment, 'GATEWAY_USERS_'),
     reviews: circuit(environment, 'GATEWAY_REVIEWS_'),
     bookings: circuit(environment, 'GATEWAY_BOOKINGS_'),
+    accommodations: circuit(environment, 'GATEWAY_ACCOMMODATIONS_'),
+    search: circuit(environment, 'GATEWAY_SEARCH_'),
     introspectionTimeoutMs: integer(environment, 'GATEWAY_INTROSPECTION_TIMEOUT_MS', 100, 30_000),
     otlpEndpoint: url(environment, 'GATEWAY_OTEL_EXPORTER_OTLP_ENDPOINT', ['http:', 'https:']),
     otelServiceName: required(environment, 'GATEWAY_OTEL_SERVICE_NAME'),
