@@ -18,6 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // In-memory state
 // ---------------------------------------------------------------------------
 
+const pendingVerifications = new Map<string, number>();
 const db = { properties: buildProperties(), reviews: buildReviews(), bookings: buildBookings() };
 /** Bookings that already have a review (RQ-11: at most one review per booking). */
 let reviewedBookings = new Set<string>();
@@ -26,6 +27,7 @@ let bookingIdempotency = new Map<string, { hash: string; booking: Booking }>();
 
 /** Restores fixtures; called after every test so mutations never leak. */
 export function resetMockDb(): void {
+  pendingVerifications.clear();
   db.properties = buildProperties();
   db.reviews = buildReviews();
   db.bookings = buildBookings();
@@ -309,6 +311,16 @@ const replacePropertyHandler = http.put<IdParams>(`${API}/properties/:id`, async
   return HttpResponse.json(next);
 });
 
+const ownerVerificationHandler = http.get<IdParams>(`${API}/properties/:id/verification`, ({ request, params }) => {
+  const { caller } = authenticate(request);
+  if (!caller) return problem(401, 'HTTP_401');
+  if (caller.role !== 'OWNER') return problem(403, 'FORBIDDEN');
+  const property = mockDb.property(String(params.id));
+  if (!property || property.ownerId !== caller.sub) return problem(404, 'NOT_FOUND');
+  const version = pendingVerifications.get(property.id);
+  return HttpResponse.json({ property, history: version === undefined ? [] : [{ version, status: 'PENDING', reason: null }] });
+});
+
 const submitVerificationHandler = http.post<IdParams>(`${API}/properties/:id/verification`, async ({ request, params }) => {
   const { caller } = authenticate(request);
   if (!caller) return problem(401, 'HTTP_401');
@@ -318,6 +330,7 @@ const submitVerificationHandler = http.post<IdParams>(`${API}/properties/:id/ver
   const body = await request.json() as { version?: number };
   if (body.version !== property.version) return problem(409, 'VERSION_CONFLICT');
   if (!publishable(property)) return problem(409, 'PUBLICATION_INCOMPLETE');
+  pendingVerifications.set(property.id, property.version);
   return HttpResponse.json({ propertyId: property.id, version: property.version, status: 'PENDING' });
 });
 
@@ -608,6 +621,7 @@ export const handlers = [
   suggestHandler,
   searchHandler,
   reviewsHandler,
+  ownerVerificationHandler,
   submitVerificationHandler,
   uploadPhotoHandler,
   myPropertiesHandler,

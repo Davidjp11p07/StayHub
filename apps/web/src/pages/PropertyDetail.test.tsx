@@ -63,7 +63,7 @@ describe('PropertyDetail', () => {
   it('lets the owner preview a draft', async () => {
     vi.spyOn(session, 'accessToken').mockReturnValue(mockToken('OWNER', OWNER_ID));
     renderDetail(PROPERTY_IDS.draft);
-    expect(await screen.findByText('Borrador: solo tú puedes ver esta propiedad.')).toBeInTheDocument();
+    expect(await screen.findByText('Borrador: pendiente de publicación.')).toBeInTheDocument();
     expect(screen.getByText('Este alojamiento aún no tiene fotos.')).toBeInTheDocument();
     expect(screen.getByText(/todavía no tiene habitaciones con precio/)).toBeInTheDocument();
   });
