@@ -62,9 +62,11 @@ export class RegisterAccountService implements RegisterAccountUseCase {
     const registrationId = command.idempotencyKey;
     const expiresAt = new Date(now.getTime() + this.settings.ttlSeconds * 1000);
 
-    const existing = await this.work.createOrRead(
-      Registration.create(registrationId, fingerprint, this.uuids.generate(), now, expiresAt),
-    );
+    const candidate = Registration.create(registrationId, fingerprint, this.uuids.generate(), now, expiresAt);
+    // Give the request carrying the password the first processing interval.
+    // If it exits before acquiring the lease, the reconciler can still recover the row.
+    candidate.scheduleNextAttempt(new Date(now.getTime() + this.settings.leaseSeconds * 1000), now);
+    const existing = await this.work.createOrRead(candidate);
     const snapshot = existing.snapshot();
     if (snapshot.requestFingerprint !== fingerprint) throw new IdempotencyConflictError();
     if (snapshot.state === 'CANCELLED') throw new RegistrationCancelledError();
@@ -79,7 +81,20 @@ export class RegisterAccountService implements RegisterAccountUseCase {
       now,
       new Date(now.getTime() + this.settings.leaseSeconds * 1000),
     );
-    if (claim.status === 'busy' || claim.status === 'missing') {
+    if (claim.status === 'busy') {
+      // Observe the existing owner without extending its lease or repeating the saga.
+      for (const delayMs of [40, 80, 160, 320, 600]) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        const current = await this.work.transaction(({ registrations }) => registrations.findById(registrationId));
+        const state = current?.snapshot();
+        if (!state || state.requestFingerprint !== fingerprint) break;
+        if (state.state === 'COMPLETED') return this.publicSummary(registrationId, command.traceId);
+        if (state.state === 'CANCELLED') throw new RegistrationCancelledError();
+        if (!state.processingOwner) break;
+      }
+      throw new DependencyUnavailableError('registration');
+    }
+    if (claim.status === 'missing') {
       throw new DependencyUnavailableError('registration');
     }
     if (claim.status === 'terminal') {

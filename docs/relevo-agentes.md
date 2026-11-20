@@ -1,6 +1,6 @@
 # RELEVO — STAYHUB (estado operativo vigente)
 
-- Actualizado: 2026-11-19 19:14 (Bogotá).
+- Actualizado: 2026-11-19 19:23 (Bogotá).
 - Worktree y rama: `stayhub-integracion-local`, `local/stayhub-integracion`. Padre del checkpoint: `c25081b` (REQ-07). Para obtener el hash del cierre de SEARCH-04: `git log -1 --oneline -- docs/relevo-agentes.md`.
 - Git: cambios de esta unidad destinados a un commit local. Sin push. El contrato continúa en `docs/instrucciones-integracion-codex.md`.
 - Control de escritura: un agente en este worktree. No se observaron otros builds, migraciones ni operaciones de escritura Git al inicio.
@@ -12,7 +12,7 @@
 - SEARCH-04 / REQ-04: CORREGIDO-Y-VERIFICADO localmente. El evento de Accommodations lleva las habitaciones con ID, capacidad, precio y moneda. Search consulta a Bookings en lotes de hasta 256 antes de paginar. Las consultas con fechas omiten Redis. La proyección previa sigue admitiendo ventanas explícitas; una instantánea antigua sin información no anuncia disponibilidad.
 - Bookings aplica la misma exclusión por habitación y estancia [entrada, salida) para retenciones pendientes, reservas confirmadas y check-in. Un error de consulta de ocupación impide responder con habitaciones libres. REQ-07 verificado.
 - Última operación funcional: API y Chrome verificaron filtros, foto, tarifa, detalle y regreso desde página 999. La API verificó conflicto de reserva, disponibilidad en el día de salida y liberación tras cancelación. Durante una repetición, el registro respondió HTTP 503 antes de enviar ninguna reserva. Una ejecución posterior pasó; REG-503 sigue pendiente.
-- SIGUIENTE ACCIÓN REG-503: ejecutar `rg -n "claimOne|busy|recordTransientFailure" apps/auth-service/src apps/auth-service/test` y comprobar qué resultado público recibe el segundo registro con la misma clave.
+- SIGUIENTE ACCIÓN PAY-04: ejecutar `rg -n "late|refund|cancel" apps/bookings-service/test/integration/payment-saga.spec.ts apps/bookings-service/src/infrastructure/persistence/prisma/payment-result.unit-of-work.ts` y reproducir la aprobación posterior a cancelar con Payments real.
 
 ## ENTORNO Y PRUEBAS
 
@@ -35,3 +35,5 @@
 - Checkpoints solo locales. Preparación del PR global y Azure pendientes.
 
 AUTH-S2S Reviews verificado para autenticación y rechazo de reservas inexistentes. Reviews y Bookings reconstruidos. 15 pruebas focalizadas y typecheck de Reviews aprobados. El gateway devolvió 404 BOOKING_NOT_ELIGIBLE. Pendiente probar publicación con estancia completada. Para preparar el nuevo secreto en un checkout existente: node scripts/generate-compose-dev-env.mjs --reviews-eligibility-only.
+
+REG-503 CORREGIDO-Y-VERIFICADO para solicitudes idénticas simultáneas. E2E por gateway: 201/201 y replay con el mismo ID, 409 al cambiar el contenido, dos claves independientes con 201/201. Chrome: registro y login. 9 pruebas Auth, 18 web, typecheck y lint Auth aprobados. Auth reconstruido, sin migraciones. Causa del incidente histórico con claves distintas aún sin confirmar. Prueba reproducible: node scripts/e2e-registration-concurrency.mjs con NODE_EXTRA_CA_CERTS apuntando al certificado local.

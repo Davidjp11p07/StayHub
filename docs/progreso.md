@@ -187,3 +187,7 @@ AUTH-S2S (Bookings): firma RS256 bajo demanda con expiración de 240 s. Contened
 ### AUTH-S2S — Reviews y Bookings
 
 Reviews firma con su propia clave por solicitud. Bookings acepta esa identidad únicamente para elegibilidad. Pasaron 15 pruebas, incluida expiración tras 240 segundos, nueva emisión y fallo al retirar la clave del emisor. Tras recrear ambos servicios, POST /reviews por el gateway con huésped sintético y reserva inexistente devolvió 404 BOOKING_NOT_ELIGIBLE. La publicación positiva queda pendiente. REG-503 sigue abierto.
+
+### REG-503 — registro concurrente
+
+Auth observaba la concesión ocupada y respondía 503 inmediatamente. Ahora espera de forma acotada fuera de la transacción y confirma que Users tiene la identidad activa. El reconciliador recibe su primer turno tras el intervalo reservado a la solicitud inicial. Pasaron 9 pruebas Auth, 18 web, tipos y lint Auth. El gateway confirmó dos 201 con el mismo ID, replay persistido y 409 para el cambio de contenido. Dos altas independientes y registro/login en Chrome pasaron. El 503 histórico con claves distintas sigue sin causa confirmada.
