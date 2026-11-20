@@ -13,6 +13,7 @@ import { ReviewProperty } from '../pages/booking/ReviewProperty';
 import { PropertyDetail } from '../pages/PropertyDetail';
 import { Register } from '../pages/Register';
 import { Search } from '../pages/Search';
+import { PropertyVerification } from '../pages/PropertyVerification';
 import { Profile } from '../pages/Profile';
 import { Inventory } from '../pages/host/Inventory';
 import { EditProperty } from '../pages/host/EditProperty';
@@ -127,6 +128,7 @@ export const appRoutes: RouteObject[] = [
   {
     element: <AppLayout />,
     children: [
+      { path: '/verification', element: <RequireRole role="VERIFIER" anonymousNotice="Inicia sesión para revisar inmuebles." forbiddenNotice="Esta sección requiere el rol de verificador."><PropertyVerification /></RequireRole> },
       // Public
       { path: paths.home, element: <Home /> },
       { path: '/info/:topic', element: <Information /> },

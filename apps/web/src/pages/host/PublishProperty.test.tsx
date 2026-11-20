@@ -45,10 +45,10 @@ const newest = () => mockDb.properties().find((p) => p.name === 'Casa del Lago')
 describe('PublishProperty form', () => {
   it('validates required fields before sending anything', async () => {
     const listener = vi.fn();
-    server.events.on('request:start', listener);
+    server.events.on('request:start', ({ request }) => { if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/properties')) listener(); });
     renderForm();
     fill('Capacidad', '0');
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     expect(screen.getByText('Revisa los campos marcados antes de continuar.')).toBeInTheDocument();
     for (const message of [
       'Selecciona el tipo de alojamiento.', 'El nombre es obligatorio.', 'La dirección es obligatoria.', 'La ciudad es obligatoria.',
@@ -90,25 +90,25 @@ describe('PublishProperty form', () => {
     renderForm();
     addPhotos(image('anim.gif', 10, 'image/gif'), image('enorme.jpg', 5_000_001), image('ok.webp', 10, 'image/webp'));
     fillValidForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     const list = screen.getByRole('list', { name: 'Fotos seleccionadas' });
     expect(within(list).getByText('Solo se aceptan fotos JPEG, PNG o WebP.')).toBeInTheDocument();
     expect(within(list).getByText('La foto supera 5 MB (5 000 000 bytes).')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Quitar anim.gif' }));
     fireEvent.click(screen.getByRole('button', { name: 'Quitar enorme.jpg' }));
     addPhotos(...Array.from({ length: 10 }, (_, i) => image(`f${i}.jpg`)));
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     expect(screen.getByText('Puedes subir hasta 10 fotos.')).toBeInTheDocument();
   });
 
-  it('creates, uploads photos in order and publishes, then opens the listing', async () => {
+  it('creates, uploads photos in order and submits for review, then opens the listing', async () => {
     renderForm();
     fillValidForm();
     addPhotos(image('portada.jpg'), image('sala.png', 4096, 'image/png'));
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent(`/property/${newest()!.id}`));
     expect(newest()).toMatchObject({
-      status: 'PUBLISHED', type: 'HOUSE', ownerId: OWNER_ID, description: 'Frente al lago, con muelle privado.',
+      status: 'DRAFT', type: 'HOUSE', ownerId: OWNER_ID, description: 'Frente al lago, con muelle privado.',
       location: { country: 'AR', latitude: -40.76, longitude: -71.64 },
       rooms: [expect.objectContaining({ name: 'Cabaña completa', capacity: 4, basePrice: { amount: '150.50', currency: 'USD' } })],
     });
@@ -140,17 +140,17 @@ describe('PublishProperty form', () => {
     renderForm();
     fillValidForm();
     addPhotos(image('portada.jpg'), image('sala.jpg'));
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     expect(await screen.findByText(/una foto no se pudo subir/)).toBeInTheDocument();
     expect(screen.getByText('El servicio no está disponible. Intenta nuevamente.')).toBeInTheDocument();
     expect(newest()).toMatchObject({ status: 'DRAFT' });
     expect(newest()!.photos).toHaveLength(1);
     expect(screen.getByLabelText('Nombre')).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent(`/property/${newest()!.id}`));
     expect(mockDb.properties()).toHaveLength(before + 1);
-    expect(newest()).toMatchObject({ status: 'PUBLISHED' });
+    expect(newest()).toMatchObject({ status: 'DRAFT' });
     expect(newest()!.photos).toHaveLength(2);
   });
 

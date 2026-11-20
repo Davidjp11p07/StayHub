@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { OwnerVerification } from './PropertyVerification';
 import { ApiError } from '../api/identity';
 import {
   formatLocation, formatMoney, lowestNightlyPrice, propertyErrorMessage, sortedPhotos, useProperty,
@@ -103,9 +104,10 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         <span className="text-gray-900 font-medium truncate" aria-current="page">{property.name}</span>
       </nav>
 
+      {property.ownerId && <OwnerVerification property={property} />}
       {property.status !== 'PUBLISHED' && (
         <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {property.status === 'DRAFT' ? 'Borrador' : 'No publicada'}: solo tú puedes ver esta propiedad.
+          {property.status === 'DRAFT' ? 'Borrador' : 'No publicada'}: pendiente de publicación.
         </p>
       )}
 

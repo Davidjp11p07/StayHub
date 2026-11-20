@@ -3,7 +3,7 @@ import type { JwtConfig } from '../config/accommodations-config';
 import type { Principal, Role } from '@accommodations/domain/properties/property.types';
 import { UUID_PATTERN } from '@accommodations/domain/shared/uuid';
 
-const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN'] satisfies Role[];
+const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] satisfies Role[];
 
 export class InvalidAccessTokenError extends Error {
   constructor() { super('INVALID_ACCESS_TOKEN'); }

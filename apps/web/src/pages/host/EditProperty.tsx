@@ -122,7 +122,7 @@ export function EditProperty() {
     setErrors(found);
     if (Object.keys(found).length) { fail('Revisa los campos marcados antes de continuar.'); return; }
     setGeneral(undefined);
-    updateMutation.mutate({ property, changes: toChanges(form, roomIds) }, {
+    updateMutation.mutate({ property, changes: { ...toChanges(form, roomIds), status: property.status === 'PUBLISHED' ? 'UNPUBLISHED' : property.status } }, {
       onSuccess: (updated) => navigate(paths.property(updated.id), { replace: true }),
       onError: (saveError) => {
         const mapped = Object.fromEntries(fieldErrors(saveError).map((f) => [formKeyFromApiField(f), 'Valor no válido.']));
@@ -241,7 +241,7 @@ export function EditProperty() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="primary" size="lg" loading={busy}>Guardar cambios</Button>
+            <Button type="submit" variant="primary" size="lg" loading={busy}>{property?.status === 'PUBLISHED' ? 'Despublicar y guardar cambios' : 'Guardar cambios'}</Button>
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => navigate(paths.property(property.id))}>
               Cancelar
             </Button>

@@ -309,6 +309,18 @@ const replacePropertyHandler = http.put<IdParams>(`${API}/properties/:id`, async
   return HttpResponse.json(next);
 });
 
+const submitVerificationHandler = http.post<IdParams>(`${API}/properties/:id/verification`, async ({ request, params }) => {
+  const { caller } = authenticate(request);
+  if (!caller) return problem(401, 'HTTP_401');
+  if (caller.role !== 'OWNER') return problem(403, 'FORBIDDEN');
+  const property = mockDb.property(String(params.id));
+  if (!property || property.ownerId !== caller.sub) return problem(404, 'NOT_FOUND');
+  const body = await request.json() as { version?: number };
+  if (body.version !== property.version) return problem(409, 'VERSION_CONFLICT');
+  if (!publishable(property)) return problem(409, 'PUBLICATION_INCOMPLETE');
+  return HttpResponse.json({ propertyId: property.id, version: property.version, status: 'PENDING' });
+});
+
 const uploadPhotoHandler = http.post<IdParams>(`${API}/properties/:id/photos`, async ({ request, params }) => {
   const id = String(params.id);
   if (!UUID.test(id)) return invalid('id');
@@ -596,6 +608,7 @@ export const handlers = [
   suggestHandler,
   searchHandler,
   reviewsHandler,
+  submitVerificationHandler,
   uploadPhotoHandler,
   myPropertiesHandler,
   createBookingHandler,

@@ -70,6 +70,32 @@ export class AccommodationsController {
     return this.accommodations.request('GET', '/properties?mine=true', contextOf(request));
   }
 
+  @Get('verification/pending')
+  @Roles('VERIFIER')
+  pendingReviews(@Req() request: Request): Promise<unknown> {
+    return this.accommodations.request('GET', '/properties/verification/pending', contextOf(request));
+  }
+
+  @Get(':propertyId/verification')
+  @Roles('OWNER', 'VERIFIER')
+  verification(@Req() request: Request): Promise<unknown> {
+    return this.accommodations.request('GET', `/properties/${propertyIdOf(request)}/verification`, contextOf(request));
+  }
+
+  @Post(':propertyId/verification')
+  @HttpCode(200)
+  @Roles('OWNER')
+  submit(@Req() request: Request, @Body() body: unknown): Promise<unknown> {
+    return this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/verification`, contextOf(request), verificationBody(body));
+  }
+
+  @Post(':propertyId/verification/decision')
+  @HttpCode(200)
+  @Roles('VERIFIER')
+  decide(@Req() request: Request, @Body() body: unknown): Promise<unknown> {
+    return this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/verification/decision`, contextOf(request), verificationBody(body));
+  }
+
   @Get(':propertyId/photos/:photoId')
   @OptionalAuth()
   public async getPhoto(@Req() request: Request, @Res() response: Response): Promise<void> {
@@ -177,4 +203,8 @@ function buildPhotoMultipart(buffer: Buffer, mimetypeValue: string, originalname
 function safeFilename(name: string | undefined): string {
   const cleaned = (name ?? '').replace(/[^A-Za-z0-9._-]/gu, '').slice(0, 100);
   return cleaned === '' ? 'photo' : cleaned;
+}
+
+function verificationBody(body: unknown): AccommodationsBody {
+  return { bytes: Buffer.from(JSON.stringify(body ?? null)), contentType: 'application/json' };
 }

@@ -9,6 +9,7 @@ import { CreatePropertyUseCase } from '@accommodations/application/properties/cr
 import { GetPropertyUseCase } from '@accommodations/application/properties/get-property.use-case';
 import { ReplacePropertyUseCase } from '@accommodations/application/properties/replace-property.use-case';
 import type { Principal } from '@accommodations/domain/properties/property.types';
+import { invalid } from '@accommodations/domain/shared/domain-error';
 import { parseUuid } from '@accommodations/domain/shared/uuid';
 import { JwtAuthGuard } from '../auth/jwt.strategy';
 import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
@@ -20,7 +21,8 @@ import { parsePhotoFile } from './photo-upload.dto';
 import { PhotoUploadInterceptor } from './photo-upload.interceptor';
 import { parseReplaceProperty } from './replace-property.dto';
 import { presentPhoto, presentProperty, type PhotoView, type PropertyView } from './property.presenter';
-import { PrismaPropertyRepository } from '@accommodations/infrastructure/persistence/prisma/property.repository';
+import type { PropertyVerification } from '@accommodations/infrastructure/persistence/generated/prisma';
+import { PrismaPropertyRepository, type PendingVerification } from '@accommodations/infrastructure/persistence/prisma/property.repository';
 
 @ApiTags('Properties')
 @Controller('properties')
@@ -34,10 +36,51 @@ export class PropertiesController {
     @Inject(STORAGE_PORT) private readonly storage: LocalStorageAdapter,
   ) {}
 
+  @Get('verification/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('VERIFIER')
+  pendingReviews(): Promise<PendingVerification[]> { return this.properties.pendingVerifications(); }
+
+  @Get(':id/verification')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'VERIFIER')
+  async verification(@CurrentPrincipal() principal: Principal, @Param('id') id: string): Promise<{ property: PropertyView; history: PropertyVerification[] }> {
+    const { property, history } = await this.properties.verificationDetail(parseUuid(id, 'id'), principal);
+    return { property: presentProperty(property, principal), history };
+  }
+
+  @Post(':id/verification')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER')
+  submit(@CurrentPrincipal() principal: Principal, @Param('id') id: string, @Body() body: unknown): Promise<PropertyVerification> {
+    const input = verificationInput(body, ['version']);
+    return this.properties.submitVerification(parseUuid(id, 'id'), principal.sub, input.version);
+  }
+
+  @Post(':id/verification/decision')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('VERIFIER')
+  decide(@CurrentPrincipal() principal: Principal, @Param('id') id: string, @Body() body: unknown): Promise<PropertyVerification> {
+    const input = verificationInput(body, ['version', 'status', 'reason']);
+    if (input.status !== 'APPROVED' && input.status !== 'REJECTED') return invalid('status');
+    if (typeof input.reason !== 'string' || !input.reason.trim() || input.reason.trim().length > 1000) return invalid('reason');
+    return this.properties.decideVerification(parseUuid(id, 'id'), principal.sub, input.version, input.status, input.reason.trim());
+  }
+
   @Get(':id/photos/:photoId')
   @UseGuards(OptionalJwtGuard)
   async getPhoto(@CurrentPrincipal() viewer: Principal | undefined, @Param('id') id: string, @Param('photoId') photoId: string, @Res() response: Response): Promise<void> {
-    const property = await this.getProperty.execute(parseUuid(id, 'id'), viewer);
+    const propertyId = parseUuid(id, 'id');
+    let property;
+    if (viewer?.role === 'VERIFIER') {
+      const review = await this.properties.verificationDetail(propertyId, viewer);
+      if (review.property.status !== 'PUBLISHED' && !review.history.some(item => item.version === review.property.version && item.status === 'PENDING')) throw new NotFoundException();
+      property = review.property;
+    } else {
+      property = await this.getProperty.execute(propertyId, viewer);
+    }
     const photo = property.photos.find(item => item.id === parseUuid(photoId, 'photoId'));
     if (!photo) throw new NotFoundException();
     let bytes: Uint8Array;
@@ -113,4 +156,13 @@ export class PropertiesController {
     const photo = await this.addPropertyPhoto.execute(parseUuid(id, 'id'), principal, parsePhotoFile(file));
     return presentPhoto(photo);
   }
+}
+
+function verificationInput(body: unknown, keys: string[]): { version: number; status: unknown; reason: unknown } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return invalid('body');
+  const input = body as Record<string, unknown>;
+  if (Object.keys(input).some(key => !keys.includes(key))) return invalid('body');
+  const version = input['version'];
+  if (typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1) return invalid('version');
+  return { version, status: input['status'], reason: input['reason'] };
 }
