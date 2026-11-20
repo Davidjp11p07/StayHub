@@ -341,3 +341,5 @@ Restauración Accommodations / HTTP. Dos rutas anónimas devolvieron 404 con el 
 Recuperación conjunta de Bookings y Payments desde un corte sin escritores: 17 tablas públicas, 84 filas y tres reservas reembolsadas cotejadas con sus pagos y reembolsos. Neto cero por reserva. Volcados locales y manifiesto conservados. Ensayo detenido.
 
 RabbitMQ de reservas restaurado en un nodo aislado desde una copia en frío. Definiciones y mensaje persistente verificados; cola temporal retirada en origen y topología inicial cotejada. Ensayo detenido.
+
+Auth Redis / RDB restaurado en contenedor desechable. Valor sintético y vencimiento absoluto idénticos; TTL restante de 28298 ms y expiración comprobada por EXISTS=0 y PTTL=-2. Ensayo detenido.
