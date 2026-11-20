@@ -351,3 +351,5 @@ Supervisión local verificada: 26 saludables, diez migraciones con salida 0 y po
 Logs de producción. Política 10m y tres archivos resuelta en los 36 servicios. El ensayo aislado conservó las últimas 21832 de 40000 líneas sin huecos. Contenedor de prueba retirado.
 
 Azure / secretos. Modelo de producción resuelto con archivos sintéticos: 39 recursos existentes y usados, 50 montajes en 25 servicios. Se documentaron también las entradas por entorno, comandos y archivos env_file, el orden de rotación y las verificaciones por familia. Sin cambios de credenciales.
+
+TLS interno / renovación y reversión verificadas con CA sintética. Search devolvió 200 en las fases antigua, dual, nueva y restaurada. Se cotejaron las huellas del gateway y el rechazo por un cliente con confianza antigua. Pila de ensayo detenida y 26 saludables en integración.

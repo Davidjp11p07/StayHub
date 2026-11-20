@@ -208,3 +208,15 @@ Materializar los archivos en un directorio privado del despliegue antes de invoc
 3. **TLS.** Comprobar correspondencia entre clave y certificado, cadena, SAN y vencimiento. Si cambia la CA interna, instalar primero la confianza necesaria en NGINX. Recrear Gateway con los archivos nuevos y verificar el HTTPS interno y público. Para los archivos montados por Compose, recrear los consumidores afectados evita depender de que un proceso relea el archivo.
 4. **HMAC.** Identificar sesiones, huellas e idempotencias pendientes antes de sustituir las claves. Ensayar renovación de sesión y repetición de una operación de pago sintética. Si la aplicación admite una sola versión, planificar el impacto sobre sesiones existentes y operaciones en curso. Una vuelta a la versión anterior requiere revisar también el estado creado durante la transición.
 5. Registrar comprobaciones, hora y versiones activas. Si hay un fallo, conservar evidencias sin cabeceras de autorización, cookies, cadenas de conexión ni claves. Ante compromiso, revocar el material afectado y aplicar el procedimiento de incidente. La verificación de esta unidad cubrió el inventario estático con archivos de ensayo; la entrega por identidad administrada y la rotación efectiva se deben probar en el entorno autorizado.
+
+### Ensayo de renovación del TLS interno
+
+El 20 de noviembre se renovó el certificado del gateway sintético con una CA nueva. El certificado público del proxy permaneció en uso durante el ensayo. Para repetir el cambio:
+
+1. Comprobar SAN y cadena de la nueva hoja antes de recrear servicios. En el ensayo, la validación estricta rechazó la primera CA sintética porque carecía de la extensión keyUsage. Se emitió otra con basicConstraints CA:TRUE y uso de firma de certificados; la hoja incluyó SAN y serverAuth. Se verificó con `openssl verify -x509_strict -CAfile nueva-ca.pem gateway.pem`.
+2. Añadir la nueva CA al archivo de confianza de NGINX conservando la confianza anterior. Validar con `nginx -t`, recargar y consultar Search por el proxy mientras Gateway aún presenta su certificado original.
+3. Apuntar los secretos de Gateway al nuevo par y recrear solo ese servicio. Esperar su sonda de salud y comprobar mediante una conexión TLS nueva que la huella SHA-256 presentada coincide con la hoja prevista. Cuando NGINX usa el nombre del contenedor para el destino, recargar también para resolver de nuevo su dirección.
+4. Consultar Search con confianza dual y después con solo la CA nueva. Ambas consultas dieron 200; un cliente que conservaba únicamente la confianza anterior rechazó la nueva hoja.
+5. Para revertir, restituir primero la confianza dual, recrear Gateway con los archivos originales, comprobar su huella y retirar la CA temporal. La consulta posterior a la reversión devolvió 200.
+
+Se probaron las fases con peticiones individuales. Con una sola instancia de Gateway, la recreación puede interrumpir solicitudes en curso. El ensayo no midió disponibilidad continua.
