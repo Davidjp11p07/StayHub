@@ -18,18 +18,6 @@ const places = [
   ['Ibagué','Tolima','CO'],['Cali','Valle del Cauca','CO'],['Mitú','Vaupés','CO'],['Puerto Carreño','Vichada','CO'],
   ['Washington D. C.','Distrito de Columbia','US'],['Madrid','Madrid','ES'],['Roma','Lazio','IT'],['Berlín','Berlín','DE'],['Londres','Inglaterra','GB'],
 ];
-// Approximate city-center coordinates, used solely as illustrative locations for fictitious properties.
-const coordinates = [
-  [-4.2153,-69.9406],[6.2442,-75.5812],[7.0847,-70.7591],[10.9685,-74.7813],
-  [10.3910,-75.4794],[5.5353,-73.3678],[5.0703,-75.5138],[1.6144,-75.6062],
-  [5.3378,-72.3959],[2.4448,-76.6147],[10.4631,-73.2532],[5.6947,-76.6611],
-  [8.7479,-75.8814],[4.7110,-74.0721],[3.8653,-67.9239],[2.5729,-72.6459],
-  [2.9273,-75.2819],[11.5444,-72.9072],[11.2408,-74.1990],[4.1420,-73.6266],
-  [1.2136,-77.2811],[7.8939,-72.5078],[1.1498,-76.6467],[4.5339,-75.6811],
-  [4.8087,-75.6906],[12.5847,-81.7006],[7.1193,-73.1227],[9.3047,-75.3978],
-  [4.4389,-75.2322],[3.4516,-76.5320],[1.1983,-70.1733],[6.1890,-67.4859],
-  [38.9072,-77.0369],[40.4168,-3.7038],[41.9028,12.4964],[52.5200,13.4050],[51.5074,-0.1278],
-];
 await mkdir(resolve('.artifacts'), { recursive: true });
 let state;
 try { state = JSON.parse(await readFile(statePath, 'utf8')); }
@@ -54,7 +42,6 @@ let token;
 for (let i = 0; i < 20; i++) { try { token = (await api('POST', '/auth/login', { json: { email: state.email, password: state.password } })).accessToken; break; } catch { await new Promise(r => setTimeout(r, 500)); } }
 if (!token) throw new Error('No se pudo iniciar sesión con el anfitrión de demostración.');
 for (const [i, [city, region, country]] of places.entries()) {
-  const [latitude, longitude] = coordinates[i];
   const key = `${country}-${city}`;
   const item = state.properties[key] ??= {};
   if (item.creating && !item.id) throw new Error(`Creación anterior incierta para ${key}; reconciliar antes de reintentar para evitar duplicados.`);
@@ -62,8 +49,8 @@ for (const [i, [city, region, country]] of places.entries()) {
     item.creating = true; await save();
     const property = await api('POST', '/properties', { token, json: {
       type: 'APARTMENT', name: `StayHub demostración ${city}`,
-      description: `Alojamiento ficticio de demostración en ${city}. Las fotografías son ilustrativas y no identifican un inmueble real. El mapa muestra una ubicación aproximada de la ciudad.`,
-      location: { addressLine: 'Dirección ficticia de demostración', city, region, country, latitude, longitude },
+      description: `Alojamiento ficticio de demostración en ${city}. Las fotografías son ilustrativas y no identifican un inmueble real.`,
+      location: { addressLine: 'Dirección ficticia de demostración', city, region, country },
       featureCodes: i % 3 === 0 ? ['WIFI','PARKING','POOL'] : ['WIFI','PARKING'],
       rooms: [{ name: 'Habitación principal', capacity: 2 + (i % 3), basePrice: { amount: country === 'CO' ? `${120000 + i * 3000}.00` : '120.00', currency: country === 'CO' ? 'COP' : country === 'US' ? 'USD' : country === 'GB' ? 'GBP' : 'EUR' } }],
     } });
@@ -79,11 +66,9 @@ for (const [i, [city, region, country]] of places.entries()) {
     delete item.uploading; await save();
     current = await api('GET', `/properties/${item.id}`, { token });
   } else if (item.uploading) { delete item.uploading; await save(); }
-  const needsCoordinates = current.location.latitude == null && current.location.longitude == null;
-  const description = needsCoordinates ? `${current.description} El mapa muestra una ubicación aproximada de la ciudad.` : current.description;
-  if (current.status !== 'PUBLISHED' || needsCoordinates) {
-    const location = needsCoordinates ? { ...current.location, latitude, longitude } : current.location;
-    await api('PUT', `/properties/${item.id}`, { token, json: { type: current.type, name: current.name, description, location, featureCodes: current.features.map(f => f.code), status: 'PUBLISHED', version: current.version, rooms: current.rooms.map(r => ({ id: r.id, name: r.name, capacity: r.capacity, basePrice: r.basePrice })) } });
+  if (current.status !== 'PUBLISHED') {
+    await api('POST', `/properties/${item.id}/verification`, { token, json: { version: current.version } });
+    console.log(`${key}: pendiente de revisión autorizada.`);
   }
   console.log(`${i + 1}/${places.length} ${city}: ${item.id}`);
 }
