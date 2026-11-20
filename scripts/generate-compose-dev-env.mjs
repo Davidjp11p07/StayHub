@@ -295,5 +295,6 @@ for (const directory of [secretsDirectory, gatewayArtifacts]) {
   for (const name of readdirSync(directory)) chmodSync(join(directory, name), 0o644);
 }
 
+await import('./reports-live-env.mjs');
 console.log('[compose-env] .env y secretos locales del Compose están completos.');
 console.log('[compose-env] Las credenciales existentes se conservaron; los tokens de servicio se renovaron por 30 días.');

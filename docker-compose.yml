@@ -80,6 +80,8 @@ services:
       dockerfile: infra/docker/gateway/Dockerfile
       target: runtime
     environment:
+      GATEWAY_REPORTS_BASE_URL: http://reports-service:3011
+      GATEWAY_REPORTS_SERVICE_AUDIENCE: stayhub-reports-service
       NODE_ENV: production
       GATEWAY_PROTOCOL: https
       GATEWAY_PORT: "8080"
@@ -173,6 +175,7 @@ services:
       timeout: 5s
       retries: 20
     depends_on:
+      reports-service: { condition: service_healthy }
       gateway-redis: { condition: service_healthy }
       auth-service: { condition: service_healthy }
       users-service: { condition: service_healthy }
@@ -217,6 +220,7 @@ services:
       dockerfile: infra/docker/accommodations/Dockerfile
       target: runtime
     environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
       NODE_ENV: production
       ACCOMMODATIONS_PORT: "3003"
       ACCOMMODATIONS_DATABASE_URL_FILE: /run/secrets/accommodations_database_url
@@ -237,7 +241,7 @@ services:
       ACCOMMODATIONS_SEARCH_EXCHANGE: ${SEARCH_RABBITMQ_EXCHANGE:-stayhub.search.v1}
       ACCOMMODATIONS_SEARCH_PUBLIC_API_URL: ${ACCOMMODATIONS_SEARCH_PUBLIC_API_URL:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public, accommodations_inventory_service_public]
+    secrets: [accommodations_database_url, accommodations_access_public, accommodations_service_public, accommodations_inventory_service_public, reports_source_public]
     volumes: [accommodations_photos:/var/lib/stayhub/accommodations/photos]
     networks: [accommodations-internal, services, search-events]
     restart: unless-stopped
@@ -461,6 +465,7 @@ services:
       dockerfile: infra/docker/bookings/Dockerfile
       target: runtime
     environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
       NODE_ENV: production
       BOOKINGS_PORT: "3005"
       BOOKINGS_DATABASE_URL_FILE: /run/secrets/bookings_database_url
@@ -493,7 +498,7 @@ services:
       BOOKINGS_SHUTDOWN_GRACE_MS: ${BOOKINGS_SHUTDOWN_GRACE_MS:-10000}
       BOOKINGS_LOG_LEVEL: ${BOOKINGS_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_outbound_private, search_availability_public, reviews_eligibility_public]
+    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_outbound_private, search_availability_public, reviews_eligibility_public, reports_source_public]
     networks: [bookings-internal, services]
     read_only: true
     tmpfs: [/tmp]
@@ -613,6 +618,7 @@ services:
       dockerfile: infra/docker/payments/Dockerfile
       target: runtime
     environment:
+      REPORTS_SOURCE_PUBLIC_KEY_FILE: /run/secrets/reports_source_public
       NODE_ENV: production
       PAYMENTS_PORT: '3006'
       PAYMENTS_DATABASE_URL_FILE: /run/secrets/payments_database_url
@@ -638,6 +644,7 @@ services:
       - payments_service_jwt_public
       - payments_token_hmac_secret
       - bookings_rabbitmq_url
+      - reports_source_public
     networks: [payments-internal, bookings-internal, services]
     restart: always
     healthcheck:
@@ -782,7 +789,38 @@ services:
     depends_on:
       room-inventory-migrate: { condition: service_completed_successfully }
       accommodations-service: { condition: service_healthy }
+  reports-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-live/reports-db.env
+    networks: [reports-internal]
+    volumes: [reports_data:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_reports -d reports_db'], interval: 5s, timeout: 3s, retries: 20}
+  reports-migrate:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: migration}
+    env_file: .artifacts/reports-live/reports.env
+    networks: [reports-internal]
+    depends_on: {reports-db: {condition: service_healthy}}
+    restart: 'no'
+  reports-service:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-live/reports.env
+    secrets: [reports_user_public, reports_gateway_public, reports_source_private]
+    networks: [reports-internal, services]
+    ports: ['127.0.0.1:3011:3011']
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    depends_on:
+      reports-migrate: {condition: service_completed_successfully}
+      bookings-service: {condition: service_healthy}
+      payments-service: {condition: service_healthy}
+      accommodations-service: {condition: service_healthy}
+
 networks:
+  reports-internal: {}
   stayhub-edge:
     internal: true
   stayhub-internal:
@@ -809,6 +847,7 @@ networks:
     internal: true
 
 volumes:
+  reports_data: {}
   auth-db-data:
   users_data:
   search_db_data:
@@ -821,6 +860,10 @@ volumes:
   inventory_data:
 
 secrets:
+  reports_user_public: {file: .artifacts/reports-live/user-public.pem}
+  reports_gateway_public: {file: .artifacts/reports-live/gateway-public.pem}
+  reports_source_private: {file: .artifacts/reports-live/source-private.pem}
+  reports_source_public: {file: .artifacts/reports-live/source-public.pem}
   reviews_eligibility_private: {file: ./secrets/reviews-eligibility-private.pem}
   reviews_eligibility_public: {file: ./secrets/reviews-eligibility-public.pem}
   bookings_outbound_private: {file: ./secrets/bookings-service-private.pem}
