@@ -213,3 +213,5 @@ Rotación de logs / VERIFICADA en ensayo local con los límites del override de 
 Secretos / inventario de producción verificado y rotación documentada. Siguiente unidad: ensayar renovación del certificado TLS interno en el entorno aislado y comprobar confianza del proxy antes y después, preservando el material original. Primer comando: Get-Content docs/despliegue-azure.md -Encoding utf8 -Tail 32. Ningún proceso nuevo.
 
 TLS interno / ROTACIÓN VERIFICADA en el proyecto sintético, incluidos validación estricta y retorno al certificado original. Ensayo detenido, integración activa. Siguiente unidad: revisar la configuración y disponibilidad de Ollama en la preparación de Azure y documentar el comportamiento del chatbot cuando el modelo privado no está disponible. Primer comando: Get-Content apps/api-gateway/src/modules/chat/chat.controller.ts -Encoding utf8.
+
+Prioridad del usuario: reconstrucción completa desde Git y prueba funcional aislada antes del informe de PR. Unidad TLS cerrada en 925397e; Ollama, rotaciones adicionales y ensayos operativos aplazados. Integración original preservada.
