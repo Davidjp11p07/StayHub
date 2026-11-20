@@ -1,3 +1,4 @@
+import { GuestNotificationsController } from './modules/notifications/guest-notifications.controller';
 import { Module } from '@nestjs/common';
 import { ChatModule } from './modules/chat/chat.module';
 import { ReportsProxyModule } from '@gateway/modules/reports/reports-proxy.module';
@@ -43,6 +44,7 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
     ReportsProxyModule,
     InventoryProxyModule,
   ],
+  controllers: [GuestNotificationsController],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
     { provide: APP_PIPE, useClass: GatewayValidationPipe },
