@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const base = 'https://127.0.0.1:18080/api/v1';
+const project = process.env.STAYHUB_TEST_COMPOSE_PROJECT || 'stayhub-integracion-local';
+assert.match(project, /^[a-z0-9][a-z0-9_-]*$/);
+const binding = execFileSync('docker', ['port', project + '-api-gateway-1', '8080/tcp'], { encoding: 'utf8' }).trim();
+const localPort = /^127\.0\.0\.1:(\d+)$/.exec(binding);
+assert.ok(localPort, 'El gateway de prueba debe publicar un puerto en 127.0.0.1');
+const base = 'https://127.0.0.1:' + localPort[1] + '/api/v1';
 const credentials = { email: `verifier-${randomUUID()}@stayhub.test`, password: `Test-${randomUUID()}` };
 async function post(path, body, headers = {}) {
   const options = {
@@ -31,7 +36,7 @@ const { id } = await registered.json();
 assert.match(id, /^[0-9a-f-]{36}$/i);
 const assignment = readFileSync(new URL('./assign-property-verifier.sql', import.meta.url));
 for (let attempt = 0; attempt < 2; attempt++) {
-  execFileSync('docker', ['exec', '-i', 'stayhub-integracion-local-users-db-1', 'psql', '-X', '-U', 'users',
+  execFileSync('docker', ['exec', '-i', project + '-users-db-1', 'psql', '-X', '-U', 'users',
     '-d', 'users_db', '-v', `user_id=${id}`], { input: assignment });
 }
 const login = await post('/auth/login', credentials);
