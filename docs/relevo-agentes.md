@@ -207,3 +207,5 @@ Auth Redis / RECUPERACIÓN Y EXPIRACIÓN VERIFICADAS. Pila sintética detenida y
 Auth / revocación posterior al respaldo de caché verificada en introspección. Ambos contenedores del ensayo retirados. Siguiente unidad: documentar y verificar cómo supervisar salud y reinicios de la pila de integración para la operación en Azure. Primer comando: docker compose -p stayhub-integracion-local -f docker-compose.yml -f docker-compose.local.yml ps.
 
 Supervisión de salud y reinicios / VERIFICADA localmente. Propuesta de señales y alertas en docs/despliegue-azure.md. Integración activa, contenedor de ensayo retirado. Siguiente unidad: verificar el controlador y la rotación efectivos de los logs de integración y preparar la política de retención de logs de producción. Primer comando: docker info --format '{{.LoggingDriver}}'.
+
+Rotación de logs / VERIFICADA en ensayo local con los límites del override de producción. Integración activa, contenedor de prueba retirado. Siguiente unidad: inventariar secretos de producción y documentar su provisión y rotación sin imprimir valores. Primer comando: Get-Content scripts/generate-compose-dev-env.mjs -Encoding utf8 -TotalCount 90.

@@ -347,3 +347,5 @@ Auth Redis / RDB restaurado en contenedor desechable. Valor sintético y vencimi
 Auth / recuperación de caché anterior a una revocación. Una sesión sintética revocada en PostgreSQL siguió siendo rechazada al restaurar en Redis su entrada activa anterior y Auth eliminó esa entrada. Pasaron 17/17 pruebas de integración sobre contenedores desechables.
 
 Supervisión local verificada: 26 saludables, diez migraciones con salida 0 y políticas coincidentes. Un proceso desechable siguió unhealthy con cero reinicios al fallar la sonda; tras salir, Docker lo reinició y recuperó healthy con contador 1. Gateway live, ready y Search respondieron 200.
+
+Logs de producción. Política 10m y tres archivos resuelta en los 36 servicios. El ensayo aislado conservó las últimas 21832 de 40000 líneas sin huecos. Contenedor de prueba retirado.
