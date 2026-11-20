@@ -11,6 +11,24 @@ servers:
 tags:
   - name: Notifications
 paths:
+  /notifications/{notificationId}/read:
+    patch:
+      operationId: markNotificationRead
+      security: [{ accessJwt: [] }]
+      parameters:
+        - { name: notificationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: First time the recipient marked this notification as read.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [readAt]
+                properties:
+                  readAt: { type: string, format: date-time }
+        '401': { description: Authentication required }
+        '404': { description: Notification not found for this recipient }
   /notifications/send:
     post:
       tags: [Notifications]
@@ -357,6 +375,7 @@ components:
         createdAt:
           type: string
           format: date-time
+        readAt: { type: string, format: date-time, nullable: true }
         sentAt:
           type: string
           format: date-time

@@ -47,7 +47,7 @@ export const REGISTER_USER_SUMMARY_SCHEMA: Record<string, unknown> = {
     id: { type: 'string', format: 'uuid' },
     name: { type: 'string' },
     email: { type: 'string', format: 'email' },
-    role: { type: 'string', enum: ['GUEST', 'OWNER', 'ADMIN'] },
+    role: { type: 'string', enum: ['GUEST', 'OWNER'] },
   },
 };
 

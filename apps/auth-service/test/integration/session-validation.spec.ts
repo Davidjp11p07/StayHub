@@ -176,19 +176,24 @@ describe('session validation and cache (AUTH-057)', () => {
     });
   });
 
-  it('does not let a stale ACTIVE cache resurrect a revoked session', async (): Promise<void> => {
+  it('rejects a revoked session after restoring an older Redis entry', async () => {
     const harness = buildService();
     const seeded = await seedSession({ role: 'OWNER' });
-    await dependencies.redis.set(
-      cacheKey(seeded.sessionId),
-      JSON.stringify({ active: true, role: 'OWNER' }),
-      'EX',
-      300,
-    );
+    const key = cacheKey(seeded.sessionId);
+    await harness.service.execute({
+      ...seeded, traceId: 'trace-active', accessTokenExpiresAt: new Date(NOW.getTime() + 300_000),
+    });
+    const backup = await dependencies.redis.dumpBuffer(key);
+    const expiresAt = await dependencies.redis.pexpiretime(key);
+    if (!backup || expiresAt <= 0) throw new Error('Expected a cached session with an expiry');
+
     await primary.session.update({
       where: { id: seeded.sessionId },
-      data: { revokedAt: NOW, revokeReason: 'REFRESH_REUSE', version: 2 },
+      data: { revokedAt: NOW, revokeReason: 'SECURITY', version: 2 },
     });
+    await dependencies.redis.del(key);
+    await dependencies.redis.restore(key, expiresAt, backup, 'ABSTTL');
+    expect(await cache.getSession(seeded.sessionId)).toEqual({ active: true, role: 'OWNER' });
 
     await expect(
       harness.service.execute({

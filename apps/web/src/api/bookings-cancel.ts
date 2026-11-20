@@ -49,6 +49,8 @@ export function refundStatusMessage(paymentStatus: PaymentStatus): string {
     case 'REFUND_PENDING': return 'Reembolso en proceso.';
     case 'REFUNDED': return 'Reembolsado.';
     case 'PARTIALLY_REFUNDED': return 'Reembolso parcial.';
+    case 'REFUND_FAILED': return 'No se pudo completar el reembolso.';
+    case 'REFUND_REVIEW_REQUIRED': return 'El reembolso requiere revisión.';
     default: return 'Sin reembolso.';
   }
 }

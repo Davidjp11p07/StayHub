@@ -87,6 +87,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   status:
                     type: string
                     enum:
@@ -346,6 +347,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   status:
                     type: string
                     enum:
@@ -605,6 +607,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   status:
                     type: string
                     enum:
@@ -1177,6 +1180,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   status:
                     type: string
                     enum:
@@ -1434,6 +1438,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   phone:
                     type: string
                     nullable: true
@@ -1721,6 +1726,7 @@ paths:
                       - GUEST
                       - OWNER
                       - ADMIN
+                      - VERIFIER
                   phone:
                     type: string
                     nullable: true

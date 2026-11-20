@@ -35,7 +35,7 @@ export const UPDATE_PROFILE_RESPONSE_CODES: readonly number[] = [
   200, 400, 401, 403, 409, 413, 415, 503,
 ];
 export const GET_PHOTO_RESPONSE_CODES: readonly number[] = [200, 401, 403, 404];
-export const PROFILE_ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN'];
+export const PROFILE_ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'];
 const E164_PATTERN = '^\\+[1-9][0-9]{7,14}$';
 
 export const PROFILE_SCHEMA: Record<string, unknown> = {

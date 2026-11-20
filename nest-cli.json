@@ -96,6 +96,21 @@
           }
         ]
       }
+    },
+    "room-inventory-service": {
+      "type": "application",
+      "root": "apps/room-inventory-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/room-inventory-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/room-inventory-service/tsconfig.build.json",
+        "assets": [
+          {
+            "include": "infrastructure/persistence/generated/client/**/*",
+            "outDir": "dist/apps/room-inventory-service"
+          }
+        ]
+      }
     }
   }
 }

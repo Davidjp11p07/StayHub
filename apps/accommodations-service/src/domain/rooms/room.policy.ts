@@ -20,18 +20,25 @@ export function parseBasePrice(value: unknown, field: string): BasePrice {
 
 function parseRoom(value: unknown, index: number, allowId: boolean): RoomInput {
   const field = `rooms[${index}]`;
-  const input = closedObject(value, field, allowId ? ['id', 'name', 'capacity', 'basePrice'] : ['name', 'capacity', 'basePrice']);
+  const input = closedObject(value, field, allowId ? ['id', 'name', 'capacity', 'basePrice', 'breakfastPerGuestNight'] : ['name', 'capacity', 'basePrice', 'breakfastPerGuestNight']);
   const room: RoomInput = {
     name: boundedString(input.name, `${field}.name`, MAX_ROOM_NAME_LENGTH),
     capacity: typeof input.capacity === 'number' && Number.isInteger(input.capacity) && input.capacity >= 1 && input.capacity <= MAX_INT ? input.capacity : invalid(`${field}.capacity`),
     basePrice: 'basePrice' in input ? parseBasePrice(input.basePrice, `${field}.basePrice`) : null,
   };
+  if ('breakfastPerGuestNight' in input) {
+    const price = parseBasePrice(input.breakfastPerGuestNight, `${field}.breakfastPerGuestNight`);
+    if (price.currency !== room.basePrice?.currency) return invalid(`${field}.breakfastPerGuestNight.currency`);
+    room.breakfastPerGuestNight = price;
+  }
   if (allowId && 'id' in input) return { id: parseUuid(input.id, `${field}.id`), ...room };
   return room;
 }
 
 /** Parses the complete room collection; a property always keeps one or more rooms. */
-export function parseRooms(value: unknown, allowId: boolean): RoomInput[] {
+export function parseRooms(value: unknown, allowId: boolean, featureCodes: readonly string[] = []): RoomInput[] {
   if (!Array.isArray(value) || value.length === 0) return invalid('rooms');
-  return value.map((room, index) => parseRoom(room, index, allowId));
+  const rooms = value.map((room, index) => parseRoom(room, index, allowId));
+  if (featureCodes.includes('BREAKFAST_INCLUDED') && rooms.some(room => room.breakfastPerGuestNight)) return invalid('featureCodes');
+  return rooms;
 }

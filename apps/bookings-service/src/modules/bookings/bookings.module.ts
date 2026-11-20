@@ -1,4 +1,5 @@
 import { ReportsBookingFactsQuery } from '@bookings/infrastructure/persistence/prisma/reports-facts.query';
+import { SearchAvailabilityController, SearchAvailabilityGuard } from '@bookings/interfaces/http/internal/search-availability.controller';
 import { Module } from '@nestjs/common';
 import { ReportFactsController, ReportsFactsGuard } from '@bookings/interfaces/http/internal/report-facts.controller';
 import { ACCOMMODATION_QUOTE_PORT } from '@bookings/application/ports/accommodation-quote.port';
@@ -60,7 +61,7 @@ import { ServiceJwtVerifier } from '@bookings/infrastructure/security/service-jw
 import { ServiceAuthGuard } from '@bookings/interfaces/http/guards/service-auth.guard';
 import { ReviewServiceGuard } from '@bookings/interfaces/http/guards/review-service.guard';
 
-@Module({ controllers: [ReportFactsController, BookingsController, StayLifecycleController, ReviewEligibilityController], providers: [ReportsFactsGuard, ReportsBookingFactsQuery,
+@Module({ controllers: [SearchAvailabilityController, ReportFactsController, BookingsController, StayLifecycleController, ReviewEligibilityController], providers: [SearchAvailabilityGuard, ReportsFactsGuard, ReportsBookingFactsQuery,
   BookingRepository, PaymentWorkRepository, NotificationWorkRepository, PrismaCreateBookingUnitOfWork, PrismaCancelGuestBookingUnitOfWork, PrismaCancelOwnerBookingUnitOfWork, PrismaOwnerBookingHistoryQuery, PrismaStayLifecycleUnitOfWork, PrismaPaymentResultUnitOfWork, PrismaRefundResultUnitOfWork, PaymentHoldExpiryRepository, AccommodationsBookingQuoteClient, PaymentsOrdersClient, PaymentsRefundsClient, NotificationsClient, RabbitMqOutboxPublisher, RabbitMqPaymentConsumer, VersionedCancellationPolicyAdapter, EnvironmentServiceTokenProvider, ServiceJwtVerifier, ServiceAuthGuard, ReviewServiceGuard, NotificationWorkScheduler, BookingsWorkersScheduler, NotificationDeliveryHealth,
   { provide: CreateBookingUseCase, inject: [ACCOMMODATION_QUOTE_PORT, CLOCK_PORT, CREATE_BOOKING_UOW, BOOKINGS_CONFIG], useFactory: (quotes: AccommodationsBookingQuoteClient, clock: SystemClock, uow: PrismaCreateBookingUnitOfWork, config: BookingsConfig): CreateBookingUseCase => new CreateBookingUseCase(quotes, clock, uow, config) },
   { provide: GetBookingUseCase, inject: [BookingRepository], useFactory: (bookings: BookingRepository): GetBookingUseCase => new GetBookingUseCase(bookings) },

@@ -17,7 +17,9 @@ export class BookingsRateLimitGuard implements CanActivate {
     const principal = principalFrom(request);
     if (principal === undefined) throw new UnauthorizedException({ code: 'AUTHENTICATION_REQUIRED' });
 
-    const scope = request.method === 'GET'
+    // The quote endpoint reads catalog prices and never allocates a booking or a hold.
+    const pricingRead = request.method === 'POST' && request.path.endsWith('/bookings/quote');
+    const scope = request.method === 'GET' || pricingRead
       ? RATE_LIMIT_SCOPE.BOOKINGS_READ
       : RATE_LIMIT_SCOPE.BOOKINGS_WRITE;
     const decision = await this.store.consume(scope, principal.userId);

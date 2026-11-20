@@ -22,6 +22,16 @@ const envPath = join(root, '.env');
 const secretsDirectory = join(root, 'secrets');
 const gatewayArtifacts = join(root, '.artifacts', 'gateway');
 
+if (process.argv.includes('--reviews-eligibility-only')) {
+  mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
+  persistentRsaPair('reviews-eligibility');
+  process.exit(0);
+}
+if (process.argv.includes('--search-availability-only')) {
+  mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
+  persistentRsaPair('search-availability');
+  process.exit(0);
+}
 ensureDevEnvironment({ root });
 mkdirSync(secretsDirectory, { recursive: true, mode: 0o700 });
 mkdirSync(gatewayArtifacts, { recursive: true, mode: 0o700 });
@@ -118,7 +128,11 @@ ensureTlsCertificate();
 const accessPublicKey = readFileSync(join(secretsDirectory, 'access-public.pem'), 'utf8');
 const gatewayPrivateKey = readFileSync(join(secretsDirectory, 'gateway-private.pem'), 'utf8');
 const gatewayPublicKey = createPublicKey(gatewayPrivateKey).export({ type: 'spki', format: 'pem' });
+persistentRsaPair('reviews-eligibility');
 const bookingsKeys = persistentRsaPair('bookings-service');
+persistentRsaPair('search-availability');
+// Room Inventory signs its own short-lived tokens for Accommodations (secrets/room-inventory-service-*.pem).
+persistentRsaPair('room-inventory-service');
 
 writeSecret(join(gatewayArtifacts, 'service_private_key.pem'), gatewayPrivateKey);
 const gatewayRedisPassword = persistentSecret('gateway-redis-password.txt');
@@ -131,6 +145,7 @@ const databasePasswords = {
   payments: persistentSecret('payments-db-password.txt'),
   notifications: persistentSecret('notifications-db-password.txt'),
   search: persistentSecret('search-db-password.txt'),
+  inventory: persistentSecret('inventory-db-password.txt'),
 };
 const searchRedisPassword = persistentSecret('search-redis-password.txt');
 const searchRabbitPassword = persistentSecret('search-rabbitmq-password.txt');
@@ -143,9 +158,10 @@ const databaseUrls = {
   payments: `postgresql://stayhub_payments:${databasePasswords.payments}@payments-db:5432/payments_db?schema=public`,
   notifications: `postgresql://stayhub_notifications:${databasePasswords.notifications}@notifications-db:5432/notifications_db?schema=public`,
   search: `postgresql://stayhub_search:${databasePasswords.search}@search-db:5432/search_db?schema=public`,
+  inventory: `postgresql://stayhub_inventory:${databasePasswords.inventory}@inventory-db:5432/inventory_db?schema=public`,
 };
 
-for (const service of ['accommodations', 'bookings', 'reviews', 'payments', 'notifications', 'search']) {
+for (const service of ['accommodations', 'bookings', 'reviews', 'payments', 'notifications', 'search', 'inventory']) {
   writeSecret(join(secretsDirectory, `${service}-database-url.txt`), databaseUrls[service]);
 }
 writeSecret(
@@ -206,6 +222,8 @@ const accessKeysJson = JSON.stringify({ [ACCESS_KID]: accessPublicKey });
 const gatewayKeysJson = JSON.stringify({ [INBOUND_KID]: gatewayPublicKey });
 replaceEnvironment({
   GATEWAY_PROTOCOL: 'https',
+  // The Compose Gateway only listens on HTTPS; the Vite dev proxy must target it accordingly.
+  WEB_GATEWAY_URL: 'https://127.0.0.1:8080',
   GATEWAY_JWT_PUBLIC_KEYS_JSON: accessKeysJson,
   GATEWAY_SERVICE_KID: INBOUND_KID,
   GATEWAY_SERVICE_ISSUER: INBOUND_ISSUER,
@@ -217,6 +235,12 @@ replaceEnvironment({
   GATEWAY_TLS_KEY_SOURCE: './.artifacts/gateway/tls_key.pem',
   GATEWAY_REDIS_PASSWORD_SOURCE: './.artifacts/gateway/redis_password.txt',
   GATEWAY_SERVICE_PRIVATE_KEY_SOURCE: './.artifacts/gateway/service_private_key.pem',
+  GATEWAY_INVENTORY_BASE_URL: 'http://room-inventory-service:3008',
+  GATEWAY_INVENTORY_SERVICE_AUDIENCE: 'stayhub-room-inventory-service',
+  GATEWAY_INVENTORY_SERVICE_SCOPE: 'inventory:manage',
+  GATEWAY_INVENTORY_TIMEOUT_MS: '5000',
+  GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD: '5',
+  GATEWAY_INVENTORY_CIRCUIT_RESET_MS: '30000',
   AUTH_INBOUND_SERVICE_PUBLIC_KEYS_JSON: gatewayKeysJson,
   AUTH_INBOUND_SERVICE_ISSUER: INBOUND_ISSUER,
   AUTH_INBOUND_SERVICE_AUDIENCE: INBOUND_AUDIENCE,
@@ -249,9 +273,20 @@ replaceEnvironment({
   REVIEWS_GATEWAY_JWT_PUBLIC_KEYS_JSON: gatewayKeysJson,
   REVIEWS_GATEWAY_JWT_ISSUER: INBOUND_ISSUER,
   REVIEWS_GATEWAY_JWT_AUDIENCE: 'stayhub-reviews-service',
+  // Room Inventory: delegated JWT from the Gateway; DB/private key mounted from ./secrets.
+  INVENTORY_JWT_PUBLIC_KEYS_JSON: gatewayKeysJson,
+  INVENTORY_JWT_ISSUER: INBOUND_ISSUER,
+  INVENTORY_JWT_AUDIENCE: 'stayhub-room-inventory-service',
+  INVENTORY_DB_PASSWORD_FILE: './secrets/inventory-db-password.txt',
+  INVENTORY_DATABASE_URL_FILE: './secrets/inventory-database-url.txt',
+  INVENTORY_SERVICE_PRIVATE_KEY_SOURCE: './secrets/room-inventory-service-private.pem',
   PAYMENTS_SERVICE_JWT_ISSUER: bookingsIssuer,
   NOTIFICATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,
   ACCOMMODATIONS_SERVICE_JWT_ISSUER: bookingsIssuer,
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: 'stayhub-room-inventory-service',
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: 'room-inventory-accommodations-2026-01',
+  ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY_FILE: './secrets/room-inventory-service-public.pem',
+  ACCOMMODATIONS_INVENTORY_CONTEXT_SCOPE: 'accommodations:inventory-context',
 });
 
 // Keep host-side secret material private. Compose consumers opt out of Podman's
@@ -260,5 +295,6 @@ for (const directory of [secretsDirectory, gatewayArtifacts]) {
   for (const name of readdirSync(directory)) chmodSync(join(directory, name), 0o644);
 }
 
+await import('./reports-live-env.mjs');
 console.log('[compose-env] .env y secretos locales del Compose están completos.');
 console.log('[compose-env] Las credenciales existentes se conservaron; los tokens de servicio se renovaron por 30 días.');

@@ -47,6 +47,6 @@ export async function simulateCharge(input: ChargeInput): Promise<ChargeResult> 
 
 export function chargeMessage(result: ChargeResult): string {
   return result.status === 'APPROVED'
-    ? '¡Pago aprobado! Tu reserva está confirmada.'
+    ? 'Pago simulado aprobado. Consulta el estado de tu reserva para saber si está confirmada.'
     : 'El pago fue rechazado. Revisa tu método de pago e inténtalo de nuevo.';
 }

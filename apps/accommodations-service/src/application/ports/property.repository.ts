@@ -16,6 +16,8 @@ export interface NewPhoto { id: string; storageKey: string; mediaType: PhotoMedi
 export interface PropertyRepository {
   create(property: NewProperty): Promise<Property>;
   findById(id: string): Promise<Property | null>;
+  /** Authoritative room lookup by opaque room id, used by internal room-context consumers. */
+  findByRoomId(roomId: string): Promise<Property | null>;
   replace(id: string, decide: (current: Property) => ReplacementPlan): Promise<Property | null>;
   addPhoto(id: string, decide: (current: Property) => Promise<NewPhoto>): Promise<Photo | null>;
 }

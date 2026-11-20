@@ -9,9 +9,10 @@ const REPLACE_FIELDS = ['type', 'name', 'description', 'location', 'featureCodes
 /** Closed PropertyReplace body: omitting description or a room basePrice clears them. */
 export function parseReplaceProperty(body: unknown): ReplacePropertyCommand {
   const input = closedObject(body, 'body', REPLACE_FIELDS);
+  const featureCodes = parseFeatureCodes(input.featureCodes);
   return {
     type: parsePropertyType(input.type), name: parseName(input.name), description: parseDescription(input.description),
-    location: parseLocation(input.location), featureCodes: parseFeatureCodes(input.featureCodes),
-    status: parsePropertyStatus(input.status), version: parseVersion(input.version), rooms: parseRooms(input.rooms, true),
+    location: parseLocation(input.location), featureCodes,
+    status: parsePropertyStatus(input.status), version: parseVersion(input.version), rooms: parseRooms(input.rooms, true, featureCodes),
   };
 }

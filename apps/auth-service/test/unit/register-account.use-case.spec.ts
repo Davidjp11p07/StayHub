@@ -368,6 +368,14 @@ describe('RegisterAccountService (AUTH-040)', () => {
     expect(users.calls).toEqual([]);
   });
 
+  it('returns the same active user to concurrent identical requests', async () => {
+    const { useCase, hasher } = build();
+    const cmd = command();
+    const [first, replay] = await Promise.all([useCase.execute(cmd), useCase.execute(cmd)]);
+    expect(replay).toEqual(first);
+    expect(hasher.count).toBe(1);
+  });
+
   it('preserves checkpoints, records a safe failure and releases the lease on retry', async () => {
     const { work, users, useCase } = build();
     const cmd = command();

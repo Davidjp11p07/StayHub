@@ -58,7 +58,17 @@ export function Reports() {
     return () => abort.abort();
   }, [request]);
 
-  function submit(event: FormEvent) { event.preventDefault(); setRequest({ owner, filters: { ...filters } }); }
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const start = Date.parse(`${filters.from}T00:00:00Z`);
+    const end = Date.parse(`${filters.to}T00:00:00Z`);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 366 * 86400000) {
+      setData(null);
+      setError('La fecha final debe ser posterior a la inicial y el período no puede superar 366 días.');
+      return;
+    }
+    setRequest({ owner, filters: { ...filters } });
+  }
   const metrics = data?.metrics;
   const revenue = metrics?.revenue.find(row => row.currency === currency);
   const prior = data?.previous.reservations.total ?? 0;

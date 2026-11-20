@@ -19,7 +19,7 @@ import {
 
 const REGISTRATION_PATH = '/internal/v1/registrations';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN'];
+const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'];
 const STATUSES: readonly string[] = ['PENDING', 'ACTIVE', 'CANCELLED'];
 
 type RegistrationStatus = 'PENDING' | 'ACTIVE' | 'CANCELLED';

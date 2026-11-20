@@ -3,7 +3,7 @@ export const TOKEN_SIGNER = Symbol('TOKEN_SIGNER');
 export interface AccessTokenClaims {
   readonly sub: string;
   readonly sid: string;
-  readonly role: 'GUEST' | 'OWNER' | 'ADMIN';
+  readonly role: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
   readonly jti: string;
 }
 

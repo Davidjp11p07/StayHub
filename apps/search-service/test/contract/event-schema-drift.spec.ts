@@ -16,6 +16,12 @@ describe('event DTO and fixture drift', () => {
 
   const corpus: unknown[] = [
     upsertedProjectionEventFixture,
+    ...[1, 0].map(capacity => ({
+      ...upsertedProjectionEventFixture,
+      data: { ...upsertedProjectionEventFixture.data, rooms: [{
+        roomId: upsertedProjectionEventFixture.accommodationId, capacity, price: 10, currency: 'COP',
+      }] },
+    })),
     removedProjectionEventFixture,
     { ...upsertedProjectionEventFixture, eventType: 'unknown' },
     { ...removedProjectionEventFixture, projectionVersion: 0 },

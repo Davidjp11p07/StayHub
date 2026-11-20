@@ -6,7 +6,6 @@ import { mockDb, mockToken, problem } from '../../../test/msw/handlers';
 import { BOOKING_IDS, GUEST_ID, OTHER_GUEST_ID, OWNER_ID, PROPERTY_IDS } from '../../../test/msw/fixtures';
 import { locationRef, renderWithProviders } from '../../../test/utils';
 import { createBooking } from '../../api/bookings';
-import * as paymentsApi from '../../api/payments';
 import { session } from '../../api/session';
 import { BookingProvider } from '../../context/BookingContext';
 import { RequireRole } from '../../app/RequireRole';
@@ -52,32 +51,23 @@ describe('Payment — summary and charge', () => {
     renderPayment(booking.id);
     expect(await screen.findByText(/Casa Azul Frente al Mar/)).toBeInTheDocument();
     expect(screen.getByText(/435/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument();
+    expect(screen.getByText(/Procesando el pago simulado/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Token de pago')).not.toBeInTheDocument();
   });
 
-  it('charges once on double click and shows success with a link to the bookings', async () => {
-    const spy = vi.spyOn(paymentsApi, 'simulateCharge');
+  it('does not claim confirmation while the server reports payment pending', async () => {
     const booking = await createPending();
     renderPayment(booking.id);
-    await screen.findByRole('button', { name: 'Pagar' });
-    fireEvent.change(screen.getByLabelText('Token de pago'), { target: { value: 'tok_valido_1234' } });
-    const pay = screen.getByRole('button', { name: 'Pagar' });
-    fireEvent.click(pay);
-    fireEvent.click(pay); // double click must not charge twice
-    expect(await screen.findByText(/aprobado/i)).toBeInTheDocument();
-    expect(spy).toHaveBeenCalledTimes(1);
+    await screen.findByText(/Procesando el pago simulado/);
+    expect(screen.queryByText(/reserva ya está confirmada/i)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver mis reservas' })).toHaveAttribute('href', '/bookings');
   });
 
-  it('shows a clear error and a retry on a declined payment', async () => {
+  it('allows checking the server status again', async () => {
     const booking = await createPending();
     renderPayment(booking.id);
-    await screen.findByRole('button', { name: 'Pagar' });
-    fireEvent.change(screen.getByLabelText('Token de pago'), { target: { value: `tok_${paymentsApi.SIMULATED_DECLINE_HINT}_1` } });
-    fireEvent.click(screen.getByRole('button', { name: 'Pagar' }));
-    expect(await screen.findByText(/rechaz/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument(); // back to the form, no duplicate charge
+    fireEvent.click(await screen.findByRole('button', { name: 'Consultar estado' }));
+    expect(await screen.findByText(/Procesando el pago simulado/)).toBeInTheDocument();
   });
 
   it('shows the confirmed state when the booking is already paid', async () => {
@@ -93,7 +83,7 @@ describe('Payment — summary and charge', () => {
     first.unmount();
     renderPayment(booking.id);
     expect(await screen.findByText(/435/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Consultar estado' })).toBeInTheDocument();
   });
 });
 

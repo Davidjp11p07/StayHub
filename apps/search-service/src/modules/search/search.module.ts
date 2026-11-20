@@ -3,6 +3,7 @@ import { SEARCH_CONFIG } from "@search/infrastructure/config/config.module";
 import type { SearchConfig } from "@search/infrastructure/config/search-config";
 import { PrismaService } from "@search/infrastructure/persistence/prisma/prisma.service";
 import { PostgreSqlSearchIndexAdapter } from "@search/infrastructure/search/postgresql-search-index.adapter";
+import { BookingsAvailabilityClient } from "@search/infrastructure/search/bookings-availability.client";
 import { RedisSearchCacheAdapter } from "@search/infrastructure/cache/redis-search-cache.adapter";
 import {
   SEARCH_INDEX_PORT,
@@ -22,9 +23,9 @@ import { SearchController } from "@search/interfaces/http/search.controller";
   providers: [
     {
       provide: SEARCH_INDEX_PORT,
-      useFactory: (prisma: PrismaService): SearchIndexPort =>
-        new PostgreSqlSearchIndexAdapter(prisma),
-      inject: [PrismaService],
+      useFactory: (prisma: PrismaService, config: SearchConfig): SearchIndexPort =>
+        new PostgreSqlSearchIndexAdapter(prisma, new BookingsAvailabilityClient(config.dependencyTimeoutMs)),
+      inject: [PrismaService, SEARCH_CONFIG],
     },
     {
       provide: SEARCH_CACHE_PORT,

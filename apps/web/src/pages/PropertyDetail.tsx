@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { OwnerVerification } from './PropertyVerification';
 import { ApiError } from '../api/identity';
 import {
   formatLocation, formatMoney, lowestNightlyPrice, propertyErrorMessage, sortedPhotos, useProperty,
@@ -8,7 +9,6 @@ import { usePropertyReviews } from '../api/reviews';
 import { paths } from '../app/navigation';
 import { Button } from '../components/Button';
 import { Header } from '../components/Header';
-import { BookingPanel } from '../components/property/BookingPanel';
 import { LocationMap } from '../components/property/LocationMap';
 import { PhotoGallery } from '../components/property/PhotoGallery';
 import { ReviewsSection, Stars } from '../components/property/ReviewsSection';
@@ -57,7 +57,7 @@ function DetailSkeleton() {
 }
 
 /** RQ-06: full listing with photos, description, price, availability, reviews and map. */
-export function PropertyDetail({ propertyId, pendingBooking, onBookingRequired, onBookingConfirmed }: PropertyDetailProps) {
+export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const navigate = useNavigate();
   const query = useProperty(propertyId);
   const [reviewsShown, setReviewsShown] = useState(REVIEWS_PAGE);
@@ -104,9 +104,10 @@ export function PropertyDetail({ propertyId, pendingBooking, onBookingRequired, 
         <span className="text-gray-900 font-medium truncate" aria-current="page">{property.name}</span>
       </nav>
 
+      {property.ownerId && <OwnerVerification property={property} />}
       {property.status !== 'PUBLISHED' && (
         <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {property.status === 'DRAFT' ? 'Borrador' : 'No publicada'}: solo tú puedes ver esta propiedad.
+          {property.status === 'DRAFT' ? 'Borrador' : 'No publicada'}: pendiente de publicación.
         </p>
       )}
 
@@ -189,13 +190,12 @@ export function PropertyDetail({ propertyId, pendingBooking, onBookingRequired, 
 
         <aside aria-label="Reserva">
           <div className="sticky top-24">
-            <BookingPanel
-              property={property}
-              pendingBooking={pendingBooking}
-              onBookingRequired={onBookingRequired}
-              onBookingConfirmed={onBookingConfirmed}
-              onViewBookings={() => navigate(paths.bookings)}
-            />
+            <div className="rounded-3xl border border-gray-200 p-6">
+              <h2 className="text-lg font-bold">Reserva tu estancia</h2>
+              <p className="mt-2 text-sm text-gray-600">La disponibilidad y el total se comprueban al solicitar la reserva.</p>
+              {!fromPrice && <p className="mt-2 text-sm text-gray-600">Este alojamiento todavía no tiene habitaciones con precio disponibles para reservar.</p>}
+              {property.status === 'PUBLISHED' && fromPrice && <Link to={paths.book(property.id)} className="mt-4 inline-flex rounded-xl bg-primary px-5 py-3 text-white">Continuar a reservar</Link>}
+            </div>
           </div>
         </aside>
       </div>

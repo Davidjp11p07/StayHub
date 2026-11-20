@@ -13,10 +13,10 @@ export class VersionedCancellationPolicyAdapter implements CancellationPolicyPor
   public evaluate(input: { actor: 'GUEST' | 'OWNER'; status: string; checkIn: string; now: Date }): CancellationDecision {
     const rules = this.config.cancellationPolicy;
     if (!rules || rules.version !== this.config.cancellationPolicyVersion) throw new DomainError('DEPENDENCY_UNAVAILABLE');
-    if (!CANCELLABLE.has(input.status)) return { eligible: false, refundMode: 'NONE', policyVersion: rules.version };
+    if (!CANCELLABLE.has(input.status)) return { eligible: false, refundMode: 'NONE', refundPercent: 0, policyVersion: rules.version };
     const deadline = Date.parse(`${input.checkIn}T00:00:00.000Z`) - rules.freeCancellationBeforeHours * 3_600_000;
-    if (!Number.isFinite(deadline) || input.now.getTime() > deadline) return { eligible: false, refundMode: 'NONE', policyVersion: rules.version };
+    if (!Number.isFinite(deadline) || input.now.getTime() > deadline) return { eligible: false, refundMode: 'NONE', refundPercent: 0, policyVersion: rules.version };
     const refundMode = rules.refundPercent >= 100 ? 'FULL' : rules.refundPercent > 0 ? 'POLICY' : 'NONE';
-    return { eligible: true, refundMode, policyVersion: rules.version };
+    return { eligible: true, refundMode, refundPercent: rules.refundPercent, policyVersion: rules.version };
   }
 }

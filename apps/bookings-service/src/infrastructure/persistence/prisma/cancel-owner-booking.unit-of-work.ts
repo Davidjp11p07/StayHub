@@ -37,6 +37,7 @@ export class PrismaCancelOwnerBookingUnitOfWork implements CancelOwnerBookingUni
         await tx.paymentWork.create({ data: {
           id: randomUUID(), bookingId: current.id, operation: 'REQUEST_REFUND', idempotencyKey: `booking:${current.id}:refund`, amount: new Prisma.Decimal(current.totalAmount), currency: current.currency,
         } });
+        await tx.booking.update({ where: { id: current.id }, data: { paymentStatus: 'REFUND_PENDING' } });
       }
 
       const row = await tx.booking.findUniqueOrThrow({ where: { id: current.id } });

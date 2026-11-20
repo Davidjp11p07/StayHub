@@ -18,6 +18,9 @@ export interface BookingView {
   guests: number;
   nights: number;
   nightlyPrice: BookingMoneyView;
+  lodging: BookingMoneyView;
+  breakfast: BookingMoneyView;
+  breakfastPerGuestNight?: BookingMoneyView;
   total: BookingMoneyView;
   status: string;
   paymentStatus: string;
@@ -45,6 +48,9 @@ export function presentBooking(booking: StoredBooking, viewer?: BookingViewer): 
     guests: booking.guests,
     nights: booking.nights,
     nightlyPrice: { amount: booking.nightlyPriceAmount, currency: booking.currency },
+    lodging: { amount: booking.lodgingAmount ?? booking.totalAmount, currency: booking.currency },
+    breakfast: { amount: booking.breakfastAmount ?? '0.00', currency: booking.currency },
+    ...(booking.breakfastUnitAmount ? { breakfastPerGuestNight: { amount: booking.breakfastUnitAmount, currency: booking.currency } } : {}),
     total: { amount: booking.totalAmount, currency: booking.currency },
     status: booking.status,
     paymentStatus: booking.paymentStatus,

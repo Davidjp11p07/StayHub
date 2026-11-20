@@ -8,6 +8,7 @@ import { CategoryPills } from '../components/home/CategoryPills';
 import { PropertyCard } from '../components/property/PropertyCard';
 import { ALL_CATEGORY, AMENITY_CATEGORIES } from '../data/categories';
 import { DEV_FALLBACK_ENABLED, DEV_FALLBACK_PROPERTIES } from '../data/properties';
+import { footerColumns, legalLinks } from '../data/information';
 import type { Property } from '../types';
 import { toCardProps } from './Search';
 
@@ -151,7 +152,7 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
               </div>
               <div className="flex gap-3">
                 <Button variant="primary" size="md" onClick={() => navigate(paths.hostNew)}>Publicar ahora →</Button>
-                <Button variant="outline" size="md" className="!text-white !border-white/40 hover:!bg-white/10">Saber más</Button>
+                <Button variant="outline" size="md" className="!bg-transparent !text-white !border-white/60 hover:!bg-white/10" onClick={() => navigate(paths.host)}>Saber más</Button>
               </div>
             </div>
           </div>
@@ -160,17 +161,12 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
 
       <footer className="border-t border-gray-200 bg-white">
         <div className="max-w-screen-xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
-          {[
-            { title: 'Asistencia', links: ['Centro de ayuda', 'Información de seguridad', 'Opciones de cancelación'] },
-            { title: 'Comunidad', links: ['StayHub.org', 'Programa de referidos', 'Viajeros accesibles'] },
-            { title: 'Alojamiento', links: ['Publicar tu alojamiento', 'Recursos para anfitriones', 'Panel de gestión'] },
-            { title: 'StayHub', links: ['Sala de prensa', 'Blog de viajes', 'Trabaja con nosotros'] },
-          ].map((col) => (
+          {footerColumns.map((col) => (
             <div key={col.title}>
               <h3 className="text-sm font-semibold text-gray-900 mb-3">{col.title}</h3>
               <ul className="flex flex-col gap-2">
                 {col.links.map((l) => (
-                  <li key={l}><button className="text-sm text-gray-500 hover:text-gray-900 transition-colors text-left">{l}</button></li>
+                  <li key={l.label}><a href={l.href} className="text-sm text-gray-600 hover:text-gray-900 transition-colors text-left">{l.label}</a></li>
                 ))}
               </ul>
             </div>
@@ -179,11 +175,7 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
         <div className="border-t border-gray-200">
           <div className="max-w-screen-xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="text-sm text-gray-500">© 2026 StayHub, Inc.</span>
-            <div className="flex gap-4">
-              {['Privacidad', 'Condiciones', 'Empresa'].map((t) => (
-                <button key={t} className="text-sm text-gray-500 hover:text-gray-800">{t}</button>
-              ))}
-            </div>
+            <div className="flex gap-4">{legalLinks.map(link => <a key={link.href} href={link.href} className="text-sm text-gray-600 hover:text-gray-800">{link.label}</a>)}</div>
             <span className="text-sm text-gray-500">🌐 Español (ES)</span>
           </div>
         </div>

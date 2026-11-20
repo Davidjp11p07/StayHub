@@ -9,9 +9,10 @@ const CREATE_FIELDS = ['type', 'name', 'description', 'location', 'featureCodes'
 /** Closed PropertyCreate body: ownerId, status, version and ids are never accepted from the client. */
 export function parseCreateProperty(body: unknown): CreatePropertyCommand {
   const input = closedObject(body, 'body', CREATE_FIELDS);
+  const featureCodes = parseFeatureCodes(input.featureCodes);
   return {
     type: parsePropertyType(input.type), name: parseName(input.name), description: parseDescription(input.description),
-    location: parseLocation(input.location), featureCodes: parseFeatureCodes(input.featureCodes),
-    rooms: parseRooms(input.rooms, false).map(({ name, capacity, basePrice }) => ({ name, capacity, basePrice })),
+    location: parseLocation(input.location), featureCodes,
+    rooms: parseRooms(input.rooms, false, featureCodes),
   };
 }

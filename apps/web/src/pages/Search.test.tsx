@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { http as mock } from 'msw';
+import { http as mock, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '../../test/msw/server';
 import { problem } from '../../test/msw/handlers';
@@ -63,11 +63,13 @@ describe('Search page', () => {
     await waitFor(() => expect(resultTitles()).toEqual(['Casa Azul Frente al Mar', 'Cabaña del Bosque Nevado']));
 
     fireEvent.change(screen.getByLabelText('Ubicación'), { target: { value: 'Tulum' } });
+    fireEvent.change(screen.getByLabelText('País (dos letras)'), { target: { value: 'mx' } });
     fireEvent.change(screen.getByLabelText('Entrada'), { target: { value: '2026-12-01' } });
     fireEvent.change(screen.getByLabelText('Salida'), { target: { value: '2026-12-04' } });
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
     await waitFor(() => expect(resultTitles()).toEqual(['Casa Azul Frente al Mar']));
     expect(screen.getByText(/Disponibilidad estimada/)).toBeInTheDocument();
+    expect(new URLSearchParams(locationRef.current!.search).get('countryCode')).toBe('MX');
   });
 
   it('validates filters before searching', async () => {
@@ -108,6 +110,12 @@ describe('Search page', () => {
     await waitFor(() => expect(resultTitles()).toHaveLength(6));
   });
 
+  it('explains that an empty date search may have incomplete availability data', async () => {
+    server.use(mock.get('*/api/v1/search', () => HttpResponse.json({ items: [], page: 1, pageSize: 20, total: 0, hasNext: false, availabilityKind: 'PROJECTED' })));
+    renderSearch('?checkIn=2027-06-01&checkOut=2027-06-03');
+    expect(await screen.findByText(/La información de disponibilidad puede estar incompleta/)).toBeInTheDocument();
+  });
+
   it('shows a safe error and retries on demand', async () => {
     server.use(mock.get('*/api/v1/search', () => problem(503, 'UNAVAILABLE'), { once: true }));
     renderSearch('?q=hotel');
@@ -133,5 +141,13 @@ describe('Search page', () => {
     expect(new URLSearchParams(locationRef.current!.search).get('page')).toBe('2');
     fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
     await waitFor(() => expect(screen.getByText('Página 1 de 3')).toBeInTheDocument());
+  });
+
+  it('returns to the last result page after opening an out-of-range URL', async () => {
+    renderSearch('?countryCode=MX&page=999&pageSize=2');
+    fireEvent.click(await screen.findByRole('button', { name: 'Ir a la última página' }));
+    await waitFor(() => expect(resultTitles()).toHaveLength(1));
+    expect(new URLSearchParams(locationRef.current!.search).get('page')).toBe('2');
+    expect(new URLSearchParams(locationRef.current!.search).get('countryCode')).toBe('MX');
   });
 });

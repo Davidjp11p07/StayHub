@@ -41,6 +41,7 @@ model Property {
   updatedAt   DateTime          @updatedAt @db.Timestamptz(6)
   rooms       Room[]
   features    PropertyFeature[]
+  reviews     PropertyVerification[]
   photos      Photo[]
 
   @@index([ownerId, status])
@@ -52,6 +53,7 @@ model Room {
   property          Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   name              String   @db.VarChar(120)
   capacity          Int
+  breakfastAmount   Decimal? @db.Decimal(12, 2)
   basePriceAmount   Decimal? @db.Decimal(12, 2)
   basePriceCurrency String?  @db.Char(3)
   createdAt         DateTime @default(now()) @db.Timestamptz(6)
@@ -99,4 +101,36 @@ model ReportSupplyVersion {
  name String @db.VarChar(120)
  roomIds Json @db.JsonB
  @@index([ownerId, capturedAt, id])
+}
+
+/// Committed catalog snapshots waiting for confirmed Search event delivery.
+model SearchProjectionOutbox {
+  id          BigInt    @id @default(autoincrement())
+  eventId     String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId  String    @db.Uuid
+  eventType   String
+  data        Json?     @db.JsonB
+  photoId     String?   @db.Uuid
+  occurredAt  DateTime  @default(now()) @db.Timestamptz(6)
+  publishedAt DateTime? @db.Timestamptz(6)
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PropertyVerification {
+  propertyId String @db.Uuid
+  version Int
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  requestedBy String @db.Uuid
+  requestedAt DateTime @default(now()) @db.Timestamptz(6)
+  status VerificationStatus @default(PENDING)
+  reviewerId String? @db.Uuid
+  reason String? @db.VarChar(1000)
+  decidedAt DateTime? @db.Timestamptz(6)
+  @@id([propertyId, version])
+  @@index([status, requestedAt])
 }

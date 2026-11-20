@@ -1,3 +1,4 @@
+import isISO31661Alpha2 from 'validator/lib/isISO31661Alpha2';
 /**
  * Transport contracts consumed by the web client through the Gateway (`/api/v1`).
  *
@@ -71,7 +72,9 @@ export const CATALOG_LIMITS = {
 export const AMOUNT_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
 export const ZERO_AMOUNT_PATTERN = /^0+(\.0{1,2})?$/;
 export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
-export const COUNTRY_PATTERN = /^[A-Z]{2}$/;
+export function isCountryCode(value: string): boolean {
+  return /^[A-Z]{2}$/.test(value) && isISO31661Alpha2(value);
+}
 
 export interface Location {
   addressLine: string;
@@ -95,6 +98,7 @@ export interface Room {
   id: string;
   name: string;
   capacity: number;
+  breakfastPerGuestNight?: BasePrice;
   basePrice?: BasePrice | null;
 }
 
@@ -133,6 +137,7 @@ export interface Property {
 export interface RoomInput {
   name: string;
   capacity: number;
+  breakfastPerGuestNight?: BasePrice;
   basePrice?: BasePrice;
 }
 
@@ -204,6 +209,7 @@ export interface SearchResponse extends Page<SearchResult> {
 
 /** Query filters for `GET /search`. All filters combine with AND. */
 export interface SearchFilters {
+  countryCode?: string;
   q?: string;
   location?: string;
   minPrice?: number;
@@ -266,12 +272,14 @@ export const BOOKING_STATUSES = [
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 export const PAYMENT_STATUSES = [
-  'NOT_STARTED', 'ORDER_PENDING', 'PENDING', 'CAPTURED', 'FAILED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED',
+  'NOT_STARTED', 'ORDER_PENDING', 'PENDING', 'CAPTURED', 'FAILED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED', 'REFUND_FAILED', 'REFUND_REVIEW_REQUIRED', 'REVIEW_REQUIRED',
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /** Request body of `POST /bookings`. `checkIn` is inclusive, `checkOut` exclusive. */
 export interface CreateBookingInput {
+  breakfastSelected?: boolean;
+  expectedPropertyVersion?: number;
   propertyId: string;
   roomId: string;
   checkIn: IsoDate;
@@ -280,6 +288,9 @@ export interface CreateBookingInput {
 }
 
 export interface Booking {
+  lodging?: BasePrice;
+  breakfast?: BasePrice;
+  breakfastPerGuestNight?: BasePrice;
   id: string;
   guestId: string;
   /** Present only when the requester is the property owner. */

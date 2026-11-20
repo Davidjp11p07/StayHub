@@ -1,4 +1,6 @@
+import { GuestNotificationsController } from './modules/notifications/guest-notifications.controller';
 import { Module } from '@nestjs/common';
+import { ChatModule } from './modules/chat/chat.module';
 import { ReportsProxyModule } from '@gateway/modules/reports/reports-proxy.module';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 
@@ -14,6 +16,7 @@ import { HealthModule } from '@gateway/modules/health/health.module';
 import { ReviewsProxyModule } from '@gateway/modules/reviews/reviews-proxy.module';
 import { BookingsProxyModule } from '@gateway/modules/bookings/bookings-proxy.module';
 import { SearchProxyModule } from '@gateway/modules/search/search-proxy.module';
+import { InventoryProxyModule } from '@gateway/modules/inventory/inventory-proxy.module';
 import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
 
 /**
@@ -28,6 +31,7 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
  */
 @Module({
   imports: [
+    ChatModule,
     GatewayConfigModule,
     GatewayRedisModule,
     GatewayAuthModule,
@@ -37,7 +41,10 @@ import { UsersProxyModule } from '@gateway/modules/users/users-proxy.module';
     BookingsProxyModule,
     AccommodationsProxyModule,
     SearchProxyModule,
+    ReportsProxyModule,
+    InventoryProxyModule,
   ],
+  controllers: [GuestNotificationsController],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
     { provide: APP_PIPE, useClass: GatewayValidationPipe },

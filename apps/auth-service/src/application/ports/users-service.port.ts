@@ -1,13 +1,15 @@
 export const USERS_SERVICE = Symbol('USERS_SERVICE');
 
-export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
+export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
+
+export type PublicRegistrationRole = 'GUEST' | 'OWNER';
 
 export interface PendingUserCommand {
   readonly registrationId: string;
   readonly userId: string;
   readonly name: string;
   readonly email: string;
-  readonly role: Exclude<UserRole, 'ADMIN'>;
+  readonly role: PublicRegistrationRole;
 }
 
 export interface RegistrationIdentity {

@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Headers, Optional, Param, Post, Query, Req, ServiceUnavailableException, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CreateBookingUseCase } from '@bookings/application/create-booking/create-booking.use-case';
+import { CreateBookingUseCase, type BookingPricePreview } from '@bookings/application/create-booking/create-booking.use-case';
 import { GetBookingUseCase } from '@bookings/application/get-booking/get-booking.use-case';
 import { CancelGuestBookingUseCase } from '@bookings/application/cancel-booking/cancel-guest-booking.use-case';
 import { CancelOwnerBookingUseCase } from '@bookings/application/cancel-booking/cancel-owner-booking.use-case';
@@ -11,6 +11,7 @@ import { OwnerBookingHistoryQueryDto } from '@bookings/interfaces/http/dto/owner
 import { ServiceAuthGuard, type AuthenticatedRequest } from '@bookings/interfaces/http/guards/service-auth.guard';
 import { presentBooking, type BookingView } from './booking.presenter';
 import { presentBookingPage, type BookingPageView } from './booking-page.presenter';
+import { PrismaOwnerBookingHistoryQuery } from '@bookings/infrastructure/persistence/prisma/owner-booking-history.query';
 
 @ApiTags('bookings') @ApiBearerAuth() @Controller('bookings') @UseGuards(ServiceAuthGuard)
 export class BookingsController {
@@ -20,12 +21,29 @@ export class BookingsController {
     private readonly cancelGuestBooking: CancelGuestBookingUseCase,
     private readonly cancelOwnerBooking: CancelOwnerBookingUseCase,
     private readonly ownerHistory: GetOwnerBookingHistoryUseCase,
+    @Optional() private readonly guestHistory?: PrismaOwnerBookingHistoryQuery,
   ) {}
+
+  @Get() @ApiOperation({ summary: 'List bookings for the authenticated guest' })
+  public async guestList(@Query() query: OwnerBookingHistoryQueryDto, @Req() request: AuthenticatedRequest): Promise<BookingPageView> {
+    const principal = request.principal;
+    if (!principal || principal.role !== 'GUEST') throw new ForbiddenException('GUEST role required');
+    if (query.guestId) throw new BadRequestException('UNKNOWN_QUERY_PARAMETER');
+    if (!this.guestHistory) throw new ServiceUnavailableException();
+    const page = await this.guestHistory.findGuestPage({ guestId: principal.sub, ...(query.from ? { from: query.from } : {}), ...(query.to ? { to: query.to } : {}), ...(query.status ? { status: query.status } : {}), page: query.page, pageSize: query.pageSize });
+    return presentBookingPage(page, { role: 'GUEST', sub: principal.sub });
+  }
+
+  @Post('quote') @HttpCode(200)
+  public preview(@Body() body: CreateBookingDto, @Req() request: AuthenticatedRequest & { traceId?: string }): Promise<BookingPricePreview> {
+    if (request.principal?.role !== 'GUEST') throw new ForbiddenException('GUEST role required');
+    return this.createBooking.preview({ ...body, guestId: request.principal.sub, ...(request.traceId ? { traceId: request.traceId } : {}) });
+  }
 
   @Post() @ApiOperation({ summary: 'Create an idempotent pending booking' }) @ApiHeader({ name: 'Idempotency-Key', required: true }) @ApiCreatedResponse({ description: 'Booking created or replayed' })
   public async create(@Body() body: CreateBookingDto, @Headers('idempotency-key') key: string | undefined, @Req() request: AuthenticatedRequest & { traceId?: string }): Promise<BookingView> {
     if (request.principal?.role !== 'GUEST') throw new ForbiddenException('GUEST role required');
-    const booking = await this.createBooking.execute({ guestId: request.principal.sub, propertyId: body.propertyId, roomId: body.roomId, checkIn: body.checkIn, checkOut: body.checkOut, guests: body.guests, idempotencyKey: assertIdempotencyKey(key), ...(request.traceId ? { traceId: request.traceId } : {}) });
+    const booking = await this.createBooking.execute({ guestId: request.principal.sub, ...body, idempotencyKey: assertIdempotencyKey(key), ...(request.traceId ? { traceId: request.traceId } : {}) });
     return presentBooking(booking);
   }
 

@@ -22,6 +22,16 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 export class BookingsController {
   public constructor(private readonly bookings: BookingsClient) {}
 
+  @Get() @Roles('GUEST')
+  public guestList(@Req() request: Request): Promise<unknown> {
+    return this.bookings.request(context(request), 'GET', `/bookings${allowedQuery(request, ['from', 'to', 'status', 'page', 'pageSize'])}`);
+  }
+
+  @Post('quote') @HttpCode(200) @Roles('GUEST')
+  public preview(@Body() body: CreateBookingDto, @Req() request: Request): Promise<unknown> {
+    return this.bookings.request(context(request), 'POST', '/bookings/quote', body);
+  }
+
   @Post() @Roles('GUEST')
   public create(@Body() body: CreateBookingDto, @Headers('idempotency-key') key: string | undefined, @Req() request: Request): Promise<unknown> {
     if (!key || !/^[A-Za-z0-9._:-]{16,128}$/u.test(key)) throw new BadRequestException({ code: 'INVALID_IDEMPOTENCY_KEY' });

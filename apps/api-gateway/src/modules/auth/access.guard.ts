@@ -55,7 +55,7 @@ export interface SessionIntrospection {
   introspect(session: ValidatedPrincipal, traceId?: string): Promise<AuthoritativeSession>;
 }
 
-const KNOWN_ROLES: readonly UserRole[] = ['GUEST', 'OWNER', 'ADMIN'];
+const KNOWN_ROLES: readonly UserRole[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'];
 
 interface RequestWithPrincipal extends Request {
   user?: AuthenticatedPrincipal;

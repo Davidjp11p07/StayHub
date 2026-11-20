@@ -20,3 +20,6 @@ dsecrets/
 .artifacts/
 AGENT.md
 ESTADO-PROYECTO.md
+
+# Obsolete local Reports generated-client path (before isolated build layout).
+apps/reports-service/src/infrastructure/generated/

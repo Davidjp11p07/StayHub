@@ -27,6 +27,21 @@ describe('ACC-005/007 configuration fail-fast', () => {
     expect(config.jwt.publicKey).toContain('BEGIN PUBLIC KEY');
   });
 
+  it('accepts a second trusted caller with its own key and scope', () => {
+    const keys = generateKeyPairSync('rsa', { modulusLength: 2048, publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } });
+    const config = loadAccommodationsConfig({ ...validEnv,
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: 'room-inventory',
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_KID: 'inventory-v1',
+      ACCOMMODATIONS_INVENTORY_SERVICE_JWT_PUBLIC_KEY: keys.publicKey,
+    });
+    expect(config.serviceJwtCallers).toHaveLength(2);
+    expect(config.serviceJwtCallers[1]).toMatchObject({ issuer: 'room-inventory', kid: 'inventory-v1', scopes: ['accommodations:inventory-context'] });
+  });
+
+  it('rejects a partial second caller configuration', () => {
+    expect(() => loadAccommodationsConfig({ ...validEnv, ACCOMMODATIONS_INVENTORY_SERVICE_JWT_ISSUER: 'room-inventory' })).toThrow();
+  });
+
   it('uses the booking quote scope default and accepts an override', () => {
     expect(loadAccommodationsConfig(validEnv).serviceJwt.scope).toBe('accommodations:booking-quote');
     expect(loadAccommodationsConfig({ ...validEnv, ACCOMMODATIONS_BOOKING_QUOTE_SCOPE: 'custom:quote' }).serviceJwt.scope).toBe('custom:quote');

@@ -14,7 +14,13 @@ export class ReportsSupplyGuard implements CanActivate {
     canActivate(ctx: ExecutionContext): boolean { const auth = ctx.switchToHttp().getRequest<Request>().headers.authorization; if (!auth?.startsWith('Bearer '))
         throw new UnauthorizedException(); let principal; try {
         const file = process.env.REPORTS_SOURCE_PUBLIC_KEY_FILE;
-        principal = verifyServiceToken(auth.slice(7), { ...this.config.serviceJwt, scope: 'reports:read', ...(file ? { issuer: process.env.REPORTS_SOURCE_ISSUER ?? 'stayhub-reports-service', kid: process.env.REPORTS_SOURCE_KID ?? 'reports-v1', publicKey: readFileSync(file, 'utf8') } : {}) });
+        const source = file
+            ? { issuer: process.env.REPORTS_SOURCE_ISSUER ?? 'stayhub-reports-service', kid: process.env.REPORTS_SOURCE_KID ?? 'reports-v1', publicKey: readFileSync(file, 'utf8') }
+            : this.config.serviceJwt;
+        principal = verifyServiceToken(auth.slice(7), {
+            serviceJwt: this.config.serviceJwt,
+            serviceJwtCallers: [{ issuer: source.issuer, kid: source.kid, publicKey: source.publicKey, scopes: ['reports:read'] }],
+        }, 'reports:read');
     }
     catch {
         throw new UnauthorizedException();

@@ -97,13 +97,13 @@ describe('POST /reviews', () => {
 });
 
 describe('isReviewable (completed-stay rule)', () => {
-  it('only a completed stay in the past is reviewable (clock frozen at 2026-11-10)', () => {
+  it('accepts completed stays including early check-out', () => {
     const completed = mockDb.booking(BOOKING_IDS.villaCompleted)!; // COMPLETED, checkOut 2026-09-08
     const confirmed = mockDb.booking(BOOKING_IDS.casaAzulConfirmed)!; // CONFIRMED, checkOut 2026-12-14
     expect(isReviewable(completed)).toBe(true);
     expect(isReviewable(confirmed)).toBe(false);
     const completedButFuture: Booking = { ...completed, checkOut: '2099-01-01' };
-    expect(isReviewable(completedButFuture)).toBe(false);
+    expect(isReviewable(completedButFuture)).toBe(true);
   });
 });
 

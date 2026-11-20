@@ -6,7 +6,7 @@ import { GUEST_ID, OWNER_ID, PROPERTY_IDS } from '../../test/msw/fixtures';
 import { ApiError } from './identity';
 import { session } from './session';
 import {
-  createProperty, fieldErrors, publishProperty, propertyWriteErrorMessage, toReplaceInput, uploadPropertyPhoto, validatePhotoFile,
+  createProperty, fieldErrors, requestVerification, propertyWriteErrorMessage, uploadPropertyPhoto, validatePhotoFile,
 } from './properties';
 import { CATALOG_LIMITS, type PropertyCreate } from '../types/catalog';
 
@@ -108,21 +108,25 @@ describe('POST /properties/:id/photos', () => {
 });
 
 describe('publishing', () => {
-  it('replaces the full representation with status PUBLISHED and the current version', async () => {
+  it('requests review of the current version and leaves the listing unpublished', async () => {
     const created = await createProperty(input);
-    await uploadPropertyPhoto(created.id, jpeg());
-    const replace = toReplaceInput(created, { status: 'PUBLISHED' });
-    expect(replace).toEqual({
-      type: 'HOUSE', name: 'Casa del Lago', description: 'Frente al lago.', location: input.location,
-      featureCodes: ['WIFI', 'PARKING'], status: 'PUBLISHED', version: 1,
-      rooms: [{ id: created.rooms[0]!.id, name: 'Principal', capacity: 4, basePrice: { amount: '150.00', currency: 'USD' } }],
+    const draft = mockDb.property(created.id)!;
+    draft.photos = [...mockDb.property(PROPERTY_IDS.villa)!.photos];
+    let submitted: unknown;
+    server.events.on('request:start', async ({ request }) => {
+      if (new URL(request.url).pathname.endsWith('/verification')) submitted = await request.clone().json();
     });
-    await expect(publishProperty(created)).resolves.toMatchObject({ status: 'PUBLISHED', version: 2 });
+    try {
+      await expect(requestVerification(created)).resolves.toMatchObject({ status: 'DRAFT', version: 1 });
+      expect(submitted).toEqual({ version: 1 });
+    } finally {
+      server.events.removeAllListeners();
+    }
   });
 
   it('explains incomplete publication', async () => {
     const created = await createProperty(input);
-    const error = await publishProperty(created).catch((e: unknown) => e);
+    const error = await requestVerification(created).catch((e: unknown) => e);
     expect(error).toMatchObject({ status: 409, problem: { code: 'PUBLICATION_INCOMPLETE' } });
     expect(propertyWriteErrorMessage(error)).toBe('Para publicar necesitas al menos una habitación con precio y una foto.');
   });

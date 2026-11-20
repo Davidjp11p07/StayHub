@@ -6,7 +6,7 @@ import { USERS_CONFIG, type UsersConfig } from '@users/infrastructure/config/use
 import { verifyJwt } from '@users/infrastructure/security/service-jwt.verifier';
 import { bearer } from '../guards/service-auth.guard';
 import { UUID_PATTERN } from '@users/domain/users/values';
-export interface Principal { sub: string; sid: string; jti: string; role: 'GUEST' | 'OWNER' | 'ADMIN' }
+export interface Principal { sub: string; sid: string; jti: string; role: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER' }
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(@Inject(USERS_CONFIG) private readonly config: UsersConfig) {
@@ -14,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
   validate(req: Request): Principal {
     const claims = verifyJwt(bearer(req), this.config.userJwt, 3600);
-    if (![claims.sub, claims.sid, claims.jti].every((v: unknown) => typeof v === 'string' && UUID_PATTERN.test(v)) || !['GUEST', 'OWNER', 'ADMIN'].includes(String(claims.role))) throw new UnauthorizedException();
+    if (![claims.sub, claims.sid, claims.jti].every((v: unknown) => typeof v === 'string' && UUID_PATTERN.test(v)) || !['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'].includes(String(claims.role))) throw new UnauthorizedException();
     return { sub: claims.sub!, sid: claims.sid as string, jti: claims.jti!, role: claims.role as Principal['role'] };
   }
 }

@@ -7,7 +7,7 @@ import { UsersServiceHttpError } from './users-service.types';
 
 const LOGIN_IDENTITY_PATH = '/internal/v1/login-identities/resolve';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN'];
+const ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'];
 
 interface ResolveLoginIdentityBody {
   readonly email: string;

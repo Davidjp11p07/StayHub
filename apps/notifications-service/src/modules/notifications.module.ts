@@ -1,3 +1,4 @@
+import { ReadNotificationController } from '../interfaces/http/notifications/read-notification.controller';
 import { Module } from '@nestjs/common';
 import { NOTIFICATION_REPOSITORY } from '../application/ports/notification.repository';
 import { REMINDER_SCHEDULE_REPOSITORY } from '../application/ports/reminder-schedule.repository';
@@ -10,7 +11,7 @@ import { BookingConfirmedUseCase } from '../application/notifications/booking-co
 import { CheckinReminderScheduler } from '../infrastructure/scheduling/checkin-reminder.scheduler';
 
 @Module({
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, ReadNotificationController],
   providers: [
     { provide: NOTIFICATION_REPOSITORY, useExisting: PrismaNotificationRepository },
     { provide: REMINDER_SCHEDULE_REPOSITORY, useExisting: PrismaNotificationRepository },

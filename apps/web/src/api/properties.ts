@@ -128,15 +128,15 @@ export function toReplaceInput(property: Property, overrides: Partial<PropertyRe
     status: property.status,
     version: property.version,
     rooms: property.rooms.map((room) => ({
-      id: room.id, name: room.name, capacity: room.capacity, ...(room.basePrice ? { basePrice: room.basePrice } : {}),
+      id: room.id, name: room.name, capacity: room.capacity, ...(room.breakfastPerGuestNight ? { breakfastPerGuestNight: room.breakfastPerGuestNight } : {}), ...(room.basePrice ? { basePrice: room.basePrice } : {}),
     })),
     ...overrides,
   };
 }
 
-/** DRAFT/UNPUBLISHED → PUBLISHED. Requires a priced room and at least one photo. */
-export function publishProperty(property: Property): Promise<Property> {
-  return replaceProperty(property.id, toReplaceInput(property, { status: 'PUBLISHED' }));
+export async function requestVerification(property: Property): Promise<Property> {
+  await http.post(`/properties/${property.id}/verification`, { version: property.version });
+  return getProperty(property.id);
 }
 
 /**
@@ -223,10 +223,10 @@ export function useUploadPropertyPhoto() {
   });
 }
 
-export function usePublishProperty() {
+export function useRequestVerification() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: publishProperty,
+    mutationFn: requestVerification,
     onSuccess: (property) => {
       client.setQueryData(propertyKeys.detail(property.id), property);
       void client.invalidateQueries({ queryKey: searchKeys.all });

@@ -1,3 +1,4 @@
+import { GuestInbox } from '../components/GuestInbox';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BOOKING_STATUS_LABELS, bookingHistoryErrorMessage, useGuestBookingHistory } from '../api/bookings-history';
@@ -75,7 +76,7 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
       onNavigate={onNavigate}
       eyebrow="Tu cuenta"
       title="Mis reservas"
-      titleAction={<Link to={paths.reviews} className="text-sm font-semibold text-primary hover:underline">Mis reseñas</Link>}
+      titleAction={<div><GuestInbox key={currentUser.id} userId={currentUser.id} /><Link to={paths.reviews} className="text-sm font-semibold text-primary hover:underline">Mis reseñas</Link></div>}
       status={status} from={from} to={to}
       onStatus={setStatus} onFrom={setFrom} onTo={setTo}
       query={query}
