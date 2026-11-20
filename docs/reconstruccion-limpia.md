@@ -44,9 +44,14 @@ $env:STAYHUB_TEST_COMPOSE_PROJECT = $project
 $env:NODE_EXTRA_CA_CERTS = (Resolve-Path .artifacts/gateway/tls_cert.pem).Path
 $env:STAYHUB_TEST_PROXY_CERT = $env:NODE_EXTRA_CA_CERTS
 $env:STAYHUB_TEST_PROXY_ORIGIN = 'https://localhost:38443'
+$env:STAYHUB_WEB_URL = $env:STAYHUB_TEST_PROXY_ORIGIN
 node scripts/e2e-verifier-session.mjs
 if ($LASTEXITCODE) { throw 'Falló el recorrido funcional' }
+$env:STAYHUB_TEST_OWNER_REPORT = '1'
+node scripts/e2e-verifier-session.mjs
+if ($LASTEXITCODE) { throw 'Error al verificar el reporte del propietario' }
 docker @dc stop
+docker buildx stop $project
 Set-Location $repo
 ```
 
