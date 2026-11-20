@@ -4,15 +4,7 @@ import { ApiError } from './identity';
 import { isPropertyId, propertyKeys } from './properties';
 import type { Booking, Review, ReviewPage } from '../types/catalog';
 
-/**
- * Reviews through the Gateway. Reading a property's reviews (`GET /properties/:id/reviews`) uses a
- * provisional shape. Writing (RQ-11) is aligned to `openapi-reviews-service.yaml`:
- * `POST /reviews { bookingId, rating 1–5, comment 1–2000 }` → a review, only for a GUEST whose own
- * stay is COMPLETED; `GET /reviews/user/:id` lists own reviews.
- *
- * External dependency (G1): the Gateway does not expose `/reviews` yet; validated against MSW.
- */
-
+/** Public property reviews and guest review history through the gateway. */
 export const reviewKeys = {
   all: ['reviews'] as const,
   property: (propertyId: string, page: number, pageSize: number) => [...reviewKeys.all, 'property', propertyId, page, pageSize] as const,
@@ -23,8 +15,11 @@ export async function getPropertyReviews(
   propertyId: string, { page = 1, pageSize = 5 }: { page?: number; pageSize?: number } = {}, signal?: AbortSignal,
 ): Promise<ReviewPage> {
   if (!isPropertyId(propertyId)) throw new ApiError(404, { code: 'NOT_FOUND' });
-  const { data } = await http.get<ReviewPage>(`/properties/${propertyId}/reviews`, { params: { page, pageSize }, signal });
-  return data;
+  const { data } = await http.get<UserReviewsPage & Partial<ReviewPage>>(`/properties/${propertyId}/reviews`, { params: { page, pageSize }, signal });
+  const complete = data.items.length > 0 && data.items.length === data.total;
+  const averageRating = data.averageRating ?? (complete
+    ? data.items.reduce((sum, review) => sum + review.rating, 0) / data.total : null);
+  return { ...data, averageRating, hasNext: data.hasNext ?? data.page < data.totalPages };
 }
 
 export function usePropertyReviews(propertyId: string | undefined, page = 1, pageSize = 5) {
@@ -48,9 +43,8 @@ export interface WrittenReview { id: string; propertyId: string; rating: number;
 export interface UserReviewsPage { items: Review[]; page: number; pageSize: number; total: number; totalPages: number }
 
 /** A stay can be reviewed only once it is COMPLETED (Bookings is the authority; this only gates the UI). */
-export function isReviewable(booking: Pick<Booking, 'status' | 'checkOut'>, now: Date = new Date()): boolean {
-  const today = now.toISOString().split('T')[0]!;
-  return booking.status === 'COMPLETED' && booking.checkOut <= today;
+export function isReviewable(booking: Pick<Booking, 'status'>): boolean {
+  return booking.status === 'COMPLETED';
 }
 
 export async function createReview(input: CreateReviewInput, signal?: AbortSignal): Promise<WrittenReview> {
