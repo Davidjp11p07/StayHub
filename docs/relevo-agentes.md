@@ -7,6 +7,8 @@
 
 ## TAREA ACTIVA
 
+- AUTH-S2S sobre 36cbc22: Bookings firma sus cuatro credenciales de salida bajo demanda con su clave propia y expiración de 240 s. Compose ya no monta los tokens temporales en Bookings. Verificado: 5 pruebas de adaptadores y Chrome con pago y REFUNDED. REG-503 simultáneo con la misma clave: 201/503 y repetición 201 con el mismo ID. Reviews aún depende del renovador.
+
 - SEARCH-04 / REQ-04: CORREGIDO-Y-VERIFICADO localmente. El evento de Accommodations lleva las habitaciones con ID, capacidad, precio y moneda. Search consulta a Bookings en lotes de hasta 256 antes de paginar. Las consultas con fechas omiten Redis. La proyección previa sigue admitiendo ventanas explícitas; una instantánea antigua sin información no anuncia disponibilidad.
 - Bookings aplica la misma exclusión por habitación y estancia [entrada, salida) para retenciones pendientes, reservas confirmadas y check-in. Un error de consulta de ocupación impide responder con habitaciones libres. REQ-07 verificado.
 - Última operación funcional: API y Chrome verificaron filtros, foto, tarifa, detalle y regreso desde página 999. La API verificó conflicto de reserva, disponibilidad en el día de salida y liberación tras cancelación. Durante una repetición, el registro respondió HTTP 503 antes de enviar ninguna reserva. Una ejecución posterior pasó; REG-503 sigue pendiente.

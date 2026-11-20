@@ -475,8 +475,7 @@ services:
       BOOKINGS_NOTIFICATIONS_URL: ${BOOKINGS_NOTIFICATIONS_URL:-http://notifications-service:3009}
       BOOKINGS_NOTIFICATIONS_JWT_AUDIENCE: ${BOOKINGS_NOTIFICATIONS_JWT_AUDIENCE:-stayhub-notifications-service}
       BOOKINGS_NOTIFICATIONS_JWT_SCOPE: ${BOOKINGS_NOTIFICATIONS_JWT_SCOPE:-notifications:send}
-      BOOKINGS_NOTIFICATIONS_SERVICE_TOKEN_FILE: /run/secrets/bookings_notifications_service_token
-      BOOKINGS_OUTBOUND_SERVICE_TOKENS_JSON_FILE: /run/secrets/bookings_outbound_service_tokens
+      BOOKINGS_OUTBOUND_PRIVATE_KEY_FILE: /run/secrets/bookings_outbound_private
       BOOKINGS_DEPENDENCY_TIMEOUT_MS: ${BOOKINGS_DEPENDENCY_TIMEOUT_MS:-3000}
       BOOKINGS_PAYMENT_HOLD_MINUTES: ${BOOKINGS_PAYMENT_HOLD_MINUTES:?required}
       BOOKINGS_CANCELLATION_POLICY_VERSION: ${BOOKINGS_CANCELLATION_POLICY_VERSION:?required}
@@ -492,7 +491,7 @@ services:
       BOOKINGS_SHUTDOWN_GRACE_MS: ${BOOKINGS_SHUTDOWN_GRACE_MS:-10000}
       BOOKINGS_LOG_LEVEL: ${BOOKINGS_LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?required}
-    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_notifications_service_token, bookings_outbound_service_tokens, search_availability_public]
+    secrets: [bookings_database_url, bookings_rabbitmq_url, bookings_outbound_private, search_availability_public]
     networks: [bookings-internal, services]
     read_only: true
     tmpfs: [/tmp]
@@ -820,6 +819,7 @@ volumes:
   inventory_data:
 
 secrets:
+  bookings_outbound_private: {file: ./secrets/bookings-service-private.pem}
   search_availability_private: {file: ./secrets/search-availability-private.pem}
   search_availability_public: {file: ./secrets/search-availability-public.pem}
   gateway_tls_cert:
