@@ -343,3 +343,5 @@ Recuperación conjunta de Bookings y Payments desde un corte sin escritores: 17 
 RabbitMQ de reservas restaurado en un nodo aislado desde una copia en frío. Definiciones y mensaje persistente verificados; cola temporal retirada en origen y topología inicial cotejada. Ensayo detenido.
 
 Auth Redis / RDB restaurado en contenedor desechable. Valor sintético y vencimiento absoluto idénticos; TTL restante de 28298 ms y expiración comprobada por EXISTS=0 y PTTL=-2. Ensayo detenido.
+
+Auth / recuperación de caché anterior a una revocación. Una sesión sintética revocada en PostgreSQL siguió siendo rechazada al restaurar en Redis su entrada activa anterior y Auth eliminó esa entrada. Pasaron 17/17 pruebas de integración sobre contenedores desechables.
