@@ -7,7 +7,7 @@ import { ServiceClientBase, type HttpFetch, type ServiceResult } from '@gateway/
 export interface ReportsRequestContext {
     readonly traceId: string;
     readonly userId: string;
-    readonly role: 'GUEST' | 'OWNER' | 'ADMIN';
+    readonly role: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 }
 export interface ReportsClientDeps {
     readonly fetch?: HttpFetch;

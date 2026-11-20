@@ -21,7 +21,7 @@ export interface IssueInboundServiceTokenOptions {
 export interface IssueAccessTokenOptions {
   readonly sub?: string;
   readonly sid?: string;
-  readonly role?: 'GUEST' | 'OWNER' | 'ADMIN';
+  readonly role?: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
   readonly jti?: string;
   readonly kid?: string;
   readonly issuer?: string;

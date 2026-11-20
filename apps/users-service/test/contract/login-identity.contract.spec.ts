@@ -3,11 +3,11 @@ import { postgresHarness, type Harness } from '../integration/postgres.setup';
 import { pendingFixture, serviceToken } from '../fixtures/users.fixture';
 describe('USR-038 login identity contract', () => {
   let h: Harness; beforeAll(async () => { h = await postgresHarness(); }); afterAll(async () => { await h?.close(); }); afterEach(async () => { await h.reset(); });
-  it('returns ACTIVE userId/role/status and rejects extra fields', async () => {
+  it.each(['ADMIN', 'VERIFIER'] as const)('returns the active %s identity and rejects extra fields', async (role) => {
     const body = pendingFixture();
-    await h.db.user.create({ data: { id: body.userId, registrationId: body.registrationId, name: body.name, email: body.email, emailNormalized: body.email, role: 'ADMIN', status: 'ACTIVE' } });
+    await h.db.user.create({ data: { id: body.userId, registrationId: body.registrationId, name: body.name, email: body.email, emailNormalized: body.email, role, status: 'ACTIVE' } });
     const response = await request(h.server).post('/internal/v1/login-identities/resolve').set('Authorization', `Bearer ${serviceToken('users:login-identity')}`).send({ email: body.email }).expect(200);
-    expect(response.body as unknown).toEqual({ userId: body.userId, role: 'ADMIN', status: 'ACTIVE' });
+    expect(response.body as unknown).toEqual({ userId: body.userId, role, status: 'ACTIVE' });
     await request(h.server).post('/internal/v1/login-identities/resolve').set('Authorization', `Bearer ${serviceToken('users:login-identity')}`).send({ email: body.email, password: 'synthetic' }).expect(400);
   });
   it('accepts a valid 254-character email and rejects 255 before lookup', async () => {

@@ -1,4 +1,4 @@
-import { generateKeyPairSync } from 'node:crypto';
+﻿import { generateKeyPairSync } from 'node:crypto';
 
 import { SignJWT, importPKCS8 } from 'jose';
 
@@ -108,8 +108,8 @@ describe('JwtVerifierService (GW-016)', () => {
     }
   });
 
-  it('acepta los tres roles del contrato', async () => {
-    for (const role of ['GUEST', 'OWNER', 'ADMIN']) {
+  it('acepta los roles del contrato', async () => {
+    for (const role of ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER']) {
       const token = await signUserToken({ ...validClaims, role });
       await expect(verifier.verify(token)).resolves.toMatchObject({ role });
     }

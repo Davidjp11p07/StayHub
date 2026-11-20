@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-export const roleSchema: SchemaObject = { type: 'string', enum: ['GUEST', 'OWNER', 'ADMIN'] };
+export const roleSchema: SchemaObject = { type: 'string', enum: ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] };
 export const problemSchema: SchemaObject = { type: 'object', required: ['type', 'title', 'status', 'detail', 'instance', 'code', 'traceId', 'errors'], properties: {
   type: { type: 'string' }, title: { type: 'string' }, status: { type: 'integer' }, detail: { type: 'string' }, instance: { type: 'string' }, code: { type: 'string' }, traceId: { type: 'string' },
   errors: { type: 'array', items: { type: 'object', required: ['field', 'code'], properties: { field: { type: 'string' }, code: { type: 'string' } } } },

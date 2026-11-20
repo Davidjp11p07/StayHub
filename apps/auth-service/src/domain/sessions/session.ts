@@ -1,6 +1,6 @@
 import { DomainValidationError } from '@auth/domain/shared/domain-error';
 
-export type SessionRole = 'GUEST' | 'OWNER' | 'ADMIN';
+export type SessionRole = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 
 export type SessionRevokeReason =
   | 'REFRESH_REUSE'

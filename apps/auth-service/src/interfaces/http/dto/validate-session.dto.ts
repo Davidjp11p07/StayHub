@@ -17,7 +17,7 @@ export class ValidateSessionResponse {
   @ApiProperty({ enum: [true] })
   public readonly active!: true;
 
-  @ApiProperty({ enum: ['GUEST', 'OWNER', 'ADMIN'] })
-  public readonly role!: 'GUEST' | 'OWNER' | 'ADMIN';
+  @ApiProperty({ enum: ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] })
+  public readonly role!: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 }
 

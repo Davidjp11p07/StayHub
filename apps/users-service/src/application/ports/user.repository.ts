@@ -1,4 +1,4 @@
-export type Role = 'GUEST' | 'OWNER' | 'ADMIN';
+export type Role = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 export type RegistrationStatus = 'PENDING' | 'ACTIVE' | 'CANCELLED';
 export interface PendingUser { registrationId: string; userId: string; name: string; email: string; role: 'GUEST' | 'OWNER' }
 export interface UserSummary { id: string; name: string; email: string; role: Role; status: RegistrationStatus }

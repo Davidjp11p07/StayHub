@@ -6,7 +6,7 @@ import type { GatewayConfig } from '@gateway/infrastructure/config/gateway-confi
 import { toRemoteHttpException } from '@gateway/infrastructure/http/remote-problem.mapper';
 import { ServiceClientBase, type HttpFetch, type ServiceResult } from '@gateway/infrastructure/http/service-client.base';
 
-export interface BookingsRequestContext { readonly traceId: string; readonly userId: string; readonly role: 'GUEST' | 'OWNER' | 'ADMIN' }
+export interface BookingsRequestContext { readonly traceId: string; readonly userId: string; readonly role: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER' }
 export interface BookingsClientDeps { readonly fetch?: HttpFetch; readonly now?: () => number; readonly sleep?: (ms: number) => Promise<void> }
 
 /** Adaptador transparente Gateway -> Bookings; la autorización de recurso permanece en Bookings. */

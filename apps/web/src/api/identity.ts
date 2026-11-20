@@ -1,6 +1,6 @@
 import { API_BASE_URL } from './base-url';
-export type Role = 'GUEST' | 'OWNER' | 'ADMIN';
-export interface RegisterRequest { name: string; email: string; password: string; role: Exclude<Role, 'ADMIN'> }
+export type Role = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
+export interface RegisterRequest { name: string; email: string; password: string; role: 'GUEST' | 'OWNER' }
 export interface Principal { userId: string; sessionId: string; role: Role }
 export interface TokenResponse { accessToken: string; tokenType: 'Bearer'; expiresIn: number; user: Principal }
 export interface Profile { id: string; name: string; email: string; role: Role; version: number }

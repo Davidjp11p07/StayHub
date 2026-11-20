@@ -376,8 +376,8 @@ describe('authentication and authorization (AUTH-058)', () => {
   });
 
   describe('roles guard', () => {
-    it('returns 403 for a valid identity without the required role', async (): Promise<void> => {
-      const { token } = await authorizedToken('GUEST');
+    it.each(['GUEST', 'VERIFIER'] as const)('returns 403 for %s on an admin route', async (role): Promise<void> => {
+      const { token } = await authorizedToken(role);
 
       const response = await postAccess('/test/access/admin', token);
 

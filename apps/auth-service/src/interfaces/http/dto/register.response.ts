@@ -11,7 +11,7 @@ export class RegisterResponse {
   @ApiProperty({ format: 'email' })
   public readonly email!: string;
 
-  @ApiProperty({ enum: ['GUEST', 'OWNER', 'ADMIN'] })
+  @ApiProperty({ enum: ['GUEST', 'OWNER'] })
   public readonly role!: 'GUEST' | 'OWNER';
 }
 

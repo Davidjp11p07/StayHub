@@ -1,6 +1,6 @@
 export const USERS_SERVICE = Symbol('USERS_SERVICE');
 
-export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
+export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 
 export type PublicRegistrationRole = 'GUEST' | 'OWNER';
 

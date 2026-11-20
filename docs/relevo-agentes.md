@@ -51,3 +51,5 @@ Cada reserva conservó CANCELLED_BY_GUEST, sin transición a CONFIRMED. Para cad
 
 Siguiente unidad pendiente: REQ-05, verificación autorizada y publicación de inmuebles.
 REQ-05 parcial. Auth enumera explícitamente GUEST y OWNER para el alta pública y su reconciliación. Contratos de registro con VERIFIER y ADMIN rechazados (HTTP 400). Próxima unidad: aprovisionamiento autorizado del verificador y propagación de su rol en sesión. Flujo de publicación pendiente.
+REQ-05 en curso. Preparación de migraciones aditivas de Users y Auth para VERIFIER. Las asignaciones estarán reservadas a un operador autorizado.
+REQ-05 identidad verificada en integración. Migraciones 202611200001_verifier_role de Users y Auth aplicadas. La asignación por UUID requiere operador de Users y una cuenta dedicada GUEST activa. scripts/e2e-verifier-session.mjs verificó registro público 400, asignación repetida, nuevo login VERIFIER 200, perfil propio 200 y reporte restringido 403. 82 pruebas focalizadas y cuatro comprobaciones de tipos aprobadas. Siguiente unidad: solicitud, revisión y trazabilidad en Accommodations, seguida de la publicación, Search, reservas y UI.
