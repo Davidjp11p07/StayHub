@@ -32,7 +32,25 @@ Desde la raíz del repositorio en Linux, compilar con `VITE_API_BASE_URL=/api/v1
 
 ### Conexión privada entre NGINX y Gateway
 
-El Compose principal publica 8080 en todas las interfaces. En el futuro override de producción reemplazar esa lista con `ports: !override ["127.0.0.1:8080:8080"]` para Gateway y con `ports: !override []` para Reports. Los microservicios usan sus nombres de Compose para comunicarse. El certificado público del dominio se termina en NGINX; el Gateway conserva su TLS interno. Configurar `GATEWAY_TLS_CERT_SOURCE` y `GATEWAY_TLS_KEY_SOURCE` con el certificado y la clave del entorno. NGINX necesita la CA interna y un nombre que coincida con el SAN del certificado del Gateway.
+El archivo `docker-compose.production.yml` se aplica encima de `docker-compose.yml`. El único puerto publicado por los contenedores es `127.0.0.1:8080:8080`, donde escucha Gateway con HTTPS. NGINX recibe las conexiones públicas en el host. Reports queda disponible para Gateway en la red interna.
+
+Preparar un archivo de entorno privado con los ajustes del Compose base y las cuatro entradas siguientes. Usar archivos TLS de producción y un directorio independiente para los secretos y archivos de Reports que referencia el modelo base.
+
+| Variable obligatoria | Valor que debe proporcionar el operador |
+| --- | --- |
+| `STAYHUB_PUBLIC_API_URL` | URL HTTPS pública completa terminada en `/api/v1`. Se usa en las nuevas proyecciones de fotos y en la URL de Swagger. |
+| `STAYHUB_PROXY_CIDRS` | CIDR del proxy inmediato tal como lo ve el contenedor Gateway. |
+| `STAYHUB_GATEWAY_TLS_CERT` | Ruta absoluta al certificado interno del Gateway con un SAN que coincida con el nombre usado por NGINX. |
+| `STAYHUB_GATEWAY_TLS_KEY` | Ruta absoluta a la clave privada correspondiente. |
+
+Validar el modelo desde la raíz con el entorno de destino. Para un motor Ollama privado, configurar `OLLAMA_BASE_URL` con una dirección alcanzable desde Gateway. Si se omite, el destino es el loopback del contenedor y las respuestas que requieren el modelo pueden devolver HTTP 503.
+
+```sh
+docker compose --env-file "$STAYHUB_PROD_ENV" -p stayhub-prod \
+  -f docker-compose.yml -f docker-compose.production.yml config --quiet
+```
+
+NGINX necesita la CA interna para verificar el certificado del Gateway. La prueba aislada confirmó que Compose monta certificado y clave en los destinos que lee el proceso. La negociación TLS con NGINX queda para el ensayo de extremo a extremo.
 
 Fragmento para el bloque HTTPS de NGINX, una vez definidos el nombre interno del certificado, la CA y la ruta de publicación. El valor `gateway.interno` ilustra un SAN que debe sustituirse por el elegido en el despliegue. [Directivas de proxy de NGINX](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
 

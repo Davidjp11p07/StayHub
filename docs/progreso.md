@@ -327,3 +327,5 @@ La pila aislada arrancó usando el principal, los puertos locales y audit.yml. H
 Azure / consumo base. Siete muestras de los 26 contenedores de integración en 42 segundos: mediana 2,91 núcleos y 1016,2 MiB; máximos 3,57 núcleos y 1067,3 MiB. Los 16 volúmenes ocupaban 605,6 MiB. Método y límites en docs/despliegue-azure.md.
 
 Azure. Topología documentada en docs/despliegue-azure.md: NGINX en Ubuntu, SPA y API de mismo origen, TLS verificado hasta Gateway y puertos privados. Compilación Vite correcta con /api/v1 (206 módulos); JS 613,92 kB antes de gzip, aviso de tamaño. No se ejecutó NGINX ni se aprovisionó Azure.
+
+Azure. Override de producción verificado con config en la copia aislada: 36 servicios, solo Gateway en 127.0.0.1:8080, dos montajes TLS cotejados con los archivos y destinos del gateway, CIDR y URL pública aplicados. Las cuatro omisiones de variables requeridas fallaron por separado. Ensayo de configuración con certificados sintéticos.

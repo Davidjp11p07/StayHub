@@ -187,3 +187,5 @@ Reports en el principal / CORREGIDO-Y-VERIFICADO. Seis comparaciones completas d
 Azure / DIAGNOSTICADO. Línea base documentada en docs/despliegue-azure.md. Integración activa; la medición no inició procesos persistentes. Siguiente unidad: definir la topología del proxy HTTPS, frontend compilado y conectividad privada del gateway en la guía de Azure. Primer comando: Get-Content docs/frontend-gateway.md -Encoding utf8.
 
 Azure / diseño de entrada HTTPS documentado. Compilación frontend verificada. Siguiente unidad: materializar el override de producción y verificar con docker compose config los enlaces de puertos, secretos TLS y URL pública de fotos en un entorno aislado. Primer comando: Get-Content docker-compose.local.yml -Encoding utf8. Pila local intacta; ningún proceso nuevo.
+
+Azure / configuración de producción verificada. docker-compose.production.yml y guía actualizados. Pila original intacta y prueba aislada detenida. Siguiente unidad: ensayar NGINX con frontend compilado, TLS interno verificado, ruta profunda y tráfico API en entorno aislado. Primer comando: Get-Content docs/despliegue-azure.md -Encoding utf8.
