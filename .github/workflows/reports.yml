@@ -1,0 +1,56 @@
+name: Reports CI
+on:
+  pull_request:
+    paths:
+      - 'apps/reports-service/**'
+      - 'apps/bookings-service/**'
+      - 'apps/payments-service/**'
+      - 'apps/accommodations-service/**'
+      - 'apps/api-gateway/**'
+      - 'apps/web/**'
+      - 'infra/docker/**'
+      - 'docker-compose.reports*.yml'
+      - 'scripts/reports-*.mjs'
+      - 'specs/006-reportes/**'
+      - '.github/workflows/reports.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reports-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/reports-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/reports-service/package-lock.json
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+      - run: npm run openapi:validate
+      - run: git diff --exit-code -- specs/006-reportes/contracts/openapi-reports.json
+        working-directory: .
+  reports-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: npm ci --prefix apps/reports-service
+      - run: node scripts/reports-demo-env.mjs
+      - run: docker compose -f docker-compose.reports.yml up -d --build --wait --wait-timeout 180
+      - run: node scripts/reports-demo-seed.mjs
+      - run: node scripts/reports-smoke.mjs --restart
+      - run: node scripts/reports-supply-smoke.mjs
+      - if: failure()
+        run: docker compose -f docker-compose.reports.yml logs --tail 100
+      - if: always()
+        run: docker compose -f docker-compose.reports.yml down

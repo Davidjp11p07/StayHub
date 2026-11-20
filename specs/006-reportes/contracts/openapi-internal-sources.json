@@ -1,0 +1,412 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StayHub Reports internal sources",
+    "version": "1.0.0",
+    "description": "Subject reports-service and dedicated reports:read scope. Reports consults each data owner through REST; no shared database."
+  },
+  "paths": {
+    "/internal/v1/reports/bookings": {
+      "get": {
+        "operationId": "getReportsBookings",
+        "security": [
+          {
+            "serviceJwt": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:3005"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized source facts without PII",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "ownerId",
+                          "propertyId",
+                          "roomId",
+                          "status",
+                          "createdAt",
+                          "cancelledAt",
+                          "checkIn",
+                          "checkOut"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ownerId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "roomId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING_PAYMENT",
+                              "CONFIRMED",
+                              "CHECKED_IN",
+                              "COMPLETED",
+                              "PAYMENT_FAILED",
+                              "EXPIRED",
+                              "CANCELLED_BY_GUEST",
+                              "CANCELLED_BY_OWNER"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "checkIn": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "checkOut": {
+                            "type": "string",
+                            "format": "date"
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "403": {
+            "description": "Insufficient scope or subject"
+          },
+          "503": {
+            "description": "Source unavailable or volume limit exceeded"
+          }
+        },
+        "parameters": [
+          {
+            "name": "ownerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 200
+            }
+          }
+        ]
+      }
+    },
+    "/internal/v1/reports/movements": {
+      "post": {
+        "operationId": "queryReportsMovements",
+        "security": [
+          {
+            "serviceJwt": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:3006"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized source facts without PII",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "bookingId",
+                          "kind",
+                          "amountMinor",
+                          "currency",
+                          "occurredAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "CHARGE",
+                              "REFUND"
+                            ]
+                          },
+                          "amountMinor": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                          },
+                          "currency": {
+                            "type": "string",
+                            "enum": [
+                              "COP",
+                              "USD"
+                            ]
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "403": {
+            "description": "Insufficient scope or subject"
+          },
+          "503": {
+            "description": "Source unavailable or volume limit exceeded"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "bookingIds",
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "bookingIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "uniqueItems": true
+                  },
+                  "from": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "to": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/v1/reports/supply": {
+      "get": {
+        "operationId": "getReportsSupply",
+        "security": [
+          {
+            "serviceJwt": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:3003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized source facts without PII",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "propertyId",
+                          "name",
+                          "capturedAt",
+                          "roomIds"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "capturedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "roomIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "403": {
+            "description": "Insufficient scope or subject"
+          },
+          "503": {
+            "description": "Source unavailable or volume limit exceeded"
+          }
+        },
+        "parameters": [
+          {
+            "name": "ownerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,18}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 200
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "serviceJwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

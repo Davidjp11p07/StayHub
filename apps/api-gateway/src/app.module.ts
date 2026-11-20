@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ReportsProxyModule } from '@gateway/modules/reports/reports-proxy.module';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 
 import { GatewayRedisModule } from '@gateway/infrastructure/cache/gateway-redis.module';

@@ -1,0 +1,34 @@
+import { spawnSync } from 'node:child_process';
+// Runs against the real Accommodations API in the isolated DEMO network.
+const code = String.raw`
+const assert = require('node:assert/strict');
+const { randomUUID } = require('node:crypto');
+const { readFileSync } = require('node:fs');
+const jwt = require('jsonwebtoken');
+(async () => {
+  const key = readFileSync('/run/secrets/source_private', 'utf8');
+  const owner = randomUUID();
+  const issue = (audience, sub, extra) => jwt.sign(extra, key, { algorithm:'RS256', keyid:'reports-demo', issuer:'stayhub-reports-demo', audience, subject:sub, expiresIn:120 });
+  const auth = issue('stayhub-accommodations-access', owner, {role:'OWNER'});
+  const service = issue('stayhub-accommodations-service', 'reports-service', {scope:'reports:read'});
+  const base = 'http://accommodations-service:3003';
+  const body = {type:'HOUSE',name:'Supply history smoke',location:{addressLine:'Synthetic 1',city:'Bogota',region:'Bogota',country:'CO'},rooms:[{name:'Room',capacity:2,basePrice:{amount:'100.00',currency:'COP'}}]};
+  let response = await fetch(base+'/properties',{method:'POST',headers:{authorization:'Bearer '+auth,'content-type':'application/json'},body:JSON.stringify(body)});
+  assert.equal(response.status,201,'create property');
+  let property = await response.json();
+  const data = new FormData();
+  data.append('file',new Blob([Buffer.from('89504e470d0a1a0a0000000d4948445200000001','hex')],{type:'image/png'}),'synthetic.png');
+  response=await fetch(base+'/properties/'+property.id+'/photos',{method:'POST',headers:{authorization:'Bearer '+auth},body:data});assert.equal(response.status,201,'photo for publication');
+  const replacement={...body,rooms:property.rooms.map(r=>({id:r.id,name:r.name,capacity:r.capacity,basePrice:r.basePrice})),version:property.version,status:'PUBLISHED'};
+  response=await fetch(base+'/properties/'+property.id,{method:'PUT',headers:{authorization:'Bearer '+auth,'content-type':'application/json'},body:JSON.stringify(replacement)});assert.equal(response.status,200,'publish');property=await response.json();
+  response=await fetch(base+'/properties/'+property.id,{method:'PUT',headers:{authorization:'Bearer '+auth,'content-type':'application/json'},body:JSON.stringify(replacement)});assert.equal(response.status,409,'stale version rejected');
+  response=await fetch(base+'/properties/'+property.id,{method:'PUT',headers:{authorization:'Bearer '+auth,'content-type':'application/json'},body:JSON.stringify({...replacement,version:property.version,status:'UNPUBLISHED'})});assert.equal(response.status,200,'unpublish');
+  response=await fetch(base+'/internal/v1/reports/supply?ownerId='+owner,{headers:{authorization:'Bearer '+service}});assert.equal(response.status,200,'read supply history');
+  const facts=await response.json();assert.equal(facts.items.length,3,'one immutable version per committed property change');assert.deepEqual(facts.items[0].roomIds,[]);assert.deepEqual(facts.items[1].roomIds,[property.rooms[0].id]);assert.deepEqual(facts.items[2].roomIds,[]);
+  const wrong = issue('stayhub-accommodations-service','bookings-service',{scope:'reports:read'});
+  response=await fetch(base+'/internal/v1/reports/supply?ownerId='+owner,{headers:{authorization:'Bearer '+wrong}});assert.equal(response.status,403,'wrong service denied');
+  console.log('Supply history PASS: create/publish/unpublish, immutable versions, rollback on conflict and source authorization.');
+})().catch(error=>{console.error(error.message);process.exitCode=1;});
+`;
+const result = spawnSync('docker', ['compose', '-p', 'stayhub-reports-demo', '-f', 'docker-compose.reports.yml', 'exec', '-T', 'reports-service', 'node'], { input: code, encoding: 'utf8' });
+process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? ''); process.exitCode = result.status ?? 1;

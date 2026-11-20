@@ -46,6 +46,10 @@ function roomColumns(room: RoomData): { name: string; capacity: number; basePric
   };
 }
 
+async function captureReportSupply(tx: Tx, propertyId: string): Promise<void> {
+ await tx.$executeRaw`INSERT INTO "ReportSupplyVersion"("propertyId","ownerId","name","roomIds") SELECT p.id,p."ownerId",p.name,CASE WHEN p.status='PUBLISHED' THEN COALESCE((SELECT jsonb_agg(r.id ORDER BY r.id) FROM "Room" r WHERE r."propertyId"=p.id),'[]'::jsonb) ELSE '[]'::jsonb END FROM "Property" p WHERE p.id=${propertyId}::uuid`;
+}
+
 async function assertKnownFeatures(tx: Tx, codes: readonly string[]): Promise<void> {
   if (codes.length === 0) return;
   const known = await tx.feature.count({ where: { code: { in: [...codes] } } });
@@ -78,6 +82,7 @@ export class PrismaPropertyRepository implements PropertyRepository {
           features: { createMany: { data: property.featureCodes.map((featureCode) => ({ featureCode })) } },
         },
       });
+      await captureReportSupply(tx, property.id);
       return toDomain(await tx.property.findUniqueOrThrow({ where: { id: property.id }, include }));
     }, TRANSACTION).catch(translate);
   }
@@ -109,6 +114,7 @@ export class PrismaPropertyRepository implements PropertyRepository {
         data: { type: plan.type, name: plan.name, description: plan.description, status: plan.status, ...locationToColumns(plan.location), version: { increment: 1 } },
       });
       if (updated.count !== 1) throw new DomainError('VERSION_CONFLICT');
+      await captureReportSupply(tx, id);
       return toDomain(await tx.property.findUniqueOrThrow({ where: { id }, include }));
     }, TRANSACTION).catch(translate);
   }

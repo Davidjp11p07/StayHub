@@ -1,4 +1,6 @@
+import { ReportsPaymentFactsQuery } from './infrastructure/persistence/prisma/reports-facts.query';
 import { Module } from '@nestjs/common';
+import { ReportsMovementsController, ReportsMovementsGuard } from './interfaces/http/reports-facts.controller';
 import { PassportModule } from '@nestjs/passport';
 import { PaymentsConfigModule } from './infrastructure/config/config.module';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
@@ -14,6 +16,7 @@ import { ReconcilerModule } from './modules/reconciler.module';
 
 @Module({
   imports: [PaymentsConfigModule, PrismaModule, OutboxModule, HealthModule, PaymentsModule, RefundsModule, ReconcilerModule, PassportModule.register({ defaultStrategy: 'jwt' })],
-  providers: [JwtStrategy, RolesGuard, ServiceAuthGuard, PaymentsLogger],
+  controllers: [ReportsMovementsController],
+  providers: [ReportsMovementsGuard, ReportsPaymentFactsQuery, JwtStrategy, RolesGuard, ServiceAuthGuard, PaymentsLogger],
 })
 export class AppModule {}

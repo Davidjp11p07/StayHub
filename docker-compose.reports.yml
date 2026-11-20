@@ -1,0 +1,105 @@
+# Isolated demonstration using real service implementations and separate databases.
+# Generate configuration first: npm run env:reports:demo
+name: stayhub-reports-demo
+services:
+  reports-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-demo/reports-db.env
+    volumes: [reports_data:/var/lib/postgresql/data]
+    networks: [reports]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_reports -d reports_db'], interval: 5s, timeout: 3s, retries: 20}
+  reports-migrate:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: migration}
+    env_file: .artifacts/reports-demo/reports.env
+    networks: [reports]
+    restart: 'no'
+    depends_on: {reports-db: {condition: service_healthy}}
+  reports-service:
+    build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-demo/reports.env
+    secrets: [source_public, source_private]
+    networks: [reports]
+    ports: ['127.0.0.1:3011:3011']
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      reports-migrate: {condition: service_completed_successfully}
+      bookings-service: {condition: service_healthy}
+      payments-service: {condition: service_healthy}
+      accommodations-service: {condition: service_healthy}
+  bookings-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-demo/bookings-db.env
+    volumes: [bookings_data:/var/lib/postgresql/data]
+    networks: [reports]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_bookings -d bookings_db'], interval: 5s, timeout: 3s, retries: 20}
+  bookings-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    env_file: .artifacts/reports-demo/rabbitmq.env
+    networks: [reports]
+    restart: unless-stopped
+    healthcheck: {test: [CMD, rabbitmq-diagnostics, -q, ping], interval: 10s, timeout: 5s, retries: 20}
+  bookings-migrate:
+    build: {context: ., dockerfile: infra/docker/bookings/Dockerfile, target: migration}
+    env_file: .artifacts/reports-demo/bookings.env
+    networks: [reports]
+    restart: 'no'
+    depends_on: {bookings-db: {condition: service_healthy}}
+  bookings-service:
+    build: {context: ., dockerfile: infra/docker/bookings/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-demo/bookings.env
+    networks: [reports]
+    restart: unless-stopped
+    depends_on:
+      bookings-migrate: {condition: service_completed_successfully}
+      bookings-rabbitmq: {condition: service_healthy}
+  payments-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-demo/payments-db.env
+    volumes: [payments_data:/var/lib/postgresql/data]
+    networks: [reports]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_payments -d payments_db'], interval: 5s, timeout: 3s, retries: 20}
+  payments-migrate:
+    build: {context: ., dockerfile: infra/docker/payments/Dockerfile, target: migration}
+    env_file: .artifacts/reports-demo/payments.env
+    networks: [reports]
+    restart: 'no'
+    depends_on: {payments-db: {condition: service_healthy}}
+  payments-service:
+    build: {context: ., dockerfile: infra/docker/payments/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-demo/payments.env
+    secrets: [source_public]
+    networks: [reports]
+    restart: unless-stopped
+    depends_on: {payments-migrate: {condition: service_completed_successfully}}
+  accommodations-db:
+    image: postgres:16-bookworm
+    env_file: .artifacts/reports-demo/accommodations-db.env
+    volumes: [accommodations_data:/var/lib/postgresql/data]
+    networks: [reports]
+    restart: unless-stopped
+    healthcheck: {test: [CMD-SHELL, 'pg_isready -U stayhub_accommodations -d accommodations_db'], interval: 5s, timeout: 3s, retries: 20}
+  accommodations-migrate:
+    build: {context: ., dockerfile: infra/docker/accommodations/Dockerfile, target: migration}
+    env_file: .artifacts/reports-demo/accommodations.env
+    networks: [reports]
+    restart: 'no'
+    depends_on: {accommodations-db: {condition: service_healthy}}
+  accommodations-service:
+    build: {context: ., dockerfile: infra/docker/accommodations/Dockerfile, target: runtime}
+    env_file: .artifacts/reports-demo/accommodations.env
+    secrets: [source_public]
+    networks: [reports]
+    restart: unless-stopped
+    depends_on: {accommodations-migrate: {condition: service_completed_successfully}}
+networks: {reports: {}}
+volumes: {reports_data: {}, bookings_data: {}, payments_data: {}, accommodations_data: {}}
+secrets:
+  source_public: {file: .artifacts/reports-demo/public.pem}
+  source_private: {file: .artifacts/reports-demo/private.pem}

@@ -1,0 +1,1571 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/reports/owner/{id}": {
+      "get": {
+        "operationId": "ReportsController_owner",
+        "summary": "Owner reservations, cancellations, revenue, occupancy and trends",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "propertyId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "group",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ownerId",
+                    "from",
+                    "to",
+                    "group",
+                    "propertyId",
+                    "generatedAt",
+                    "source",
+                    "timezone",
+                    "metrics",
+                    "previous",
+                    "properties"
+                  ],
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "group": {
+                      "type": "string",
+                      "enum": [
+                        "day",
+                        "month"
+                      ]
+                    },
+                    "propertyId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "LIVE",
+                        "DEMO"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "enum": [
+                        "UTC"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "previous": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "properties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filters"
+          },
+          "401": {
+            "description": "Invalid bearer token"
+          },
+          "403": {
+            "description": "Owner or role not authorized"
+          },
+          "503": {
+            "description": "Source or storage unavailable; no partial result"
+          }
+        },
+        "tags": [
+          "reports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/reports/occupancy": {
+      "get": {
+        "operationId": "ReportsController_occupancy",
+        "summary": "Occupancy over published room-night supply, with completeness and trends",
+        "parameters": [
+          {
+            "name": "group",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "propertyId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ownerId",
+                    "from",
+                    "to",
+                    "group",
+                    "propertyId",
+                    "generatedAt",
+                    "source",
+                    "timezone",
+                    "metrics",
+                    "previous",
+                    "properties"
+                  ],
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "group": {
+                      "type": "string",
+                      "enum": [
+                        "day",
+                        "month"
+                      ]
+                    },
+                    "propertyId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "LIVE",
+                        "DEMO"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "enum": [
+                        "UTC"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "previous": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "properties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filters"
+          },
+          "401": {
+            "description": "Invalid bearer token"
+          },
+          "403": {
+            "description": "Owner or role not authorized"
+          },
+          "503": {
+            "description": "Source or storage unavailable; no partial result"
+          }
+        },
+        "tags": [
+          "reports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/reports/revenue": {
+      "get": {
+        "operationId": "ReportsController_revenue",
+        "summary": "Charged, refunded and net amounts per currency by confirmed movement date",
+        "parameters": [
+          {
+            "name": "group",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "propertyId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ownerId",
+                    "from",
+                    "to",
+                    "group",
+                    "propertyId",
+                    "generatedAt",
+                    "source",
+                    "timezone",
+                    "metrics",
+                    "previous",
+                    "properties"
+                  ],
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "group": {
+                      "type": "string",
+                      "enum": [
+                        "day",
+                        "month"
+                      ]
+                    },
+                    "propertyId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "LIVE",
+                        "DEMO"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "enum": [
+                        "UTC"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "previous": {
+                      "type": "object",
+                      "required": [
+                        "reservations",
+                        "cancellations",
+                        "revenue",
+                        "occupancy",
+                        "series"
+                      ],
+                      "properties": {
+                        "reservations": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "byStatus": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "cancelledCohort": {
+                              "type": "integer"
+                            },
+                            "cancellationRate": {
+                              "type": "number",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "cancellations": {
+                          "type": "integer"
+                        },
+                        "revenue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currency",
+                              "chargedMinor",
+                              "refundedMinor",
+                              "netMinor"
+                            ],
+                            "properties": {
+                              "currency": {
+                                "type": "string",
+                                "example": "COP"
+                              },
+                              "chargedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "refundedMinor": {
+                                "type": "string",
+                                "pattern": "^[0-9]+$"
+                              },
+                              "netMinor": {
+                                "type": "string",
+                                "pattern": "^-?[0-9]+$"
+                              }
+                            }
+                          }
+                        },
+                        "occupancy": {
+                          "type": "object",
+                          "required": [
+                            "occupiedRoomNights",
+                            "availableRoomNights",
+                            "rate",
+                            "complete",
+                            "reason"
+                          ],
+                          "properties": {
+                            "occupiedRoomNights": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "availableRoomNights": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "rate": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projected": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "series": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "period": {
+                                "type": "string"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "cancellations": {
+                                "type": "integer"
+                              },
+                              "revenue": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "currency",
+                                    "chargedMinor",
+                                    "refundedMinor",
+                                    "netMinor"
+                                  ],
+                                  "properties": {
+                                    "currency": {
+                                      "type": "string",
+                                      "example": "COP"
+                                    },
+                                    "chargedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "refundedMinor": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "netMinor": {
+                                      "type": "string",
+                                      "pattern": "^-?[0-9]+$"
+                                    }
+                                  }
+                                }
+                              },
+                              "occupancy": {
+                                "type": "object",
+                                "required": [
+                                  "occupiedRoomNights",
+                                  "availableRoomNights",
+                                  "rate",
+                                  "complete",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "occupiedRoomNights": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "availableRoomNights": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "rate": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "complete": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projected": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "properties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filters"
+          },
+          "401": {
+            "description": "Invalid bearer token"
+          },
+          "403": {
+            "description": "Owner or role not authorized"
+          },
+          "503": {
+            "description": "Source or storage unavailable; no partial result"
+          }
+        },
+        "tags": [
+          "reports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "info": {
+    "title": "StayHub Reports",
+    "description": "UTC [from,to). Minor units are strings. Currency totals remain separate. Occupancy measures published room-night supply; missing historical supply is explicit.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {}
+  }
+}

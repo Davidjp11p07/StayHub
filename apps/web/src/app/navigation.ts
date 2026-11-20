@@ -13,6 +13,8 @@ export const paths = {
   /** RQ-11 the guest's own reviews. */
   reviews: '/reviews',
   host: '/host',
+  hostReports: '/host/reports',
+  adminReports: '/admin/reports',
   hostNew: '/host/new',
   hostProperties: '/host/properties',
   hostPropertyEdit: (id: string) => `/host/properties/${encodeURIComponent(id)}/edit`,
