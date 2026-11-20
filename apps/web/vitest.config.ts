@@ -9,6 +9,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     pool: 'forks',
+    // Each jsdom fork runs its own MSW server. Bound contention during async UI assertions.
+    minWorkers: 1,
+    maxWorkers: 2,
     poolOptions: { forks: { execArgv: ['--require', preloadFetch] } },
     setupFiles: ['./test/setup.ts'],
     restoreMocks: true,
