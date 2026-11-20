@@ -38,8 +38,7 @@ suite('RateLimitStore sobre Redis real (GW-014)', () => {
     store: RateLimitStore;
     client: Redis;
   } => {
-    const client = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
-    return { store: new RateLimitStore(override, new IoredisScriptAdapter(client)), client };
+    return { store: new RateLimitStore(override, new IoredisScriptAdapter(redis)), client: redis };
   };
 
   it('concede exactamente el limite bajo peticiones concurrentes', async () => {
