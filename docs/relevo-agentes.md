@@ -183,3 +183,5 @@ Flujo API aislado / CORREGIDO-Y-VERIFICADO. Se comprobó publicación, Search, r
 Consolidación de Reports en prueba: seis comparaciones de modelo correctas. Arranque y flujo funcional solo en stayhub-audit-ff153ff.
 
 Reports en el principal / CORREGIDO-Y-VERIFICADO. Seis comparaciones completas del modelo y flujo funcional por HTTPS en la copia aislada. El override anterior sigue siendo compatible. Prueba detenida con datos conservados; integración original activa. Siguiente unidad: medir el consumo de los 26 contenedores activos de integración como insumo para dimensionar el despliegue Azure. Primer comando: docker ps --filter label=com.docker.compose.project=stayhub-integracion-local --format '{{.Names}}'.
+
+Azure / DIAGNOSTICADO. Línea base documentada en docs/despliegue-azure.md. Integración activa; la medición no inició procesos persistentes. Siguiente unidad: definir la topología del proxy HTTPS, frontend compilado y conectividad privada del gateway en la guía de Azure. Primer comando: Get-Content docs/frontend-gateway.md -Encoding utf8.
