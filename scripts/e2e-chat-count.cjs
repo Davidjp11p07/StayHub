@@ -27,6 +27,24 @@ let browser; let page;
   await page.getByLabel('Tu pregunta').fill('no, en todo stayhub');
   await page.getByRole('button', { name: 'Enviar' }).click();
   await page.waitForFunction(({ total }) => [...document.querySelectorAll('#stayhub-chat p')].filter(p => p.textContent?.includes(`Hay ${total} alojamientos publicados en el catálogo de búsqueda.`)).length >= 2, { total: all }, { timeout: 30000 });
+  for (const [place, query, label] of [
+    ['Colombia', 'countryCode=CO', 'CO'], ['co', 'countryCode=CO', 'CO'],
+    ['Bogota, Colombia', 'location=Bogotá&countryCode=CO', 'Bogota, CO'],
+    ['México', 'countryCode=MX', 'MX'],
+  ]) {
+    const result = await page.request.get(web + '/api/v1/search?' + query);
+    if (!result.ok()) throw Error('Search: ' + result.status());
+    const expected = (await result.json()).total;
+    await page.getByLabel('Tu pregunta').fill('¿Cuántos alojamientos hay en ' + place + '?');
+    const received = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/chat') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Enviar' }).click();
+    const response = await received;
+    if (!response.ok()) throw Error('Chat: ' + response.status());
+    const reply = (await response.json()).reply;
+    if (!reply?.startsWith('Hay ' + expected + ' alojamiento') || !reply.includes(' en ' + label + ' en el catálogo')) throw Error('Conteo inesperado: ' + reply);
+    await page.locator('#stayhub-chat p').filter({ hasText: reply }).last().waitFor();
+    console.log(place + ': ' + expected);
+  }
   await page.screenshot({ path: '.artifacts/chat-count-verified.png' });
   console.log(`Conteos verificados con Search: ciudad ${total}, total ${all}; explicación visible.`);
   await browser.close();

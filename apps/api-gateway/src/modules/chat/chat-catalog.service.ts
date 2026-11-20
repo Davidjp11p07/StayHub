@@ -3,12 +3,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { GATEWAY_CONFIG, type GatewayConfig } from '@gateway/infrastructure/config/gateway-config';
 import { ReviewsClient } from '@gateway/infrastructure/http/reviews.client';
 import { issueServiceToken } from '@gateway/infrastructure/service-auth/service-token.provider';
-import { isCountQuestion, isGlobalCount, simpleCityCount } from './chat-intent';
+import { isCountQuestion, isGlobalCount, placeFilters, simpleCityCount } from './chat-intent';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 interface SearchFilters {
-  q?: string; location?: string; checkIn?: string; checkOut?: string;
+  q?: string; location?: string; countryCode?: string; checkIn?: string; checkOut?: string;
   guests?: number; minPrice?: number; maxPrice?: number; currency?: string; amenities?: string[];
   missingCurrency?: boolean;
 }
@@ -22,11 +22,12 @@ export class ChatCatalogService {
     const conversation = [...history.filter(turn => turn.startsWith('Usuario: ')).map(turn => turn.slice(9)), message].join('\n');
     const explicitCity = simpleCityCount(message);
     const globalCount = isGlobalCount(message, history);
-    const filters: SearchFilters = globalCount ? {} : explicitCity ? { location: explicitCity } : await this.extractFilters(conversation);
+    const filters: SearchFilters = globalCount ? {} : explicitCity ? placeFilters(explicitCity) : await this.extractFilters(conversation);
     if (isCountQuestion(message) && !/\b(?:llamad[oa]s?|nombre)\b/iu.test(message)) delete filters.q;
     const params = new URLSearchParams({ pageSize: '10' });
     if (filters.q) params.set('q', filters.q);
     if (filters.location) params.set('location', filters.location);
+    if (filters.countryCode) params.set('countryCode', filters.countryCode);
     if (filters.checkIn && filters.checkOut) {
       params.set('checkIn', filters.checkIn);
       params.set('checkOut', filters.checkOut);
@@ -91,7 +92,7 @@ export class ChatCatalogService {
       // Only accept literal, positive amenities; ambiguous negatives must not become filters.
       const amenityTerms = ['wifi', 'wi-fi', 'parking', 'pool', 'piscina', 'estacionamiento', 'cocina', 'mascotas', 'desayuno', 'air_conditioning', 'kitchen', 'pets_allowed', 'breakfast_included'];
       const amenities = Array.isArray(raw.amenities) ? raw.amenities.filter((value): value is string => typeof value === 'string' && amenityTerms.includes(value.toLowerCase()) && words.includes(value.toLowerCase()) && !/(?:sin|no)\s+\S*$/u.test(words.slice(Math.max(0, words.indexOf(value.toLowerCase()) - 10), words.indexOf(value.toLowerCase())))).map(value => value.toLowerCase()) : [];
-      return { ...(q ? { q } : {}), ...(location ? { location } : {}), ...(checkIn && checkOut && validDate(checkIn) && validDate(checkOut) && checkIn < checkOut ? { checkIn, checkOut } : {}),
+      return { ...(q ? { q } : {}), ...(location ? placeFilters(location) : {}), ...(checkIn && checkOut && validDate(checkIn) && validDate(checkOut) && checkIn < checkOut ? { checkIn, checkOut } : {}),
         ...(guests && guests <= 100 ? { guests } : {}), ...(amenities.length ? { amenities: [...new Set(amenities)].slice(0, 20) } : {}),
         ...(validPrices && currency ? { currency, ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) } : {}),
         ...((minPrice !== undefined || maxPrice !== undefined) && !currency ? { missingCurrency: true } : {}) };

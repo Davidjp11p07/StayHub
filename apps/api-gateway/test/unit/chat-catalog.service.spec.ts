@@ -19,6 +19,19 @@ describe('ChatCatalogService', () => {
     expect(searchUrl.searchParams.get('location')).toBe('Bogotá');
   });
 
+  it.each([
+    ['Colombia', null, 'CO'], ['co', null, 'CO'], ['Mexico', null, 'MX'],
+    ['Bogotá, Colombia', 'Bogotá', 'CO'], ['Bogota, co', 'Bogota', 'CO'],
+  ])('uses exact country filters for %s', async (place, city, country) => {
+    const fetchMock = jest.fn<Promise<unknown>, [string, RequestInit]>().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [], total: 2 }) });
+    global.fetch = fetchMock as typeof fetch;
+    const service = new ChatCatalogService({ serviceJwt: {} } as GatewayConfig, {} as ReviewsClient);
+    await service.context('¿Cuántos alojamientos hay en ' + place + '?', []);
+    const params = new URL(fetchMock.mock.calls[0]![0]).searchParams;
+    expect(params.get('location')).toBe(city);
+    expect(params.get('countryCode')).toBe(country);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it.each(['cuantos inmbuebles hay en total', 'cuantos inmbuebles hay en total en todo stayhub', 'no, en todo stayhub'])('counts the whole catalog without carrying a city into "%s"', async message => {
     const fetchMock = jest.fn<Promise<unknown>, [string, RequestInit]>().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [], total: 7 }) });
     global.fetch = fetchMock as typeof fetch;

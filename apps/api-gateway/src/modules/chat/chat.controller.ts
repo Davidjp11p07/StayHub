@@ -41,8 +41,9 @@ export class ChatController {
         return { reply: 'No se aplicó el filtro de precio porque falta la moneda. ¿En qué moneda está tu presupuesto? Indica COP, USD, EUR, MXN o ARS.', explanation };
       }
       if (countQuestion && typeof data.total === 'number') {
-        if (!isGlobalCount(body.message, body.history ?? []) && /\ben\s+\p{L}/iu.test(body.message) && typeof filters.location !== 'string') return { reply: '¿En qué ciudad quieres consultar el número de alojamientos?', explanation };
-        const location = typeof filters.location === 'string' ? ` en ${filters.location}` : '';
+        if (!isGlobalCount(body.message, body.history ?? []) && /\ben\s+\p{L}/iu.test(body.message) && typeof filters.location !== 'string' && typeof filters.countryCode !== 'string') return { reply: '¿En qué ciudad quieres consultar el número de alojamientos?', explanation };
+        const place = [filters.location, filters.countryCode].filter(value => typeof value === 'string').join(', ');
+        const location = place ? ` en ${place}` : '';
         return { reply: `Hay ${data.total} alojamiento${data.total === 1 ? '' : 's'} publicado${data.total === 1 ? '' : 's'}${location} en el catálogo de búsqueda.`, explanation };
       }
       if (countQuestion) return { reply: 'No pude consultar el número de alojamientos en este momento.', explanation };

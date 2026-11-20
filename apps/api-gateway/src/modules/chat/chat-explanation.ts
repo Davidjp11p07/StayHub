@@ -13,6 +13,7 @@ export function explainCatalog(data: CatalogExplanationData): string {
   const f = data.filters ?? {};
   const criteria: string[] = [];
   if (typeof f.q === 'string') criteria.push(`nombre: ${f.q}`);
+  if (typeof f.countryCode === 'string') criteria.push('país: ' + f.countryCode);
   if (typeof f.location === 'string') criteria.push(`ubicación: ${f.location}`);
   if (typeof f.checkIn === 'string' && typeof f.checkOut === 'string') criteria.push(`fechas: ${f.checkIn} a ${f.checkOut}`);
   if (typeof f.guests === 'number') criteria.push(`huéspedes: ${f.guests}`);
