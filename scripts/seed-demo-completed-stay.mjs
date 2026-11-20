@@ -4,11 +4,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 const base = 'http://localhost:5173/api/v1';
 const catalog = JSON.parse(await readFile('.artifacts/demo-properties-state.json', 'utf8'));
-const file = '.artifacts/demo-completed-stay.json';
-const propertyId = catalog.properties['CO-Leticia'].id;
+const destination = process.argv[2] ?? 'CO-Leticia';
+assert.ok(Object.hasOwn(catalog.properties, destination), 'Destino ausente del catálogo demo');
+const propertyId = catalog.properties[destination].id;
+const file = destination === 'CO-Leticia' ? '.artifacts/demo-completed-stay.json'
+  : '.artifacts/demo-completed-stay-' + propertyId + '.json';
 const property = await api('/properties/' + propertyId);
 const room = property.rooms.find(row => row.name === 'Habitación principal');
 assert.ok(room && property.status === 'PUBLISHED');
+assert.ok(['COP', 'USD'].includes(room.basePrice.currency),
+  'Payments no admite la moneda de esta habitación demo: ' + room.basePrice.currency);
 const day = offset => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 try {
   await writeFile(file, JSON.stringify({
@@ -53,7 +58,7 @@ assert.equal(booking.paymentStatus, 'CAPTURED');
 if (booking.status === 'CONFIRMED') booking = await api(path + '/check-in', { token: owner, method: 'POST' });
 if (booking.status === 'CHECKED_IN') booking = await api(path + '/check-out', { token: owner, method: 'POST' });
 assert.equal(booking.status, 'COMPLETED');
-const comment = 'Reseña ficticia de la estancia de demostración en Leticia.';
+const comment = 'Reseña ficticia de la estancia de demostración en ' + destination.slice(3) + '.';
 const ownReviews = () => api('/reviews/user/' + session.user.userId, { token });
 let reviews = await ownReviews();
 if (!reviews.total) {

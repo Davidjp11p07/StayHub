@@ -157,3 +157,5 @@ P1-E: estancia reproducible en la demo publicada de Leticia. node scripts/seed-d
 Siguiente unidad P1-E: generar y verificar el reporte LIVE de Leticia para esta estancia (reserva completada, cobro y período) y cotejar su instantánea con la auditoría. Primer comando: Get-Content scripts/verify-owner-report.mjs -Encoding utf8. Esta unidad no inició procesos persistentes.
 
 P1-E. Reporte de Leticia verificado con node scripts/verify-demo-stay-report.mjs y node scripts/audit-demo-coverage.mjs. La auditoría confirmó una instantánea en todo el catálogo demo. Siguiente unidad: ampliar la cobertura de reseñas vinculadas a estancias completadas partiendo de scripts/seed-demo-completed-stay.mjs.
+
+P1-E. Reseñas verificadas en Leticia y Arauca. La pila local sigue activa. La reserva de Madrid c71a13c8-59cb-4d11-8d86-c2ac2ab5744b quedó pendiente; el control del seed ya evita repetir este caso. Siguiente unidad: investigar el manejo de moneda no soportada en la creación normal de reservas y la resolución de la reserva existente. Primer comando: Get-Content apps/bookings-service/src/application/create-booking/create-booking.use-case.ts -Encoding utf8.
