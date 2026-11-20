@@ -137,6 +137,10 @@ assert.ok(history.every(row => row.reviewerId === user.userId && row.reason && r
 console.log('Propiedad sintética: publicación directa denegada, rechazo, corrección, aprobación idempotente y dos decisiones trazables.');
 
 await checkSearch(true);
+if (process.env.STAYHUB_TEST_PROXY_ORIGIN) {
+  const { verifyHttpsProxy } = await import('./verify-https-proxy.mjs');
+  await verifyHttpsProxy({ origin: process.env.STAYHUB_TEST_PROXY_ORIGIN, credentials: guestCredentials, propertyId: property.id });
+}
 if (process.env.STAYHUB_TEST_OWNER_REPORT === '1') {
   const { verifyOwnerReport } = await import('./verify-owner-report.mjs');
   try {

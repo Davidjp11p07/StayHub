@@ -50,7 +50,7 @@ docker compose --env-file "$STAYHUB_PROD_ENV" -p stayhub-prod \
   -f docker-compose.yml -f docker-compose.production.yml config --quiet
 ```
 
-NGINX necesita la CA interna para verificar el certificado del Gateway. La prueba aislada confirmó que Compose monta certificado y clave en los destinos que lee el proceso. La negociación TLS con NGINX queda para el ensayo de extremo a extremo.
+NGINX necesita la CA interna para verificar el certificado del Gateway. La prueba aislada confirmó que Compose monta certificado y clave en los destinos que lee el proceso. La negociación TLS se comprobó en el ensayo aislado descrito abajo.
 
 Fragmento para el bloque HTTPS de NGINX, una vez definidos el nombre interno del certificado, la CA y la ruta de publicación. El valor `gateway.interno` ilustra un SAN que debe sustituirse por el elegido en el despliegue. [Directivas de proxy de NGINX](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
 
@@ -75,4 +75,6 @@ El límite de 8 MiB deja margen al multipart de una foto de hasta 5.000.000 byte
 
 ### Comprobaciones de aceptación
 
-En esta unidad se compiló el frontend de producción con base relativa. Pendiente en un ensayo del proxy: validar la configuración con `nginx -t`, abrir y recargar una ruta profunda desde el navegador, iniciar sesión y comprobar la renovación, verificar una foto pública y confirmar que un error de /api/v1/ conserva su respuesta de API. Antes de publicar, comprobar la redirección HTTP, la cadena TLS pública y la verificación TLS del salto interno.
+En el ensayo local, NGINX sirvió el frontend compilado y validó el certificado del Gateway por su SAN. El proxy se ejecutó en un contenedor de la red aislada, con api-gateway:8080 como destino y puertos de loopback 28081/28443. nginx -t pasó. HTTP devolvió 308 conservando la ruta. Al cambiar el nombre TLS esperado por uno incorrecto, el proxy devolvió 502; al restaurarlo, Search volvió a responder 200.
+
+Chrome abrió y recargó una ruta de propiedad, decodificó una foto pública y recibió un 404 JSON para una propiedad inexistente. El login emitió la cookie de renovación Secure, HttpOnly y SameSite=Strict con ruta /api/v1/auth/refresh. La recarga obtuvo 200 al renovar. Para repetir con el proxy activo, ejecutar scripts/e2e-verifier-session.mjs con STAYHUB_TEST_COMPOSE_PROJECT, NODE_EXTRA_CA_CERTS para el Gateway, STAYHUB_TEST_PROXY_ORIGIN y STAYHUB_TEST_PROXY_CERT para el certificado sintético del proxy. Chrome acepta para el ensayo la clave pública de ese certificado. DNS, confianza pública del certificado y acceso desde Internet quedan pendientes de una prueba externa autorizada.

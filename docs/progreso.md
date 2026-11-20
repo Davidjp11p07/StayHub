@@ -329,3 +329,5 @@ Azure / consumo base. Siete muestras de los 26 contenedores de integración en 4
 Azure. Topología documentada en docs/despliegue-azure.md: NGINX en Ubuntu, SPA y API de mismo origen, TLS verificado hasta Gateway y puertos privados. Compilación Vite correcta con /api/v1 (206 módulos); JS 613,92 kB antes de gzip, aviso de tamaño. No se ejecutó NGINX ni se aprovisionó Azure.
 
 Azure. Override de producción verificado con config en la copia aislada: 36 servicios, solo Gateway en 127.0.0.1:8080, dos montajes TLS cotejados con los archivos y destinos del gateway, CIDR y URL pública aplicados. Las cuatro omisiones de variables requeridas fallaron por separado. Ensayo de configuración con certificados sintéticos.
+
+Azure / proxy HTTPS aislado. NGINX y Chrome verificaron ruta profunda, foto pública, 404 JSON, login y refresh. HTTP 308; SAN interno incorrecto 502 y restaurado 200. Reserva de 300001 COP y reembolso conciliados. Proxy y segunda pila detenidos; integración con 26 saludables.
