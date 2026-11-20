@@ -6,9 +6,19 @@ import { readFileSync } from 'node:fs';
 const base = 'https://127.0.0.1:18080/api/v1';
 const credentials = { email: `verifier-${randomUUID()}@stayhub.test`, password: `Test-${randomUUID()}` };
 async function post(path, body, headers = {}) {
-  return fetch(base + path, {
+  const options = {
     method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body),
-  });
+  };
+  const response = await fetch(base + path, options);
+  if (path === '/auth/register' && response.status === 429) {
+    const seconds = Number(response.headers.get('retry-after'));
+    if (Number.isInteger(seconds) && seconds > 0 && seconds <= 600) {
+      console.log('Registro limitado; reintento en ' + seconds + ' s.');
+      await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+      return fetch(base + path, options);
+    }
+  }
+  return response;
 }
 async function register(role) {
   return post('/auth/register', { name: 'Verificación sintética', ...credentials, role }, { 'idempotency-key': randomUUID() });
@@ -122,6 +132,15 @@ assert.ok(history.every(row => row.reviewerId === user.userId && row.reason && r
 console.log('Propiedad sintética: publicación directa denegada, rechazo, corrección, aprobación idempotente y dos decisiones trazables.');
 
 await checkSearch(true);
+if (process.env.STAYHUB_TEST_OWNER_REPORT === '1') {
+  const { verifyOwnerReport } = await import('./verify-owner-report.mjs');
+  try {
+    await verifyOwnerReport({ base, property, ownerCredentials, guest, post, date });
+  } finally {
+    assert.equal((await edit(version + 1, 'UNPUBLISHED')).status, 200);
+  }
+  process.exit(0);
+}
 if (process.env.STAYHUB_TEST_INVENTORY === '1') {
   const { verifyRoomInventory } = await import('./verify-room-inventory.mjs');
   try {
