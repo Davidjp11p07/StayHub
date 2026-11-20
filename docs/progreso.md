@@ -335,3 +335,5 @@ Azure / proxy HTTPS aislado. NGINX y Chrome verificaron ruta profunda, foto púb
 Recuperación Azure. Inventario de solo lectura: 10 volúmenes PostgreSQL, 1 de fotos y 5 anónimos de Redis/RabbitMQ. Documentados el punto de corte, los volcados por servicio, la protección de archivos y la verificación funcional de una restauración aislada. Sin copias de datos ni restauraciones en esta unidad.
 
 Ensayo de recuperación de Accommodations: pg_dump y restauración transaccional en base nueva sin puertos. Nueve tablas, 65 filas y tres propiedades coincidieron. Tres fotos, 210 bytes, referencias, SHA-256 y permisos coincidentes. Manifiesto local excluido de Git. Origen y destino sintéticos detenidos.
+
+Restauración Accommodations / HTTP. Dos rutas anónimas devolvieron 404 con el estado original y 200 con una muestra publicada en una segunda restauración desechable. Se cotejaron UUID, nombre, referencia, tipo, tamaño y SHA-256 de la foto con el manifiesto. Contenedores de prueba cerrados.
