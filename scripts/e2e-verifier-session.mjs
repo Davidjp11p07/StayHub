@@ -122,6 +122,15 @@ assert.ok(history.every(row => row.reviewerId === user.userId && row.reason && r
 console.log('Propiedad sintética: publicación directa denegada, rechazo, corrección, aprobación idempotente y dos decisiones trazables.');
 
 await checkSearch(true);
+if (process.env.STAYHUB_TEST_INVENTORY === '1') {
+  const { verifyRoomInventory } = await import('./verify-room-inventory.mjs');
+  try {
+    await verifyRoomInventory({ base, property, owner, ownerCredentials, guest, post, date });
+  } finally {
+    assert.equal((await edit(version + 1, 'UNPUBLISHED')).status, 200);
+  }
+  process.exit(0);
+}
 if (process.env.STAYHUB_TEST_REVIEW === '1') {
   const { verifyGuestReview } = await import('./verify-guest-review.mjs');
   try {
