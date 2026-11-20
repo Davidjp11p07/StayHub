@@ -320,7 +320,7 @@ services:
     networks: [search-internal]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stayhub_search -d search_db"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U stayhub_search -d search_db"]
       interval: 5s
       timeout: 5s
       retries: 20
