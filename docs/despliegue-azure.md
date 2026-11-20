@@ -151,3 +151,26 @@ El valor restaurado coincidió y PEXPIRETIME devolvió el mismo instante (179515
 Se verificó la introspección de Auth con una sesión sintética OWNER, PostgreSQL 16 y Redis 7 aislados. Se guardó la entrada de caché generada por Auth, se revocó la sesión en PostgreSQL y se restauró la entrada anterior con su vencimiento absoluto. Aunque la caché contenía el estado activo, la siguiente introspección devolvió SessionInvalidError y retiró la entrada de Redis. Pasaron las 17 pruebas de integración de session-validation.spec.ts.
 
 Antes de reabrir tráfico, verificar en PostgreSQL que las revocaciones posteriores al punto de copia de Redis siguen presentes. Si también se recuperó PostgreSQL desde un punto anterior a una revocación, hace falta reconciliar esas revocaciones o invalidar las sesiones afectadas antes de habilitar el acceso. La prueba cubre el caso de uso de introspección con los adaptadores reales; no mide una sesión de navegador a través del Gateway.
+
+## Supervisión de salud y reinicios
+
+En la integración del 20 de noviembre de 2026, los 26 contenedores persistentes estaban saludables y los diez migradores habían terminado con código 0. Las políticas de Docker coincidieron con Compose: Gateway, Auth, Bookings y Payments usaban always; los otros 22 persistentes, unless-stopped; los diez migradores, no. Todos los contenedores inspeccionados tenían RestartCount en cero y OOMKilled en false en ese momento.
+
+Desde la VM, definir en Bash el proyecto y los archivos de su despliegue. Estos comandos muestran solo los campos operativos, incluso para los migradores terminados:
+
+```bash
+DC=(docker compose --env-file "$STAYHUB_PROD_ENV" -p stayhub-prod -f docker-compose.yml -f docker-compose.production.yml)
+"${DC[@]}" config --services
+"${DC[@]}" ps --all
+"${DC[@]}" ps --all -q | xargs -r docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}} {{.Id}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}} exit={{.State.ExitCode}} restarts={{.RestartCount}} oom={{.State.OOMKilled}}'
+```
+
+| Señal | Cómo interpretarla y actuar |
+| --- | --- |
+| Servicio ausente, detenido o unhealthy | Comparar el inventario observado con config --services. Comprobar dependencias, disco y registros recientes del servicio. Para un migrador, exited con código 0 es el resultado esperado. Un código distinto requiere revisar la migración antes de continuar el despliegue. |
+| Aumento de RestartCount, estado restarting u OOMKilled | Registrar servicio, ID del contenedor, hora UTC y contador. Comparar muestras del mismo ID; una recreación inicia un contador nuevo. Correlacionar OOM con memoria del host y los límites del servicio. |
+| Gateway vivo con errores de usuario | Docker sondea /health/live. Consultar también /health/ready por el enlace HTTPS privado, con la CA y el SAN internos configurados. Esta sonda comprueba configuración, TLS, Redis de borde y resolución de seis destinos. Añadir una consulta pública por NGINX que exija respuesta JSON de Search. |
+
+Las sondas locales /health/live, /health/ready y /api/v1/search?q=Leticia respondieron 200 con TLS verificado. En un contenedor desechable con política unless-stopped, dos fallos de la sonda dejaron el proceso running/unhealthy y el contador en 0. Tras la salida controlada del proceso, Docker lo reinició y se observó running/healthy con contador 1. Una alerta de salud debe cubrir ambos comportamientos.
+
+Para Azure se propone tomar una muestra por minuto con un temporizador del host. Emitir una línea JSON por servicio con hora UTC, proyecto, servicio, ID, estado, salud, salida, reinicios y OOM; incluir los servicios esperados ausentes y un registro de finalización por muestra. Recoger el archivo con Azure Monitor Agent mediante una regla de recopilación asociada a la VM. Como umbrales iniciales, alertar ante dos muestras consecutivas de mala salud, una migración fallida, un evento OOM o varios reinicios del mismo ID en cinco minutos. Vigilar también la ausencia de muestras durante cinco minutos y asociar las alertas a un grupo de acciones del equipo. Validar entrega y recuperación de una alerta antes de dar por operativo el monitoreo. Esta unidad verificó las señales de Docker; agente, reglas y notificaciones quedan pendientes en Azure. [Recopilación de JSON en una VM](https://learn.microsoft.com/en-us/azure/azure-monitor/vm/data-collection-log-json) · [Alertas de consulta de registros](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-log-alert-rule)

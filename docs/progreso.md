@@ -345,3 +345,5 @@ RabbitMQ de reservas restaurado en un nodo aislado desde una copia en frío. Def
 Auth Redis / RDB restaurado en contenedor desechable. Valor sintético y vencimiento absoluto idénticos; TTL restante de 28298 ms y expiración comprobada por EXISTS=0 y PTTL=-2. Ensayo detenido.
 
 Auth / recuperación de caché anterior a una revocación. Una sesión sintética revocada en PostgreSQL siguió siendo rechazada al restaurar en Redis su entrada activa anterior y Auth eliminó esa entrada. Pasaron 17/17 pruebas de integración sobre contenedores desechables.
+
+Supervisión local verificada: 26 saludables, diez migraciones con salida 0 y políticas coincidentes. Un proceso desechable siguió unhealthy con cero reinicios al fallar la sonda; tras salir, Docker lo reinició y recuperó healthy con contador 1. Gateway live, ready y Search respondieron 200.
