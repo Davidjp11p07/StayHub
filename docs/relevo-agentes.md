@@ -163,3 +163,7 @@ P1-E. Reseñas verificadas en Leticia y Arauca. La pila local sigue activa. La r
 Unidad Madrid en curso: reconstrucción localizada de bookings-service para validar el rechazo de EUR antes de crear la reserva.
 
 Madrid resuelto. Bookings reconstruido y activo. Reserva anterior CANCELLED_BY_OWNER, paymentStatus ORDER_PENDING. Gateway rechazó EUR al cotizar y reservar sin crear otra fila en el historial. Siguiente unidad: mostrar en el formulario de reserva una explicación específica para moneda no admitida; el gateway actualmente devuelve un conflicto genérico. Primer comando: Get-Content apps/web/src/pages/booking/Booking.tsx -Encoding utf8.
+
+En curso: reconstrucción de Bookings para verificar el código de moneda no admitida en el formulario.
+
+Cerrada la unidad de moneda no admitida. Bookings y Vite activos; aviso verificado en Chrome para Madrid. Siguiente unidad: cotejar la configuración efectiva de Compose para la preparación del despliegue, sin exponer valores sensibles. Primer comando: docker compose -p stayhub-integracion-local -f docker-compose.yml -f docker-compose.reports.integration.yml -f .artifacts/compose-local-ports.yml config --services.

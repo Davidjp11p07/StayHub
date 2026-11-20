@@ -20,7 +20,7 @@ export class CreateBookingUseCase {
     }
     const currencies = this.config.allowedPaymentCurrencies ?? ['COP', 'USD'];
     if (!currencies.includes(quote.basePrice.currency)) {
-      throw new DomainError('ACCOMMODATION_CONFLICT', 'basePrice.currency');
+      throw new DomainError('UNSUPPORTED_PAYMENT_CURRENCY');
     }
     const rate = quote.breakfastPerGuestNight;
     if (command.breakfastSelected && !rate) throw new DomainError('ACCOMMODATION_CONFLICT');

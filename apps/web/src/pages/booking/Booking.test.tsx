@@ -210,3 +210,14 @@ describe('Booking flow — access (authenticated guest only)', () => {
     expect(await screen.findByRole('button', { name: 'Confirmar reserva' })).toBeInTheDocument();
   });
 });
+
+it('explains an unsupported quote currency and disables confirmation', async () => {
+  server.use(mock.post('*/bookings/quote', () => problem(409, 'UNSUPPORTED_PAYMENT_CURRENCY')));
+  renderBooking();
+  await screen.findByRole('heading', { name: /Casa Azul/ });
+  fill('ENTRADA', '2027-01-05');
+  fill('SALIDA', '2027-01-08');
+  expect(await screen.findByRole('alert')).toHaveTextContent('No se puede pagar en la moneda de esta habitación');
+  expect(screen.getByRole('button', { name: 'Confirmar reserva' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+});

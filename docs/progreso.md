@@ -280,3 +280,5 @@ P1-E. El reporte LIVE de Leticia del 20 al 21 de noviembre de 2026 (fin exclusiv
 P1-E. El seed acepta un destino del catálogo y conserva Leticia por defecto. Arauca completó una estancia por 126000 COP con reseña y aviso; tres ejecuciones conservaron los mismos identificadores. Auditoría: 2 completadas, 2 reseñas, 3 confirmaciones. En Madrid se creó una reserva de 120 EUR que quedó PENDING_PAYMENT. Payments solo admite COP/USD. Se verificó que el seed ahora detecta EUR antes de crear una cuenta o reserva.
 
 Madrid. Bookings usa la lista de monedas de Payments antes de persistir una reserva. Gateway local: cotización y alta de Madrid devolvieron 409 ACCOMMODATION_CONFLICT; historial del huésped estable en una reserva. La reserva anterior quedó CANCELLED_BY_OWNER por la API. Tres pruebas unitarias y typecheck correctos.
+
+Madrid. Bookings distingue UNSUPPORTED_PAYMENT_CURRENCY (409) de un cambio de oferta. Chrome con el huésped demo confirmó el aviso y el botón de confirmación deshabilitado al cotizar en EUR. Pasaron 15 pruebas del formulario, 3 del caso de uso y typecheck web.

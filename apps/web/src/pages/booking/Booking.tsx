@@ -91,7 +91,7 @@ export function Booking() {
       requestAnimationFrame(() => alertRef.current?.focus());
       return;
     }
-    if (!price.data || price.isFetching) return;
+    if (!price.data || price.isFetching || price.isError) return;
     submitting.current = true;
     const input = { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests, breakfastSelected: withBreakfast, expectedPropertyVersion: price.data.propertyVersion };
     const payload = JSON.stringify(input);
@@ -191,8 +191,12 @@ export function Booking() {
 
           {room.breakfastPerGuestNight && <label><input type="checkbox" checked={withBreakfast} onChange={e => setBreakfastSelected(e.target.checked)} /> Incluir desayuno ({formatMoney(room.breakfastPerGuestNight.amount, currency)} por huésped y noche)</label>}
           {canQuote && price.isFetching && <p role="status">Consultando el precio...</p>}
-          {price.isError && <p role="alert">No se pudo cotizar la estancia. <button type="button" onClick={() => void price.refetch()}>Reintentar</button></p>}
-          {canQuote && room.basePrice && price.data && (
+          {price.isError && <p role="alert">
+            {price.error instanceof ApiError && price.error.problem?.code === 'UNSUPPORTED_PAYMENT_CURRENCY'
+              ? bookingErrorMessage(price.error)
+              : <>No se pudo cotizar la estancia. <button type="button" onClick={() => void price.refetch()}>Reintentar</button></>}
+          </p>}
+          {canQuote && room.basePrice && price.data && !price.isError && (
             <dl aria-label="Resumen de la reserva" className="flex flex-col gap-2 border-t border-gray-100 pt-4">
               <div className="flex justify-between text-sm text-gray-700">
                 <dt>{`${formatMoney(room.basePrice.amount, currency)} × ${nights} ${nights === 1 ? 'noche' : 'noches'}`}</dt>
@@ -208,7 +212,7 @@ export function Booking() {
             </dl>
           )}
 
-          <Button type="submit" variant="primary" size="lg" disabled={canQuote && (!price.data || price.isFetching)} loading={createMutation.isPending}>Confirmar reserva</Button>
+          <Button type="submit" variant="primary" size="lg" disabled={canQuote && (!price.data || price.isFetching || price.isError)} loading={createMutation.isPending}>Confirmar reserva</Button>
           <p className="text-xs text-center text-gray-600">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
         </form>
       )}

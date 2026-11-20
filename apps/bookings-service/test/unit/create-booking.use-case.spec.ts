@@ -10,7 +10,7 @@ it.each(['EUR', 'USD'])('rejects %s when only COP can be charged', async currenc
   });
   const stay = { guestId: 'guest', propertyId: 'property', roomId: 'room', guests: 1,
     checkIn: '2029-01-02', checkOut: '2029-01-03', idempotencyKey: 'key' };
-  await expect(useCase.preview(stay)).rejects.toMatchObject({ code: 'ACCOMMODATION_CONFLICT' });
-  await expect(useCase.execute(stay)).rejects.toMatchObject({ code: 'ACCOMMODATION_CONFLICT' });
+  await expect(useCase.preview(stay)).rejects.toMatchObject({ code: 'UNSUPPORTED_PAYMENT_CURRENCY' });
+  await expect(useCase.execute(stay)).rejects.toMatchObject({ code: 'UNSUPPORTED_PAYMENT_CURRENCY' });
   expect(uow.create).not.toHaveBeenCalled();
 });
