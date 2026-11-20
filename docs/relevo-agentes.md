@@ -159,3 +159,7 @@ Siguiente unidad P1-E: generar y verificar el reporte LIVE de Leticia para esta 
 P1-E. Reporte de Leticia verificado con node scripts/verify-demo-stay-report.mjs y node scripts/audit-demo-coverage.mjs. La auditoría confirmó una instantánea en todo el catálogo demo. Siguiente unidad: ampliar la cobertura de reseñas vinculadas a estancias completadas partiendo de scripts/seed-demo-completed-stay.mjs.
 
 P1-E. Reseñas verificadas en Leticia y Arauca. La pila local sigue activa. La reserva de Madrid c71a13c8-59cb-4d11-8d86-c2ac2ab5744b quedó pendiente; el control del seed ya evita repetir este caso. Siguiente unidad: investigar el manejo de moneda no soportada en la creación normal de reservas y la resolución de la reserva existente. Primer comando: Get-Content apps/bookings-service/src/application/create-booking/create-booking.use-case.ts -Encoding utf8.
+
+Unidad Madrid en curso: reconstrucción localizada de bookings-service para validar el rechazo de EUR antes de crear la reserva.
+
+Madrid resuelto. Bookings reconstruido y activo. Reserva anterior CANCELLED_BY_OWNER, paymentStatus ORDER_PENDING. Gateway rechazó EUR al cotizar y reservar sin crear otra fila en el historial. Siguiente unidad: mostrar en el formulario de reserva una explicación específica para moneda no admitida; el gateway actualmente devuelve un conflicto genérico. Primer comando: Get-Content apps/web/src/pages/booking/Booking.tsx -Encoding utf8.

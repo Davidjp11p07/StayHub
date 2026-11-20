@@ -1,1 +1,1 @@
-export interface BookingSettings { paymentHoldMinutes: number; cancellationPolicyVersion: string; }
+export interface BookingSettings { allowedPaymentCurrencies?: readonly string[]; paymentHoldMinutes: number; cancellationPolicyVersion: string; }

@@ -18,6 +18,10 @@ export class CreateBookingUseCase {
     if (command.expectedPropertyVersion !== undefined && command.expectedPropertyVersion !== quote.propertyVersion) {
       throw new DomainError('ACCOMMODATION_CONFLICT');
     }
+    const currencies = this.config.allowedPaymentCurrencies ?? ['COP', 'USD'];
+    if (!currencies.includes(quote.basePrice.currency)) {
+      throw new DomainError('ACCOMMODATION_CONFLICT', 'basePrice.currency');
+    }
     const rate = quote.breakfastPerGuestNight;
     if (command.breakfastSelected && !rate) throw new DomainError('ACCOMMODATION_CONFLICT');
     return new Booking({
