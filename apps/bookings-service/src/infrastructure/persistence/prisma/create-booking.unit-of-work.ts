@@ -8,6 +8,13 @@ import { mapBooking } from './booking.repository';
 @Injectable()
 export class PrismaCreateBookingUnitOfWork implements CreateBookingUnitOfWork {
   public constructor(private readonly prisma: PrismaService) {}
+  public async replay(guestId: string, key: string, hash: string): Promise<StoredBooking | null> {
+    const existing = await this.prisma.idempotencyRecord.findUnique({ where: { guestId_key: { guestId, key } }, include: { booking: true } });
+    if (!existing) return null;
+    if (existing.requestHash !== hash) throw new DomainError('IDEMPOTENCY_CONFLICT');
+    if (!existing.booking) throw new DomainError('IDEMPOTENCY_IN_PROGRESS');
+    return mapBooking(existing.booking);
+  }
   public async create(input: PersistCreateBooking): Promise<StoredBooking> {
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -18,7 +25,7 @@ export class PrismaCreateBookingUnitOfWork implements CreateBookingUnitOfWork {
           throw new DomainError('IDEMPOTENCY_IN_PROGRESS');
         }
         const b = input.booking; const now = new Date();
-        const row = await tx.booking.create({ data: { id: b.id, guestId: b.data.guestId, ownerId: b.data.snapshot.ownerId, propertyId: b.data.snapshot.propertyId, roomId: b.data.snapshot.roomId, propertyName: b.data.snapshot.propertyName, roomName: b.data.snapshot.roomName, checkIn: new Date(`${b.data.period.checkIn}T00:00:00.000Z`), checkOut: new Date(`${b.data.period.checkOut}T00:00:00.000Z`), guests: b.data.guests, capacitySnapshot: b.data.snapshot.capacity, nightlyPriceAmount: new Prisma.Decimal(b.data.nightlyPrice.toString()), currency: b.data.nightlyPrice.currency, nights: b.data.period.nights, totalAmount: new Prisma.Decimal(b.total.toString()), accommodationVersion: b.data.snapshot.propertyVersion, roomSourceUpdatedAt: b.data.snapshot.roomUpdatedAt, status: b.status as BookingStatus, paymentStatus: 'ORDER_PENDING' as PaymentStatus, holdExpiresAt: b.data.holdExpiresAt } });
+        const row = await tx.booking.create({ data: { id: b.id, guestId: b.data.guestId, ownerId: b.data.snapshot.ownerId, propertyId: b.data.snapshot.propertyId, roomId: b.data.snapshot.roomId, propertyName: b.data.snapshot.propertyName, roomName: b.data.snapshot.roomName, checkIn: new Date(`${b.data.period.checkIn}T00:00:00.000Z`), checkOut: new Date(`${b.data.period.checkOut}T00:00:00.000Z`), guests: b.data.guests, capacitySnapshot: b.data.snapshot.capacity, nightlyPriceAmount: new Prisma.Decimal(b.data.nightlyPrice.toString()), currency: b.data.nightlyPrice.currency, nights: b.data.period.nights, totalAmount: new Prisma.Decimal(b.total.toString()), breakfastUnitAmount: b.data.breakfastUnitPrice?.toString() ?? null, breakfastAmount: b.breakfast?.toString() ?? '0.00', accommodationVersion: b.data.snapshot.propertyVersion, roomSourceUpdatedAt: b.data.snapshot.roomUpdatedAt, status: b.status as BookingStatus, paymentStatus: 'ORDER_PENDING' as PaymentStatus, holdExpiresAt: b.data.holdExpiresAt } });
         await tx.bookingTransition.create({ data: { id: crypto.randomUUID(), bookingId: row.id, toStatus: row.status, actorType: 'GUEST', actorId: row.guestId, reasonCode: 'BOOKING_CREATED', metadata: { traceId: input.traceId ?? null } } });
         await tx.idempotencyRecord.create({ data: { guestId: row.guestId, key: input.idempotencyKey, requestHash: input.requestHash, bookingId: row.id, state: 'COMPLETED', responseStatus: 201, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) } });
         await tx.paymentWork.create({ data: { id: crypto.randomUUID(), bookingId: row.id, operation: 'CREATE_ORDER', idempotencyKey: `booking:${row.id}:payment-order`, amount: row.totalAmount, currency: row.currency } });
@@ -29,6 +36,10 @@ export class PrismaCreateBookingUnitOfWork implements CreateBookingUnitOfWork {
       if (error instanceof DomainError) throw error;
       const code = typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : '';
       const text = error instanceof Error ? `${error.message} ${code}` : 'unknown persistence error';
+      if (code === 'P2034' || code === 'P2002' || /bookings_no_overlap|23P01|P2004/iu.test(text)) {
+        const replay = await this.replay(input.booking.data.guestId, input.idempotencyKey, input.requestHash);
+        if (replay) return replay;
+      }
       if (/bookings_no_overlap|23P01|P2004/iu.test(text)) throw new DomainError('BOOKING_CONFLICT');
       throw error;
     }

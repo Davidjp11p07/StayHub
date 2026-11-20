@@ -299,6 +299,7 @@ describe('registration HTTP contract (AUTH-026)', () => {
         body: { ...validBody(), password: 'a'.repeat(129) },
       },
       { name: 'ADMIN role', body: { ...validBody(), role: 'ADMIN' } },
+      { name: 'VERIFIER role', body: { ...validBody(), role: 'VERIFIER' } },
       { name: 'unknown field', body: { ...validBody(), admin: true } },
       { name: 'null email', body: { ...validBody(), email: null } },
     ];

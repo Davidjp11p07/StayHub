@@ -11,7 +11,7 @@ import type {
 export type { UserRole, VerifiedUserClaims } from '@gateway/application/ports/jwt-verifier.port';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES = ['GUEST', 'OWNER', 'ADMIN'] as const;
+const ROLES = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] as const;
 const REQUIRED_CLAIMS = ['sub', 'sid', 'role', 'jti', 'iat', 'exp'] as const;
 
 @Injectable()

@@ -1,3 +1,5 @@
+import { ReadNotificationController } from '../../src/interfaces/http/notifications/read-notification.controller';
+import { NOTIFICATION_REPOSITORY } from '../../src/application/ports/notification.repository';
 import { readFileSync } from 'node:fs';
 import { Test } from '@nestjs/testing';
 import type { OpenAPIObject } from '@nestjs/swagger';
@@ -21,8 +23,9 @@ describe('notifications OpenAPI (NTF-013)', () => {
     const contract = parsed as ContractOpenApi;
     await SwaggerParser.validate(contract as never);
     const builder = Test.createTestingModule({
-      controllers: [NotificationsController],
+      controllers: [NotificationsController, ReadNotificationController],
       providers: [
+        { provide: NOTIFICATION_REPOSITORY, useValue: {} },
         { provide: SendNotificationUseCase, useValue: { execute: jest.fn() } },
         { provide: ListUserNotificationsUseCase, useValue: { execute: jest.fn() } },
         { provide: BookingConfirmedUseCase, useValue: { execute: jest.fn() } },
@@ -38,7 +41,7 @@ describe('notifications OpenAPI (NTF-013)', () => {
     try {
       const generated = createNotificationsOpenApi(app);
       await SwaggerParser.validate(generated as never);
-      expect(Object.keys(contract.paths).sort()).toEqual(['/notifications/send', '/notifications/events/booking-confirmed', '/notifications/user/{id}'].sort());
+      expect(Object.keys(contract.paths).sort()).toEqual(['/notifications/{notificationId}/read', '/notifications/send', '/notifications/events/booking-confirmed', '/notifications/user/{id}'].sort());
       expect(Object.keys(generated.paths).sort()).toEqual(Object.keys(contract.paths).sort());
       expect(generated.paths['/notifications/send']?.post?.operationId).toBe('sendNotification');
       expect(generated.paths['/notifications/events/booking-confirmed']?.post?.operationId).toBe('bookingConfirmedEvent');

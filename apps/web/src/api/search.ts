@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { http } from './http';
 import { ApiError } from './identity';
 import {
-  CURRENCY_PATTERN, SEARCH_LIMITS,
+  CURRENCY_PATTERN, SEARCH_LIMITS, isCountryCode,
   type SearchFilters, type SearchResponse, type SearchResult, type SearchSuggestion, type SearchSuggestResponse,
 } from '../types/catalog';
 
@@ -30,6 +30,7 @@ export function normalizeSearchFilters(filters: SearchFilters): SearchFilters {
   const result: SearchFilters = {
     q: text(filters.q),
     location: text(filters.location),
+    countryCode: text(filters.countryCode)?.toUpperCase(),
     minPrice,
     maxPrice,
     currency: minPrice !== undefined || maxPrice !== undefined ? text(filters.currency) : undefined,
@@ -49,6 +50,7 @@ export type SearchValidation = Partial<Record<keyof SearchFilters, string>>;
 export function validateSearchFilters(filters: SearchFilters): SearchValidation {
   const f = normalizeSearchFilters(filters);
   const errors: SearchValidation = {};
+  if (f.countryCode && !isCountryCode(f.countryCode)) errors.countryCode = 'Usa el código de dos letras del país.';
   if (f.q && f.q.length > SEARCH_LIMITS.qMaxLength) errors.q = `Usa hasta ${SEARCH_LIMITS.qMaxLength} caracteres.`;
   if (f.location && f.location.length > SEARCH_LIMITS.locationMaxLength) errors.location = `Usa hasta ${SEARCH_LIMITS.locationMaxLength} caracteres.`;
   if (f.minPrice !== undefined && f.minPrice < 0) errors.minPrice = 'El precio mínimo no puede ser negativo.';
@@ -68,7 +70,7 @@ export function validateSearchFilters(filters: SearchFilters): SearchValidation 
   return errors;
 }
 
-const ORDER: (keyof SearchFilters)[] = ['q', 'location', 'checkIn', 'checkOut', 'guests', 'minPrice', 'maxPrice', 'currency', 'amenities', 'page', 'pageSize'];
+const ORDER: (keyof SearchFilters)[] = ['q', 'location', 'countryCode', 'checkIn', 'checkOut', 'guests', 'minPrice', 'maxPrice', 'currency', 'amenities', 'page', 'pageSize'];
 
 /** Contract query string: `amenities` repeats (`style: form, explode: true`). */
 export function toSearchParams(filters: SearchFilters): URLSearchParams {
@@ -90,6 +92,7 @@ export function parseSearchParams(params: URLSearchParams): SearchFilters {
   return normalizeSearchFilters({
     q: params.get('q') ?? undefined,
     location: params.get('location') ?? undefined,
+    countryCode: params.get('countryCode') ?? undefined,
     checkIn: params.get('checkIn') ?? undefined,
     checkOut: params.get('checkOut') ?? undefined,
     guests: int('guests'),
@@ -159,7 +162,7 @@ export function useSearch(filters: SearchFilters, { enabled = true, debounceMs =
     queryKey: searchKeys.results(stable),
     queryFn: ({ signal }) => searchProperties(stable, signal),
     enabled: enabled && valid,
-    placeholderData: keepPreviousData,
+    ...(stable.checkIn ? { staleTime: 0 } : { placeholderData: keepPreviousData }),
   });
   return { ...query, validation, filters: stable };
 }

@@ -1,3 +1,5 @@
+import { GuestNotificationsController } from '@gateway/modules/notifications/guest-notifications.controller';
+import { ReportsProxyModule } from '@gateway/modules/reports/reports-proxy.module';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 
@@ -44,6 +46,7 @@ describe('AppModule (GW-022)', () => {
       expect(imports).toEqual(
         expect.arrayContaining([
           GatewayConfigModule,
+          ReportsProxyModule,
           GatewayRedisModule,
           GatewayAuthModule,
           HealthModule,
@@ -64,8 +67,8 @@ describe('AppModule (GW-022)', () => {
       expect(registersGlobal(APP_INTERCEPTOR, IdentityHeaderInterceptor)).toBe(true);
     });
 
-    it('no declara controladores de negocio propios (eso son US1-US4)', () => {
-      expect(metadata('controllers')).toEqual([]);
+    it('registra el controlador de notificaciones del usuario', () => {
+      expect(metadata('controllers')).toEqual([GuestNotificationsController]);
     });
   });
 

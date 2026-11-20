@@ -45,6 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: 20}
       - run: npm ci --prefix apps/reports-service
+      - run: echo "REPORTS_DEMO_UID=$(id -u)" >> "$GITHUB_ENV"
       - run: node scripts/reports-demo-env.mjs
       - run: docker compose -f docker-compose.reports.yml up -d --build --wait --wait-timeout 180
       - run: node scripts/reports-demo-seed.mjs

@@ -19,6 +19,7 @@ export interface NotificationRecord {
   requestFingerprint: string;
   createdAt: Date;
   sentAt: Date | null;
+  readAt?: Date | null;
 }
 
 export type TemplateData = Record<string, string | number>;
@@ -29,6 +30,6 @@ export function toNotificationView(record: NotificationRecord): NotificationView
   return {
     id: record.id, userId: record.userId, type: record.type, channel: record.channel,
     subject: record.subject, body: record.body, status: record.status,
-    createdAt: record.createdAt, sentAt: record.sentAt,
+    createdAt: record.createdAt, sentAt: record.sentAt, readAt: record.readAt ?? null,
   };
 }

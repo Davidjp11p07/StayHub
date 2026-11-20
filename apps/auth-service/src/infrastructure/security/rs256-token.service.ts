@@ -10,7 +10,7 @@ import type {
 import { AUTH_CONFIG, type AuthConfig } from '@auth/infrastructure/config/auth-config';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES = ['GUEST', 'OWNER', 'ADMIN'] as const;
+const ROLES = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] as const;
 
 @Injectable()
 export class Rs256TokenService implements TokenSigner {

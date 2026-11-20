@@ -10,13 +10,15 @@ import {
   Post,
   Put,
   Req,
+  Res,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 import {
   AccommodationsClient,
+  type AccommodationsBody,
   type AccommodationsMultipart,
   type AccommodationsRequestContext,
 } from '@gateway/infrastructure/http/accommodations.client';
@@ -45,6 +47,7 @@ import {
  */
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+export const PROPERTY_PHOTO_MAX_BYTES = PHOTO_MAX_BYTES;
 const MULTER_FILE_LIMIT = PHOTO_MAX_BYTES + 1;
 
 interface MulterFile {
@@ -59,6 +62,50 @@ type MultipartRequest = Request & { file?: MulterFile };
 @Controller('properties')
 export class AccommodationsController {
   public constructor(private readonly accommodations: AccommodationsClient) {}
+
+  @Get()
+  @Roles('OWNER')
+  public listMine(@Req() request: Request): Promise<unknown> {
+    if (request.query['mine'] !== 'true' || Object.keys(request.query).length !== 1) throw new BadRequestException({ code: 'INVALID_QUERY_PARAMETER' });
+    return this.accommodations.request('GET', '/properties?mine=true', contextOf(request));
+  }
+
+  @Get('verification/pending')
+  @Roles('VERIFIER')
+  pendingReviews(@Req() request: Request): Promise<unknown> {
+    return this.accommodations.request('GET', '/properties/verification/pending', contextOf(request));
+  }
+
+  @Get(':propertyId/verification')
+  @Roles('OWNER', 'VERIFIER')
+  verification(@Req() request: Request): Promise<unknown> {
+    return this.accommodations.request('GET', `/properties/${propertyIdOf(request)}/verification`, contextOf(request));
+  }
+
+  @Post(':propertyId/verification')
+  @HttpCode(200)
+  @Roles('OWNER')
+  submit(@Req() request: Request, @Body() body: unknown): Promise<unknown> {
+    return this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/verification`, contextOf(request), verificationBody(body));
+  }
+
+  @Post(':propertyId/verification/decision')
+  @HttpCode(200)
+  @Roles('VERIFIER')
+  decide(@Req() request: Request, @Body() body: unknown): Promise<unknown> {
+    return this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/verification/decision`, contextOf(request), verificationBody(body));
+  }
+
+  @Get(':propertyId/photos/:photoId')
+  @OptionalAuth()
+  public async getPhoto(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const photoId = request.params['photoId'] ?? '';
+    if (!UUID_PATTERN.test(photoId)) throw new BadRequestException({ code: 'VALIDATION_ERROR' });
+    const result = await this.accommodations.getPhoto(propertyIdOf(request), photoId, contextOf(request));
+    response.setHeader('Content-Type', result.headers['content-type'] ?? 'application/octet-stream');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.end(Buffer.from(result.body));
+  }
 
   @Post()
   @HttpCode(201)
@@ -132,8 +179,32 @@ function photoMultipart(file: MulterFile | undefined): AccommodationsMultipart {
   return { body: new Uint8Array(body), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
+/** Helper conservado para las pruebas y consumidores existentes del adaptador. */
+export function multipart(file: Pick<MulterFile, 'buffer' | 'mimetype'>): AccommodationsBody {
+  const value = buildPhotoMultipart(file.buffer, file.mimetype, undefined);
+  return { bytes: value.body, contentType: value.contentType };
+}
+
+function buildPhotoMultipart(buffer: Buffer, mimetypeValue: string, originalname: string | undefined): AccommodationsMultipart {
+  const boundary = `stayhub${randomUUID().replace(/-/g, '')}`;
+  const filename = safeFilename(originalname);
+  const mimetype = /^[\w.+-]+\/[\w.+-]+$/u.test(mimetypeValue) ? mimetypeValue : 'application/octet-stream';
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimetype}\r\n\r\n`,
+    ),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  return { body: new Uint8Array(body), contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
 /** El nombre original no se confía: solo caracteres seguros para la cabecera multipart. */
 function safeFilename(name: string | undefined): string {
   const cleaned = (name ?? '').replace(/[^A-Za-z0-9._-]/gu, '').slice(0, 100);
   return cleaned === '' ? 'photo' : cleaned;
+}
+
+function verificationBody(body: unknown): AccommodationsBody {
+  return { bytes: Buffer.from(JSON.stringify(body ?? null)), contentType: 'application/json' };
 }

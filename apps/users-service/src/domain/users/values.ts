@@ -1,5 +1,5 @@
 import { invalid } from '../shared/domain-error';
-export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN';
+export type UserRole = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'CANCELLED';
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export const Email = { parse(input: unknown): { value: string; normalized: string } {
@@ -17,7 +17,7 @@ export const Name = { parse(value: unknown): string {
 export const UserId = { parse(value: unknown): string { if (typeof value !== 'string' || !UUID_PATTERN.test(value)) return invalid('userId'); return value; } };
 export const RegistrationId = { parse(value: unknown): string { if (typeof value !== 'string' || !UUID_PATTERN.test(value)) return invalid('registrationId'); return value; } };
 export const Role = {
-  parse(value: unknown): UserRole { if (value !== 'GUEST' && value !== 'OWNER' && value !== 'ADMIN') return invalid('role'); return value; },
+  parse(value: unknown): UserRole { if (value !== 'GUEST' && value !== 'OWNER' && value !== 'ADMIN' && value !== 'VERIFIER') return invalid('role'); return value; },
   public(value: unknown): 'GUEST' | 'OWNER' { if (value !== 'GUEST' && value !== 'OWNER') return invalid('role'); return value; },
 };
 export const RegistrationStatus = { parse(value: unknown): UserStatus { if (value !== 'PENDING' && value !== 'ACTIVE' && value !== 'CANCELLED') return invalid('status'); return value; } };

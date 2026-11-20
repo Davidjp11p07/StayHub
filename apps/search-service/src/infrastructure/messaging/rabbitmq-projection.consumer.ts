@@ -40,10 +40,11 @@ export const defaultRabbitMqConnector: RabbitMqConnector = (url, options) =>
 export class RabbitMqProjectionConsumer
   implements OnModuleInit, OnModuleDestroy
 {
-  private connection?: ChannelModel;
-  private channel?: ConfirmChannel;
-  private startup?: Promise<void>;
-  private consumerTag?: string;
+  private connection: ChannelModel | undefined;
+  private channel: ConfirmChannel | undefined;
+  private startup: Promise<void> | undefined;
+  private consumerTag: string | undefined;
+  private retryTimer: NodeJS.Timeout | undefined;
   private readonly inFlight = new Set<Promise<void>>();
   private stopping = false;
 
@@ -56,19 +57,34 @@ export class RabbitMqProjectionConsumer
   ) {}
 
   public onModuleInit(): void {
-    this.startup = this.start().catch(() => {
-      this.logger.warn("projection.consumer.unavailable");
-    });
+    this.connectAndRetry();
   }
 
   public async onModuleDestroy(): Promise<void> {
     this.stopping = true;
+    if (this.retryTimer) clearTimeout(this.retryTimer);
     await this.startup?.catch(() => undefined);
     if (this.channel && this.consumerTag)
       await this.channel.cancel(this.consumerTag).catch(() => undefined);
     await Promise.allSettled(this.inFlight);
     await this.channel?.close().catch(() => undefined);
     await this.connection?.close().catch(() => undefined);
+  }
+
+  private connectAndRetry(): void {
+    if (this.stopping || this.startup) return;
+    this.startup = this.start().catch(() => {
+      this.logger.warn("projection.consumer.unavailable");
+      this.scheduleReconnect();
+    }).finally(() => { this.startup = undefined; });
+  }
+
+  private scheduleReconnect(): void {
+    if (this.stopping || this.retryTimer) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = undefined;
+      this.connectAndRetry();
+    }, 2_000);
   }
 
   public async start(): Promise<void> {
@@ -81,16 +97,29 @@ export class RabbitMqProjectionConsumer
       return;
     }
     connection.on("error", () => undefined);
-    const channel = await connection.createConfirmChannel();
-    channel.on("error", () => undefined);
-    this.connection = connection;
-    this.channel = channel;
-    await this.configureTopology(channel);
-    const reply = await channel.consume(
+    let channel: ConfirmChannel | undefined;
+    try {
+      channel = await connection.createConfirmChannel();
+      channel.on("error", () => undefined);
+      const activeChannel = channel;
+      const disconnected = (): void => {
+        if (this.channel !== activeChannel) return;
+        this.channel = undefined;
+        this.connection = undefined;
+        this.consumerTag = undefined;
+        void connection.close().catch(() => undefined);
+        this.scheduleReconnect();
+      };
+      connection.on("close", disconnected);
+      channel.on("close", disconnected);
+      this.connection = connection;
+      this.channel = channel;
+      await this.configureTopology(channel);
+      const reply = await channel.consume(
       this.config.rabbitmqQueue,
       (message) => {
-        if (!message) return;
-        const pending = this.handle(message, channel);
+        if (!message) { disconnected(); void activeChannel.close().catch(() => undefined); return; }
+        const pending = this.handle(message, activeChannel);
         this.inFlight.add(pending);
         void pending.then(
           () => this.inFlight.delete(pending),
@@ -99,10 +128,15 @@ export class RabbitMqProjectionConsumer
       },
       { noAck: false },
     );
-    this.consumerTag = reply.consumerTag;
-    this.logger.info("projection.consumer.ready", {
-      queue: this.config.rabbitmqQueue,
-    });
+      this.consumerTag = reply.consumerTag;
+      this.logger.info("projection.consumer.ready", { queue: this.config.rabbitmqQueue });
+    } catch (error) {
+      this.channel = undefined;
+      this.connection = undefined;
+      await channel?.close().catch(() => undefined);
+      await connection.close().catch(() => undefined);
+      throw error;
+    }
   }
 
   private async configureTopology(channel: ConfirmChannel): Promise<void> {

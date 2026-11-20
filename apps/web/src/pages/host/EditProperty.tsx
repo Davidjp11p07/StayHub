@@ -1,3 +1,4 @@
+import { CoordinatePicker } from '../../components/host/CoordinatePicker';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -31,7 +32,7 @@ function toFormState(property: Property): { form: PropertyFormState; roomIds: Re
   const rooms: RoomDraft[] = property.rooms.map((room) => {
     const key = nextKey('room');
     roomIds[key] = room.id;
-    return { key, name: room.name, capacity: String(room.capacity), amount: room.basePrice?.amount ?? '', currency: room.basePrice?.currency ?? 'USD' };
+    return { key, name: room.name, capacity: String(room.capacity), breakfastAmount: room.breakfastPerGuestNight?.amount ?? '', amount: room.basePrice?.amount ?? '', currency: room.basePrice?.currency ?? 'USD' };
   });
   return {
     form: {
@@ -61,6 +62,7 @@ function toChanges(form: PropertyFormState, roomIds: Record<string, string>): Pa
     ...(roomIds[r.key] ? { id: roomIds[r.key] } : {}),
     name: r.name.trim(),
     capacity: Number(r.capacity),
+    ...(r.breakfastAmount?.trim() ? { breakfastPerGuestNight: { amount: r.breakfastAmount.trim(), currency: r.currency } } : {}),
     basePrice: { amount: r.amount.trim(), currency: r.currency },
   }));
   return {
@@ -122,7 +124,7 @@ export function EditProperty() {
     setErrors(found);
     if (Object.keys(found).length) { fail('Revisa los campos marcados antes de continuar.'); return; }
     setGeneral(undefined);
-    updateMutation.mutate({ property, changes: toChanges(form, roomIds) }, {
+    updateMutation.mutate({ property, changes: { ...toChanges(form, roomIds), status: property.status === 'PUBLISHED' ? 'UNPUBLISHED' : property.status } }, {
       onSuccess: (updated) => navigate(paths.property(updated.id), { replace: true }),
       onError: (saveError) => {
         const mapped = Object.fromEntries(fieldErrors(saveError).map((f) => [formKeyFromApiField(f), 'Valor no válido.']));
@@ -218,6 +220,11 @@ export function EditProperty() {
                 <input inputMode="decimal" value={form.longitude} onChange={set('longitude')} placeholder="-74.0721" className={fieldClass(!!errors['location.longitude'])} />
               </FormField>
             </div>
+            <CoordinatePicker latitude={form.latitude} longitude={form.longitude} disabled={busy}
+              onSelect={(latitude, longitude) => {
+                setForm(current => current && ({ ...current, latitude, longitude }));
+                setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'location.latitude' && key !== 'location.longitude')));
+              }} />
           </fieldset>
 
           <fieldset disabled={busy} className="flex flex-col gap-3">
@@ -241,12 +248,13 @@ export function EditProperty() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="primary" size="lg" loading={busy}>Guardar cambios</Button>
+            <Button type="submit" variant="primary" size="lg" loading={busy}>{property?.status === 'PUBLISHED' ? 'Despublicar y guardar cambios' : 'Guardar cambios'}</Button>
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => navigate(paths.property(property.id))}>
               Cancelar
             </Button>
           </div>
         </form>
+        <section className="mt-8"><h2 className="text-xl font-semibold">Inventario por habitación</h2>{property.rooms.map(room => <p key={room.id} className="mt-2"><a className="underline" href={`/host/inventory/${encodeURIComponent(room.id)}`}>Gestionar inventario de {room.name}</a></p>)}</section>
       </main>
     </div>
   );

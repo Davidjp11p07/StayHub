@@ -1,4 +1,4 @@
-import type { ProjectionOutcome } from "@search/domain/projection-event";
+import type { ProjectionOutcome, RoomOffer } from "@search/domain/projection-event";
 import type { AvailabilityWindow } from "@search/domain/availability-window";
 import type { SearchDocument } from "@search/domain/projection";
 export const PROJECTION_UNIT_OF_WORK_PORT = Symbol(
@@ -14,6 +14,7 @@ export interface ProjectionMutation {
 }
 export interface UpsertProjectionMutation extends ProjectionMutation {
   readonly kind: "UPSERT";
+  readonly rooms?: readonly RoomOffer[];
   readonly document: SearchDocument;
   readonly availability: readonly AvailabilityWindow[];
 }

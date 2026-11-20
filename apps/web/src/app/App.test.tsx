@@ -25,7 +25,6 @@ const renderApp = (route: string | { pathname: string; search?: string; state?: 
 
 const signInOnSubmit = (user: User) => auth.login.mockImplementation(async () => { auth.status = 'authenticated'; auth.currentUser = user; });
 
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().split('T')[0]!;
 
 describe('route tree', () => {
   it.each([
@@ -40,9 +39,10 @@ describe('route tree', () => {
     expect(await screen.findByRole('heading', heading)).toBeInTheDocument();
   });
 
-  it('redirects unknown paths to home', async () => {
+  it('shows a 404 page for unknown paths', async () => {
     renderApp('/no-existe');
-    await waitFor(() => expect(locationRef.current?.pathname).toBe('/'));
+    expect(await screen.findByRole('heading', { name: 'Página no encontrada' })).toBeInTheDocument();
+    expect(locationRef.current?.pathname).toBe('/no-existe');
   });
 
   it('waits for the session before rendering pages and offers recovery when it is unavailable', () => {
@@ -94,21 +94,16 @@ describe('return after login', () => {
     await waitFor(() => expect(locationRef.current?.pathname).toBe('/'));
   });
 
-  it('resumes a booking started before login on the same property', async () => {
+  it('returns to the server-backed booking form after login', async () => {
     signInOnSubmit({ id: GUEST_ID, role: 'GUEST', name: 'Ana' });
     renderApp(`/property/${PROPERTY_IDS.casaAzul}`);
     await screen.findByRole('heading', { level: 1, name: 'Casa Azul Frente al Mar' });
-    fireEvent.change(screen.getByLabelText('ENTRADA'), { target: { value: day(30) } });
-    fireEvent.change(screen.getByLabelText('SALIDA'), { target: { value: day(32) } });
-    fireEvent.click(screen.getByRole('button', { name: /Inicia sesión para reservar/ }));
-    expect(locationRef.current?.pathname).toBe('/login');
-    fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'ana@example.test' } });
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password' } });
-    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión →/ }));
-    expect(await screen.findByRole('heading', { name: 'Confirma tu reserva' })).toBeInTheDocument();
-    expect(locationRef.current?.pathname).toBe(`/property/${PROPERTY_IDS.casaAzul}`);
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
-    expect(screen.getByText('¡Reserva confirmada!')).toBeInTheDocument();
-    await waitFor(() => expect(locationRef.current?.state).toBeNull());
+    fireEvent.click(screen.getByRole('link', { name: 'Continuar a reservar' }));
+    await waitFor(() => expect(locationRef.current?.pathname).toBe('/login'));
+    fireEvent.change(screen.getByLabelText('Correo electr\u00f3nico'), { target: { value: 'ana@example.test' } });
+    fireEvent.change(screen.getByLabelText('Contrase\u00f1a'), { target: { value: 'password' } });
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesi\u00f3n/ }));
+    await waitFor(() => expect(locationRef.current?.pathname).toBe(`/property/${PROPERTY_IDS.casaAzul}/book`));
+    expect(localStorage.getItem('stayhub_bookings')).toBeNull();
   });
 });

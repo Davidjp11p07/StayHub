@@ -1,0 +1,1 @@
+ALTER TABLE "Notification" ADD COLUMN "readAt" TIMESTAMPTZ(3);

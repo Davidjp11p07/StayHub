@@ -34,7 +34,7 @@ describe('refund concurrency and database safeguards with PostgreSQL 16', () => 
       refund: jest.fn((_command) => { void _command; return Promise.resolve({ kind: 'completed' as const, reference: 'refund-provider-reference' }); }),
       getTransaction: jest.fn(),
     };
-    const clock: ClockPort = { now: () => new Date('2026-11-08T12:00:00.000Z') };
+    const clock: ClockPort = { now: () => new Date() };
     const useCase = new RefundPayment({
       unitOfWork: unitOfWork as unknown as UnitOfWork<RefundUnitOfWorkRepositories>,
       gateway,

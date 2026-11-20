@@ -26,6 +26,8 @@ El script de Gateway reutiliza las claves y claims Gateway→Auth y Auth→Users
 
 Para cambiar el destino del proxy, configura `WEB_GATEWAY_URL` en el entorno. Abre la web con `localhost` para que el navegador pueda habilitar Web Locks.
 
+Con el stack completo en Docker Compose el Gateway solo escucha HTTPS con un certificado autofirmado. `npm run env:compose:dev` (o `scripts/generate-compose-dev-env.mjs`) deja `WEB_GATEWAY_URL=https://127.0.0.1:8080` en `.env`, y Vite omite la verificación del certificado únicamente para destinos HTTPS en loopback. Si usas el Gateway nativo HTTP (`npm run dev:gateway`), vuelve a `http://127.0.0.1:8080`.
+
 ## Comportamiento
 
 Registro exige nombre, correo, contraseña y rol GUEST/OWNER. El frontend genera Idempotency-Key y conserva la clave en reintentos del mismo formulario. Registro exitoso dirige al login con el correo precargado; no inicia sesión automáticamente.

@@ -18,6 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // In-memory state
 // ---------------------------------------------------------------------------
 
+const pendingVerifications = new Map<string, number>();
 const db = { properties: buildProperties(), reviews: buildReviews(), bookings: buildBookings() };
 /** Bookings that already have a review (RQ-11: at most one review per booking). */
 let reviewedBookings = new Set<string>();
@@ -26,6 +27,7 @@ let bookingIdempotency = new Map<string, { hash: string; booking: Booking }>();
 
 /** Restores fixtures; called after every test so mutations never leak. */
 export function resetMockDb(): void {
+  pendingVerifications.clear();
   db.properties = buildProperties();
   db.reviews = buildReviews();
   db.bookings = buildBookings();
@@ -163,6 +165,7 @@ const searchHandler = http.get(`${API}/search`, ({ request }) => {
   const params = new URL(request.url).searchParams;
   const q = params.get('q')?.trim() || undefined;
   const location = params.get('location')?.trim() || undefined;
+  const countryCode = params.get('countryCode')?.toUpperCase();
   const currency = params.get('currency') ?? undefined;
   const minPrice = params.has('minPrice') ? Number(params.get('minPrice')) : undefined;
   const maxPrice = params.has('maxPrice') ? Number(params.get('maxPrice')) : undefined;
@@ -188,6 +191,7 @@ const searchHandler = http.get(`${API}/search`, ({ request }) => {
 
   const results = db.properties
     .filter((p) => p.status === 'PUBLISHED')
+    .filter((p) => !countryCode || p.location.country === countryCode)
     .map((p) => toSearchResult(p, q ? relevance(p, q) : 0))
     .filter((r) => !q || r.relevance > 0)
     .filter((r) => !location || fold(r.location).includes(fold(location)))
@@ -275,7 +279,7 @@ const createPropertyHandler = http.post(`${API}/properties`, async ({ request })
   const property: Property = {
     id: crypto.randomUUID(), ownerId: auth.caller.sub, type: body.type, name: body.name.trim(),
     description: body.description ?? null, location: body.location, status: 'DRAFT', version: 1,
-    rooms: body.rooms.map((r) => ({ id: crypto.randomUUID(), name: r.name, capacity: r.capacity, basePrice: r.basePrice ?? null })),
+    rooms: body.rooms.map((r) => ({ id: crypto.randomUUID(), name: r.name, capacity: r.capacity, ...(r.breakfastPerGuestNight ? { breakfastPerGuestNight: r.breakfastPerGuestNight } : {}), basePrice: r.basePrice ?? null })),
     features: features(body.featureCodes), photos: [], createdAt: now, updatedAt: now,
   };
   db.properties.push(property);
@@ -300,11 +304,34 @@ const replacePropertyHandler = http.put<IdParams>(`${API}/properties/:id`, async
   const next: Property = {
     ...current, type: body.type, name: body.name.trim(), description: body.description ?? null, location: body.location,
     features: features(body.featureCodes), status: body.status, version: current.version + 1, updatedAt: new Date().toISOString(),
-    rooms: body.rooms.map((r) => ({ id: r.id ?? crypto.randomUUID(), name: r.name, capacity: r.capacity, basePrice: r.basePrice ?? null })),
+    rooms: body.rooms.map((r) => ({ id: r.id ?? crypto.randomUUID(), name: r.name, capacity: r.capacity, ...(r.breakfastPerGuestNight ? { breakfastPerGuestNight: r.breakfastPerGuestNight } : {}), basePrice: r.basePrice ?? null })),
   };
   if (body.status === 'PUBLISHED' && !publishable(next)) return problem(409, 'PUBLICATION_INCOMPLETE');
   db.properties = db.properties.map((p) => (p.id === id ? next : p));
   return HttpResponse.json(next);
+});
+
+const ownerVerificationHandler = http.get<IdParams>(`${API}/properties/:id/verification`, ({ request, params }) => {
+  const { caller } = authenticate(request);
+  if (!caller) return problem(401, 'HTTP_401');
+  if (caller.role !== 'OWNER') return problem(403, 'FORBIDDEN');
+  const property = mockDb.property(String(params.id));
+  if (!property || property.ownerId !== caller.sub) return problem(404, 'NOT_FOUND');
+  const version = pendingVerifications.get(property.id);
+  return HttpResponse.json({ property, history: version === undefined ? [] : [{ version, status: 'PENDING', reason: null }] });
+});
+
+const submitVerificationHandler = http.post<IdParams>(`${API}/properties/:id/verification`, async ({ request, params }) => {
+  const { caller } = authenticate(request);
+  if (!caller) return problem(401, 'HTTP_401');
+  if (caller.role !== 'OWNER') return problem(403, 'FORBIDDEN');
+  const property = mockDb.property(String(params.id));
+  if (!property || property.ownerId !== caller.sub) return problem(404, 'NOT_FOUND');
+  const body = await request.json() as { version?: number };
+  if (body.version !== property.version) return problem(409, 'VERSION_CONFLICT');
+  if (!publishable(property)) return problem(409, 'PUBLICATION_INCOMPLETE');
+  pendingVerifications.set(property.id, property.version);
+  return HttpResponse.json({ propertyId: property.id, version: property.version, status: 'PENDING' });
 });
 
 const uploadPhotoHandler = http.post<IdParams>(`${API}/properties/:id/photos`, async ({ request, params }) => {
@@ -349,6 +376,19 @@ const BOOKING_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9._:-]{16,128}$/;
 const BLOCKING_STATUSES = new Set(['PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN']);
 
+const bookingQuoteHandler = http.post(`${API}/bookings/quote`, async ({ request }) => {
+  if (!authenticate(request).caller) return problem(401, 'UNAUTHORIZED');
+  const input = await request.json() as CreateBookingInput;
+  const property = mockDb.property(input.propertyId);
+  const room = property?.rooms.find(r => r.id === input.roomId);
+  if (!property || !room?.basePrice) return problem(404, 'NOT_FOUND');
+  const nights = (Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86400000;
+  const lodging = Math.round(Number(room.basePrice.amount) * 100) * nights;
+  const breakfast = input.breakfastSelected ? Math.round(Number(room.breakfastPerGuestNight?.amount ?? 0) * 100) * input.guests * nights : 0;
+  return HttpResponse.json({ lodging: (lodging / 100).toFixed(2), breakfast: (breakfast / 100).toFixed(2),
+    total: ((lodging + breakfast) / 100).toFixed(2), currency: room.basePrice.currency, propertyVersion: property.version });
+});
+
 const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) => {
   const auth = authenticate(request);
   if (!auth.caller) return problem(401, 'UNAUTHORIZED');
@@ -359,7 +399,7 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   const body = await request.json().catch(() => undefined);
   if (!isObject(body)) return invalid('body');
-  const allowed = ['propertyId', 'roomId', 'checkIn', 'checkOut', 'guests'];
+  const allowed = ['propertyId', 'roomId', 'checkIn', 'checkOut', 'guests', 'breakfastSelected', 'expectedPropertyVersion'];
   const errors = Object.keys(body).filter((k) => !allowed.includes(k));
   if (typeof body.propertyId !== 'string' || !UUID.test(body.propertyId)) errors.push('propertyId');
   if (typeof body.roomId !== 'string' || !UUID.test(body.roomId)) errors.push('roomId');
@@ -373,7 +413,7 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   // Idempotent replay per (guest, key): same command → same booking; different command → conflict.
   const ledgerId = `${caller.sub}|${key}`;
-  const hash = JSON.stringify([input.propertyId, input.roomId, input.checkIn, input.checkOut, input.guests]);
+  const hash = JSON.stringify([input.propertyId, input.roomId, input.checkIn, input.checkOut, input.guests, input.breakfastSelected ?? false, input.expectedPropertyVersion]);
   const prior = bookingIdempotency.get(ledgerId);
   if (prior) {
     if (prior.hash !== hash) return problem(409, 'IDEMPOTENCY_CONFLICT');
@@ -391,12 +431,18 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   const nights = Math.round((Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86_400_000);
   const now = new Date();
+  if ((input.expectedPropertyVersion !== undefined && input.expectedPropertyVersion !== property.version) ||
+      (input.breakfastSelected && (!room.breakfastPerGuestNight || !input.expectedPropertyVersion))) return problem(409, 'ACCOMMODATION_CONFLICT');
+  const breakfast = input.breakfastSelected ? Number(room.breakfastPerGuestNight?.amount) * input.guests * nights : 0;
   const booking: Booking = {
     id: crypto.randomUUID(), guestId: caller.sub, ownerId: property.ownerId,
     propertyId: property.id, roomId: room.id, propertyName: property.name, roomName: room.name,
     checkIn: input.checkIn, checkOut: input.checkOut, guests: input.guests, nights,
     nightlyPrice: { amount: room.basePrice.amount, currency: room.basePrice.currency },
-    total: { amount: (Number(room.basePrice.amount) * nights).toFixed(2), currency: room.basePrice.currency },
+    lodging: { amount: (Number(room.basePrice.amount) * nights).toFixed(2), currency: room.basePrice.currency },
+    breakfast: { amount: breakfast.toFixed(2), currency: room.basePrice.currency },
+    ...(input.breakfastSelected && room.breakfastPerGuestNight ? { breakfastPerGuestNight: room.breakfastPerGuestNight } : {}),
+    total: { amount: (Number(room.basePrice.amount) * nights + breakfast).toFixed(2), currency: room.basePrice.currency },
     status: 'PENDING_PAYMENT', paymentStatus: 'NOT_STARTED', paymentOrderId: null,
     holdExpiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
     cancellationReason: null, createdAt: now.toISOString(), updatedAt: now.toISOString(),
@@ -588,13 +634,17 @@ const userReviewsHandler = http.get(`${API}/reviews/user/:userId`, ({ request, p
 });
 
 export const handlers = [
+  http.get(`${API}/users/:userId/profile/photo`, () => problem(404, 'NOT_FOUND')),
   createReviewHandler,
   userReviewsHandler,
   suggestHandler,
   searchHandler,
   reviewsHandler,
+  ownerVerificationHandler,
+  submitVerificationHandler,
   uploadPhotoHandler,
   myPropertiesHandler,
+  bookingQuoteHandler,
   createBookingHandler,
   cancelBookingHandler,
   bookingHistoryHandler,

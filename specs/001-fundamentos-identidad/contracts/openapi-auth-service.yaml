@@ -104,7 +104,7 @@ paths:
                   active: { type: boolean, enum: [true] }
                   role:
                     type: string
-                    enum: [GUEST, OWNER, ADMIN]
+                    enum: [GUEST, OWNER, ADMIN, VERIFIER]
                     description: Authoritative immutable role captured when the session was created.
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
@@ -173,7 +173,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         email: { type: string, format: email }
-        role: { type: string, enum: [GUEST, OWNER, ADMIN] }
+        role: { type: string, enum: [GUEST, OWNER] }
     InternalTokenPair:
       type: object
       additionalProperties: false
@@ -189,7 +189,7 @@ components:
           properties:
             userId: { type: string, format: uuid }
             sessionId: { type: string, format: uuid }
-            role: { type: string, enum: [GUEST, OWNER, ADMIN] }
+            role: { type: string, enum: [GUEST, OWNER, ADMIN, VERIFIER] }
     FieldError:
       type: object
       required: [field, code]

@@ -31,6 +31,7 @@ const ROOM_INPUT = {
     name: { type: 'string', maxLength: 120 },
     capacity: { type: 'integer', minimum: 1, example: 2 },
     basePrice: BASE_PRICE,
+    breakfastPerGuestNight: { ...BASE_PRICE, description: 'Optional breakfast per guest per night, in the room currency.' },
   },
 };
 
@@ -77,6 +78,7 @@ export const PROPERTY_REPLACE_BODY = {
           name: { type: 'string', maxLength: 120 },
           capacity: { type: 'integer', minimum: 1 },
           basePrice: BASE_PRICE,
+    breakfastPerGuestNight: { ...BASE_PRICE, description: 'Optional breakfast per guest per night, in the room currency.' },
         },
       },
     },

@@ -3,7 +3,7 @@ export type PropertyType = (typeof PROPERTY_TYPES)[number];
 export const PROPERTY_STATUSES = ['DRAFT', 'PUBLISHED', 'UNPUBLISHED'] as const;
 export type PropertyStatus = (typeof PROPERTY_STATUSES)[number];
 export type PhotoMediaType = 'image/jpeg' | 'image/png' | 'image/webp';
-export type Role = 'GUEST' | 'OWNER' | 'ADMIN';
+export type Role = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 
 export interface Principal { sub: string; role: Role }
 
@@ -12,7 +12,7 @@ export interface Location {
   postalCode?: string; latitude?: number; longitude?: number;
 }
 export interface BasePrice { amount: string; currency: string }
-export interface RoomData { name: string; capacity: number; basePrice: BasePrice | null }
+export interface RoomData { name: string; capacity: number; basePrice: BasePrice | null; breakfastPerGuestNight?: BasePrice }
 export interface Room extends RoomData { id: string }
 export interface Feature { code: string; name: string }
 export interface Photo { id: string; storageKey: string; mediaType: PhotoMediaType; byteSize: number; position: number; createdAt: Date }

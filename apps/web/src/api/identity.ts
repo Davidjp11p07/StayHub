@@ -1,5 +1,6 @@
-export type Role = 'GUEST' | 'OWNER' | 'ADMIN';
-export interface RegisterRequest { name: string; email: string; password: string; role: Exclude<Role, 'ADMIN'> }
+import { API_BASE_URL } from './base-url';
+export type Role = 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
+export interface RegisterRequest { name: string; email: string; password: string; role: 'GUEST' | 'OWNER' }
 export interface Principal { userId: string; sessionId: string; role: Role }
 export interface TokenResponse { accessToken: string; tokenType: 'Bearer'; expiresIn: number; user: Principal }
 export interface Profile { id: string; name: string; email: string; role: Role; version: number }
@@ -23,7 +24,7 @@ export class ApiError extends Error {
 export async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api/v1${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       ...init, credentials: 'include', signal: init.signal ?? AbortSignal.timeout(15000),
       headers: { ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },

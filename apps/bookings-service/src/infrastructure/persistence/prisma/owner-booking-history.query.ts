@@ -22,4 +22,18 @@ export class PrismaOwnerBookingHistoryQuery implements OwnerBookingHistoryPort {
     ]);
     return { items: rows.map(mapBooking), page: filter.page, pageSize: filter.pageSize, total, hasNext: filter.page * filter.pageSize < total };
   }
+
+  public async findGuestPage(filter: { guestId: string; from?: string; to?: string; status?: string; page: number; pageSize: number }): Promise<BookingPage> {
+    const where: Prisma.BookingWhereInput = {
+      guestId: filter.guestId,
+      ...(filter.status ? { status: filter.status as BookingStatus } : {}),
+      ...(filter.from ? { checkOut: { gt: new Date(`${filter.from}T00:00:00.000Z`) } } : {}),
+      ...(filter.to ? { checkIn: { lt: new Date(`${filter.to}T00:00:00.000Z`) } } : {}),
+    };
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: (filter.page - 1) * filter.pageSize, take: filter.pageSize }),
+    ]);
+    return { items: rows.map(mapBooking), page: filter.page, pageSize: filter.pageSize, total, hasNext: filter.page * filter.pageSize < total };
+  }
 }

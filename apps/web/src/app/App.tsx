@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { BookingProvider } from '../context/BookingContext';
 import { ToastViewport } from '../components/ui/Toast';
 import { AppRoutes } from './routes';
+import { ChatWidget } from '../components/ChatWidget';
 
 export const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 
@@ -30,6 +31,7 @@ export function App({ client = defaultQueryClient }: { client?: QueryClient }) {
         <BookingProvider>
           <BrowserRouter future={routerFuture}>
             <AppRoutes />
+            <ChatWidget />
           </BrowserRouter>
         </BookingProvider>
       </AuthProvider>

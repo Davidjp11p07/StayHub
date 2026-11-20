@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StoragePort } from '@accommodations/application/ports/storage.port';
 import { AccommodationsLogger } from '@accommodations/infrastructure/logging/accommodations-logger';
@@ -9,6 +9,11 @@ const KEY = /^[0-9a-f]{64}$/;
 /** Writes under an absolute root using a temp file + rename; refuses path-like keys. */
 export class LocalStorageAdapter implements StoragePort {
   constructor(private readonly root: string, private readonly logger = new AccommodationsLogger()) {}
+
+  async read(storageKey: string): Promise<Uint8Array> {
+    if (!KEY.test(storageKey)) throw new Error('INVALID_STORAGE_KEY');
+    return readFile(join(this.root, storageKey));
+  }
 
   async store(content: Uint8Array): Promise<string> {
     const key = randomBytes(32).toString('hex');

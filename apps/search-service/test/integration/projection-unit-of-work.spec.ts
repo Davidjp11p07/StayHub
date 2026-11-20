@@ -63,7 +63,8 @@ describeWithPostgres('Prisma projection unit of work', () => {
   afterAll(async () => prisma.$disconnect());
 
   it('commits event, document, windows, cursor and visible cache generation atomically', async () => {
-    const event = upsertEvent(1);
+    const rooms = [{ roomId: randomUUID(), price: 10, currency: 'COP', capacity: 2 }];
+    const event = upsertEvent(1, { rooms });
     await expect(upsert.execute(event)).resolves.toBe('APPLIED');
     await expect(
       prisma.searchDocument.findUnique({
@@ -73,6 +74,7 @@ describeWithPostgres('Prisma projection unit of work', () => {
     ).resolves.toEqual(
       expect.objectContaining({
         name: 'Casa Bogotá',
+        rooms,
         projectionVersion: 1n,
         availability: [expect.objectContaining({ projectionVersion: 1n })],
       }),

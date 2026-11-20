@@ -32,6 +32,7 @@ model SearchDocument {
   sourceUpdatedAt DateTime @db.Timestamptz(6)
   indexedAt DateTime @default(now()) @db.Timestamptz(6)
   availability AvailabilityWindow[]
+  rooms Json?
   @@map("search_documents")
 }
 model AvailabilityWindow {

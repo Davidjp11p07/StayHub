@@ -6,6 +6,6 @@ export function createOpenApi(app: INestApplication): OpenAPIObject {
     .setDescription('Internal REST API; accommodations-service owns properties, rooms, features and photo metadata.')
     .addServer(serverUrl)
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT (RS256)' }, 'bearerAuth')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT (RS256)', description: 'Service JWT for the internal booking quote.' }, 'serviceJwt').build();
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT (RS256)', description: 'Service JWT for internal providers (booking quote and inventory room context).' }, 'serviceJwt').build();
   return SwaggerModule.createDocument(app, config);
 }

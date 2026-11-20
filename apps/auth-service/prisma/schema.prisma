@@ -26,6 +26,7 @@ enum RegistrationState {
 enum UserRole {
   GUEST
   OWNER
+  VERIFIER
   ADMIN
 }
 

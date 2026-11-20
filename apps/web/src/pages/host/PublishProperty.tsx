@@ -1,7 +1,8 @@
+import { CoordinatePicker } from '../../components/host/CoordinatePicker';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  fieldErrors, propertyWriteErrorMessage, useCreateProperty, usePublishProperty, useUploadPropertyPhoto,
+  fieldErrors, propertyWriteErrorMessage, useCreateProperty, useRequestVerification, useUploadPropertyPhoto,
 } from '../../api/properties';
 import { paths } from '../../app/navigation';
 import { Button } from '../../components/Button';
@@ -21,7 +22,7 @@ type Intent = 'publish' | 'draft';
 type Phase = 'idle' | 'creating' | 'uploading' | 'publishing';
 
 const PHASE_LABEL: Record<Phase, string> = {
-  idle: '', creating: 'Creando la propiedad…', uploading: 'Subiendo fotos…', publishing: 'Publicando…',
+  idle: '', creating: 'Creando la propiedad…', uploading: 'Subiendo fotos…', publishing: 'Enviando a revisión…',
 };
 
 /**
@@ -33,7 +34,7 @@ export function PublishProperty() {
   const navigate = useNavigate();
   const createMutation = useCreateProperty();
   const uploadMutation = useUploadPropertyPhoto();
-  const publishMutation = usePublishProperty();
+  const publishMutation = useRequestVerification();
 
   const [form, setForm] = useState<PropertyFormState>(emptyPropertyForm);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
@@ -112,7 +113,7 @@ export function PublishProperty() {
           property = await publishMutation.mutateAsync(property);
           setCreated(property);
         } catch (error) {
-          fail(`La propiedad se guardó como borrador, pero no se pudo publicar: ${propertyWriteErrorMessage(error)}`);
+          fail(`La propiedad se guardó como borrador, pero no se pudo solicitar la revisión. ${propertyWriteErrorMessage(error)}`);
           return;
         }
       }
@@ -131,7 +132,7 @@ export function PublishProperty() {
       <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">Panel de anfitrión</p>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Publicar propiedad</h1>
-        <p className="text-sm text-gray-500 mb-8">Completa los datos, agrega habitaciones con su precio y sube al menos una foto para publicar.</p>
+        <p className="text-sm text-gray-500 mb-8">Completa los datos, agrega habitaciones con su precio y sube al menos una foto para solicitar la revisión.</p>
 
         <form
           noValidate
@@ -191,6 +192,11 @@ export function PublishProperty() {
                 <input inputMode="decimal" value={form.longitude} onChange={set('longitude')} placeholder="-74.0721" className={fieldClass(!!errors['location.longitude'])} />
               </FormField>
             </div>
+            <CoordinatePicker latitude={form.latitude} longitude={form.longitude} disabled={locked}
+              onSelect={(latitude, longitude) => {
+                setForm(current => current && ({ ...current, latitude, longitude }));
+                setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'location.latitude' && key !== 'location.longitude')));
+              }} />
           </fieldset>
 
           <fieldset disabled={locked} className="flex flex-col gap-3">
@@ -226,7 +232,7 @@ export function PublishProperty() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="primary" size="lg" loading={busy}>Publicar propiedad</Button>
+            <Button type="submit" variant="primary" size="lg" loading={busy}>Solicitar revisión</Button>
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => { void submit('draft'); }}>
               Guardar como borrador
             </Button>

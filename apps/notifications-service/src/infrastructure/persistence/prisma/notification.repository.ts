@@ -10,7 +10,7 @@ function mapRecord(row: Record<string, unknown>): NotificationRecord {
     channel: row.channel as NotificationRecord['channel'], recipientEmail: row.recipientEmail as string | null,
     subject: String(row.subject), body: String(row.body), status: row.status as NotificationRecord['status'],
     failureReason: row.failureReason as string | null, idempotencyKey: String(row.idempotencyKey),
-    requestFingerprint: String(row.requestFingerprint), createdAt: row.createdAt as Date, sentAt: row.sentAt as Date | null,
+    requestFingerprint: String(row.requestFingerprint), readAt: row.readAt as Date | null, createdAt: row.createdAt as Date, sentAt: row.sentAt as Date | null,
   };
 }
 
@@ -40,6 +40,13 @@ export class PrismaNotificationRepository implements NotificationRepository, Rem
   async updateDelivery(id: string, status: 'SENT' | 'FAILED', sentAt: Date | null, failureReason: string | null): Promise<NotificationRecord> {
     const updated = await this.prisma.notification.update({ where: { id }, data: { status, sentAt, failureReason } });
     return mapRecord(updated as unknown as Record<string, unknown>);
+  }
+
+  async markRead(id: string, userId: string): Promise<Date | undefined> {
+    const rows = await this.prisma.$queryRaw<Array<{ readAt: Date }>>`
+      UPDATE "Notification" SET "readAt" = COALESCE("readAt", CURRENT_TIMESTAMP)
+      WHERE id = ${id}::uuid AND "userId" = ${userId}::uuid RETURNING "readAt"`;
+    return rows[0]?.readAt;
   }
 
   async list(filter: NotificationFilter): Promise<NotificationRecord[]> {

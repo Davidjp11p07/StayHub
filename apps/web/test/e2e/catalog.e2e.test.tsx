@@ -84,27 +84,27 @@ describe('guest journey (public)', () => {
 });
 
 describe('owner journey (OWNER)', () => {
-  it('publishes a property, finds it in "my properties", edits it, and the change propagates', async () => {
+  it('saves a draft, finds it in "my properties", edits it, and the change propagates', async () => {
     asOwner();
     const name = 'Cabaña E2E del Lago';
     const edited = 'Cabaña E2E del Lago (editada)';
 
-    // 1. Publish.
+    // Save an editable draft.
     const first = renderApp('/host/new');
     expect(screen.getByRole('heading', { name: 'Publicar propiedad' })).toBeInTheDocument();
     fillPublishForm(name);
     fireEvent.change(screen.getByLabelText('Agregar fotos'), { target: { files: [image()] } });
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar como borrador' }));
     expect(await screen.findByRole('heading', { level: 1, name }, { timeout: 3000 })).toBeInTheDocument();
     const created = mockDb.properties().find((p) => p.name === name)!;
-    expect(created).toMatchObject({ status: 'PUBLISHED', ownerId: OWNER_ID });
+    expect(created).toMatchObject({ status: 'DRAFT', ownerId: OWNER_ID });
     expect(locationRef.current?.pathname).toBe(`/property/${created.id}`);
     first.unmount();
 
     // 2. It appears in "my properties"; open its editor.
     const second = renderApp('/host/properties');
     const editLink = await screen.findByRole('link', { name: `Editar ${name}` });
-    expect(screen.getAllByText('Publicada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Borrador').length).toBeGreaterThan(0);
     fireEvent.click(editLink);
     await waitFor(() => expect(locationRef.current?.pathname).toBe(`/host/properties/${created.id}/edit`));
 
@@ -114,6 +114,8 @@ describe('owner journey (OWNER)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
     await waitFor(() => expect(locationRef.current?.pathname).toBe(`/property/${created.id}`));
     expect(await screen.findByRole('heading', { level: 1, name: edited })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Solicitar revisión' }));
+    expect(await screen.findByText(/Pendiente de revisión/)).toBeInTheDocument();
     second.unmount();
 
     // 4. The listing reflects the change too.
@@ -147,7 +149,7 @@ describe('edit error handling', () => {
     // A concurrent change bumps the server version; the in-memory form still holds the old one.
     mockDb.property(PROPERTY_IDS.casaAzul)!.version += 1;
     fill('Nombre', 'Casa Azul renovada');
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
     expect(await screen.findByText('La propiedad cambió mientras la editabas. Recarga para ver la última versión.')).toBeInTheDocument();
   });
 
@@ -157,7 +159,7 @@ describe('edit error handling', () => {
     renderApp(`/host/properties/${PROPERTY_IDS.hacienda}/edit`);
     expect(await screen.findByDisplayValue('Hacienda Las Flores')).toBeInTheDocument();
     fill('Nombre', 'Intento ajeno');
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
     expect(await screen.findByText('No encontramos la propiedad o no te pertenece.')).toBeInTheDocument();
   });
 
@@ -167,7 +169,7 @@ describe('edit error handling', () => {
     renderApp(`/host/properties/${PROPERTY_IDS.casaAzul}/edit`);
     expect(await screen.findByDisplayValue('Casa Azul Frente al Mar')).toBeInTheDocument();
     fill('Nombre', 'Casa Azul sin permiso');
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
     expect(await screen.findByText('Solo los propietarios pueden publicar alojamientos.')).toBeInTheDocument();
   });
 });

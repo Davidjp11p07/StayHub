@@ -92,3 +92,25 @@ describe('notifications configuration (NTF-002)', () => {
     }))).toThrow('Invalid configuration: NOTIFICATIONS_JWT_PUBLIC_KEY');
   });
 });
+
+describe('SMTP configuration', () => {
+  const smtp = { NOTIFICATIONS_EMAIL_MODE: 'smtp', NOTIFICATIONS_SMTP_HOST: 'mail.example.test',
+    NOTIFICATIONS_SMTP_FROM: 'host@example.test' };
+
+  it('defaults to port 587 and STARTTLS, and supports authenticated TLS', () => {
+    expect(loadNotificationsConfig(validEnvironment(smtp)).email).toMatchObject({ port: 587, secure: false });
+    const authenticated = loadNotificationsConfig(validEnvironment({ ...smtp, NOTIFICATIONS_SMTP_PORT: '465',
+      NOTIFICATIONS_SMTP_SECURE: 'true', NOTIFICATIONS_SMTP_USER: 'test', NOTIFICATIONS_SMTP_PASSWORD: 'synthetic' }));
+    expect(authenticated.email).toMatchObject({ port: 465, secure: true, user: 'test' });
+  });
+
+  it.each([
+    { NOTIFICATIONS_SMTP_HOST: '' }, { NOTIFICATIONS_SMTP_FROM: '' },
+    { NOTIFICATIONS_SMTP_FROM: 'invalid' }, { NOTIFICATIONS_SMTP_PORT: '0' },
+    { NOTIFICATIONS_SMTP_PORT: '65536' }, { NOTIFICATIONS_SMTP_PORT: '1.5' },
+    { NOTIFICATIONS_SMTP_SECURE: 'yes' }, { NOTIFICATIONS_SMTP_USER: 'test' },
+    { NOTIFICATIONS_SMTP_PASSWORD: 'synthetic' },
+  ])('rejects invalid SMTP configuration %o', override => {
+    expect(() => loadNotificationsConfig(validEnvironment({ ...smtp, ...override }))).toThrow('NOTIFICATIONS_SMTP');
+  });
+});

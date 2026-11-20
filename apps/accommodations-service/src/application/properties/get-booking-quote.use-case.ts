@@ -10,6 +10,7 @@ export interface BookingQuote {
   propertyStatus: 'PUBLISHED';
   capacity: number;
   basePrice: { amount: string; currency: string };
+  breakfastPerGuestNight?: { amount: string; currency: string };
   propertyVersion: number;
   roomUpdatedAt: string;
 }
@@ -36,6 +37,7 @@ export class GetBookingQuoteUseCase {
       propertyStatus: 'PUBLISHED',
       capacity: room.capacity,
       basePrice: room.basePrice,
+      ...(room.breakfastPerGuestNight ? { breakfastPerGuestNight: room.breakfastPerGuestNight } : {}),
       propertyVersion: property.version,
       roomUpdatedAt: property.updatedAt.toISOString(),
     };

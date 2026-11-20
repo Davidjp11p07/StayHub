@@ -29,7 +29,7 @@ describe('ACC-034 generated Swagger vs frozen accommodations contract', () => {
   });
   afterAll(async () => { await app.close(); });
 
-  it('exposes exactly the four contracted operations with matching paths, methods, operationIds and statuses', () => {
+  it('exposes exactly the contracted operations with matching paths, methods, operationIds and statuses', () => {
     const expected = operations().map(({ method, path, operation }) => ({
       method, path, operationId: operation.operationId, statuses: Object.keys(operation.responses).map(Number).sort((a, b) => a - b),
     })).sort((a, b) => a.operationId.localeCompare(b.operationId));

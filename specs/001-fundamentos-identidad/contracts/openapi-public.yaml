@@ -199,7 +199,7 @@ components:
   schemas:
     Role:
       type: string
-      enum: [GUEST, OWNER, ADMIN]
+      enum: [GUEST, OWNER, ADMIN, VERIFIER]
     PublicRegistrationRole:
       type: string
       enum: [GUEST, OWNER]
@@ -233,7 +233,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         email: { type: string, format: email }
-        role: { $ref: '#/components/schemas/Role' }
+        role: { $ref: '#/components/schemas/PublicRegistrationRole' }
     TokenResponse:
       type: object
       additionalProperties: false

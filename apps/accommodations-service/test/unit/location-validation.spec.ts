@@ -18,7 +18,7 @@ describe('ACC-009 location validation', () => {
   });
   it.each([
     ['addressLine', 'a'.repeat(201)], ['city', 'c'.repeat(101)], ['region', 'r'.repeat(101)], ['postalCode', 'p'.repeat(21)],
-    ['country', 'co'], ['country', 'COL'], ['country', 'C1'], ['postalCode', null], ['city', 5],
+    ['country', 'ZZ'], ['country', 'co'], ['country', 'COL'], ['country', 'C1'], ['postalCode', null], ['city', 5],
     ['latitude', 90.0001], ['latitude', -91], ['latitude', '4.7'], ['latitude', Number.NaN], ['latitude', null],
     ['longitude', 180.5], ['longitude', -181], ['longitude', Number.POSITIVE_INFINITY],
   ])('rejects %s=%p', (key, value) => { expect(fieldOf(() => parseLocation({ ...location, [key]: value }))).toBe(`location.${key}`); });

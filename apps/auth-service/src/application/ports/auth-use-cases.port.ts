@@ -1,11 +1,11 @@
-import type { UserRole } from './users-service.port';
+import type { PublicRegistrationRole, UserRole } from './users-service.port';
 
 export const REGISTER_ACCOUNT_USE_CASE = Symbol('REGISTER_ACCOUNT_USE_CASE');
 export const LOGIN_USE_CASE = Symbol('LOGIN_USE_CASE');
 export const ROTATE_REFRESH_TOKEN_USE_CASE = Symbol('ROTATE_REFRESH_TOKEN_USE_CASE');
 export const VALIDATE_SESSION_USE_CASE = Symbol('VALIDATE_SESSION_USE_CASE');
 
-export type RegistrationRole = Exclude<UserRole, 'ADMIN'>;
+export type RegistrationRole = PublicRegistrationRole;
 
 export interface RegisterAccountInput {
   readonly name: string;

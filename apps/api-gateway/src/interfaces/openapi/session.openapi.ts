@@ -31,7 +31,7 @@ export const REFRESH_COOKIE_SCHEME = 'refreshCookie';
 export const LOGIN_RESPONSE_CODES: readonly number[] = [200, 400, 401, 429, 503];
 export const REFRESH_RESPONSE_CODES: readonly number[] = [200, 401, 503];
 export const VALIDATE_RESPONSE_CODES: readonly number[] = [200, 401, 503];
-export const SESSION_ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN'];
+export const SESSION_ROLES: readonly string[] = ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'];
 
 export const LOGIN_REQUEST_SCHEMA: Record<string, unknown> = {
   type: 'object',

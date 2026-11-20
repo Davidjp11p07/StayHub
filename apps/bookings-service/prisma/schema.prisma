@@ -76,6 +76,8 @@ model Booking {
   guests                Int
   capacitySnapshot      Int
   nightlyPriceAmount    Decimal                @db.Decimal(12, 2)
+  breakfastUnitAmount   Decimal?               @db.Decimal(12, 2)
+  breakfastAmount       Decimal                @default(0) @db.Decimal(12, 2)
   currency              String                 @db.Char(3)
   nights                Int
   totalAmount           Decimal                @db.Decimal(12, 2)

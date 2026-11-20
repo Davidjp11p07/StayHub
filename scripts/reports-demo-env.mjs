@@ -1,5 +1,5 @@
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
@@ -11,6 +11,7 @@ if (!existsSync(join(root, 'private.pem'))) {
   const keys = generateKeyPairSync('rsa', { modulusLength: 2048, publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } });
   write('private.pem', keys.privateKey); write('public.pem', keys.publicKey);
 }
+chmodSync(join(root, 'public.pem'), 0o644);
 const publicKey = readFileSync(join(root, 'public.pem'), 'utf8');
 const passwordFile = join(root, 'password');
 if (!existsSync(passwordFile)) write('password', randomBytes(24).toString('hex'));

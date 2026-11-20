@@ -1,3 +1,4 @@
+import { isISO31661Alpha2 } from 'class-validator';
 import { invalid } from '../shared/domain-error';
 import { boundedString, closedObject } from '../shared/input';
 import type { Location } from './property.types';
@@ -18,7 +19,7 @@ export function parseLocation(value: unknown): Location {
     addressLine: boundedString(input.addressLine, 'location.addressLine', 200),
     city: boundedString(input.city, 'location.city', 100),
     region: boundedString(input.region, 'location.region', 100),
-    country: typeof input.country === 'string' && /^[A-Z]{2}$/.test(input.country) ? input.country : invalid('location.country'),
+    country: typeof input.country === 'string' && /^[A-Z]{2}$/.test(input.country) && isISO31661Alpha2(input.country) ? input.country : invalid('location.country'),
   };
   if ('postalCode' in input) location.postalCode = boundedString(input.postalCode, 'location.postalCode', 20);
   if ('latitude' in input) location.latitude = coordinate(input.latitude, 'location.latitude', 90);

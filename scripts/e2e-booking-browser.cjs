@@ -1,0 +1,71 @@
+const { chromium } = require('playwright');
+const { randomUUID } = require('crypto');
+let browser;
+(async () => {
+  const propertyId = process.env.STAYHUB_TEST_PROPERTY_ID;
+  if (!propertyId) throw Error('Define STAYHUB_TEST_PROPERTY_ID como una propiedad de prueba publicada.');
+  const web = process.env.STAYHUB_WEB_URL || 'http://localhost:5173';
+  browser = await chromium.launch({ ...(process.env.STAYHUB_BROWSER_PATH ? { executablePath: process.env.STAYHUB_BROWSER_PATH } : { channel:'chrome' }), headless:true});
+  const page = await browser.newPage({ viewport:{width:1280,height:800} });
+  page.on('response', r => { if (r.url().includes('/auth/register')) console.log('register response', r.status()); });
+  const email=`booking-browser-${randomUUID()}@stayhub.test`, password=`Smoke-${randomUUID()}`;
+  await page.goto(`${web}/register`);
+  await page.locator('#register-name').fill('Reserva Prueba');
+  await page.locator('#register-email').fill(email);
+  await page.locator('#register-role').selectOption('GUEST');
+  await page.locator('#register-password').fill(password);
+  await page.locator('#register-confirm').fill(password);
+  await page.locator('form button[type=submit]').click();
+  await page.waitForURL('**/login*',{timeout:30000});
+  await page.locator('#email').fill(email); await page.locator('#password').fill(password);
+  await page.locator('form button[type=submit]').click();
+  await page.waitForURL(url=>!url.pathname.startsWith('/login'),{timeout:30000});
+  await page.goto(`${web}/property/${propertyId}/book`);
+  const propertyName = await page.locator('main h1').innerText();
+  const date = (days) => new Date(Date.now()+days*86400000).toISOString().slice(0,10);
+  const offset = Number(process.env.STAYHUB_TEST_CHECKIN_OFFSET || 200);
+  await page.locator('#booking-check-in').fill(date(offset));
+  await page.locator('#booking-check-out').fill(date(offset + 2));
+  await page.getByRole('button',{name:'Confirmar reserva'}).click();
+  await page.waitForURL('**/booking/*/pay',{timeout:30000});
+  const bookingId = new URL(page.url()).pathname.split('/')[2];
+  console.log('PAYMENT PAGE:', (await page.locator('main').innerText()).slice(0,1000));
+  await page.getByText('Tu reserva ya está confirmada.').waitFor({timeout:30000});
+  await page.getByRole('link',{name:'Ver mis reservas'}).waitFor({timeout:30000});
+  await page.getByRole('link',{name:'Ver mis reservas'}).click();
+  await page.waitForURL('**/bookings');
+  await page.getByRole('heading',{name:propertyName}).waitFor({timeout:30000});
+  console.log('HISTORIAL:', (await page.locator('main').innerText()).slice(0,1000));
+  for (let i=0;i<10;i++) {
+    if (await page.locator('li').filter({hasText:propertyName}).getByText('Confirmada',{exact:true}).count()) { console.log('RESERVA CONFIRMADA EN HISTORIAL'); break; }
+    await page.waitForTimeout(1000); await page.reload(); await page.getByRole('heading',{name:propertyName}).waitFor({timeout:30000});
+    if (i === 9) throw Error('La reserva no llegó a confirmada');
+  }
+  await page.screenshot({path:'.artifacts/booking-verified.png'});
+  await page.goto(`${web}/property/${propertyId}/book`);
+  await page.locator('#booking-check-in').fill(date(offset));
+  await page.locator('#booking-check-out').fill(date(offset + 2));
+  await page.getByRole('button',{name:'Confirmar reserva'}).click();
+  await page.getByText('Esas fechas ya no están disponibles. Elige otras.').waitFor({timeout:30000});
+  console.log('CONFLICTO DE FECHAS: OK');
+  await page.goto(`${web}/bookings/${bookingId}/cancel`, { waitUntil: 'domcontentloaded' });
+  const cancellationResponse = page.waitForResponse(response => response.url().endsWith(`/api/v1/bookings/${bookingId}`) && response.request().method() === 'DELETE');
+  await page.getByRole('button', { name: 'Confirmar cancelación' }).click();
+  const cancelled = await (await cancellationResponse).json();
+  if (cancelled.paymentStatus !== 'REFUND_PENDING') throw Error(`Estado inicial de reembolso inesperado: ${cancelled.paymentStatus}`);
+  await page.getByText('Reserva cancelada.', { exact: true }).waitFor({ timeout: 30000 });
+  let persisted;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const bookingResponse = page.waitForResponse(response => response.url().endsWith(`/api/v1/bookings/${bookingId}`) && response.request().method() === 'GET');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    persisted = await (await bookingResponse).json();
+    if (persisted.status !== 'CANCELLED_BY_GUEST') throw Error(`Estado inesperado: ${persisted.status}`);
+    if (persisted.paymentStatus === 'REFUNDED') break;
+    await page.waitForTimeout(1000);
+  }
+  if (persisted.paymentStatus !== 'REFUNDED') throw Error(`Reembolso no confirmado: ${persisted.paymentStatus}`);
+  console.log(`ESTADO DE REEMBOLSO: ${persisted.paymentStatus}`);
+  await page.getByText(/Esta reserva ya no se puede cancelar/).waitFor({ timeout: 30000 });
+  console.log('CANCELACIÓN PERSISTENTE: OK');
+  await browser.close();
+})().catch(async e=>{console.log(e.message);await browser?.close();process.exitCode=1});

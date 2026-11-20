@@ -106,14 +106,12 @@ async function main() {
   });
   await step('publicar propiedad', async () => {
     const current = (await api('GET', `/properties/${property.id}`, { token: owner.token, expect: 200 })).body;
-    const { body } = await api('PUT', `/properties/${property.id}`, {
-      token: owner.token, expect: 200,
-      json: {
-        type: current.type, name: current.name, description: current.description ?? undefined, location: current.location,
-        featureCodes: current.features.map((feature) => feature.code), status: 'PUBLISHED', version: current.version,
-        rooms: current.rooms.map((room) => ({ id: room.id, name: room.name, capacity: room.capacity, ...(room.basePrice ? { basePrice: room.basePrice } : {}) })),
-      },
-    });
+    await api('POST', `/properties/${property.id}/verification`, { token: owner.token, expect: 200, json: { version: current.version } });
+    const token = process.env.STAYHUB_VERIFIER_TOKEN;
+    if (!token) throw new Error('Define STAYHUB_VERIFIER_TOKEN con una sesión de verificador de la pila de prueba.');
+    await api('POST', `/properties/${property.id}/verification/decision`, { token, expect: 200,
+      json: { version: current.version, status: 'APPROVED', reason: 'Revisión de propiedad sintética del smoke local' } });
+    const { body } = await api('GET', `/properties/${property.id}`, { expect: 200 });
     property = body;
     return `${body.status} v${body.version}`;
   });

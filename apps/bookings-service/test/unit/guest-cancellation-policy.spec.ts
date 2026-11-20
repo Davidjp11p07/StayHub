@@ -7,7 +7,7 @@ const config = { cancellationPolicyVersion: 'v1', cancellationPolicy: { version:
 describe('versioned guest cancellation policy', () => {
   it('is eligible before the approved deadline and refunds by policy', () => {
     const policy = new VersionedCancellationPolicyAdapter(config);
-    expect(policy.evaluate({ actor: 'GUEST', status: 'CONFIRMED', checkIn: '2030-01-10', now: new Date('2030-01-01T00:00:00Z') })).toEqual({ eligible: true, refundMode: 'POLICY', policyVersion: 'v1' });
+    expect(policy.evaluate({ actor: 'GUEST', status: 'CONFIRMED', checkIn: '2030-01-10', now: new Date('2030-01-01T00:00:00Z') })).toEqual({ eligible: true, refundMode: 'POLICY', refundPercent: 50, policyVersion: 'v1' });
   });
 
   it('returns a full refund mode when the approved policy grants 100 percent', () => {
@@ -22,7 +22,7 @@ describe('versioned guest cancellation policy', () => {
 
   it('is ineligible after the approved deadline', () => {
     const policy = new VersionedCancellationPolicyAdapter(config);
-    expect(policy.evaluate({ actor: 'GUEST', status: 'CONFIRMED', checkIn: '2030-01-10', now: new Date('2030-01-09T12:00:00Z') })).toEqual({ eligible: false, refundMode: 'NONE', policyVersion: 'v1' });
+    expect(policy.evaluate({ actor: 'GUEST', status: 'CONFIRMED', checkIn: '2030-01-10', now: new Date('2030-01-09T12:00:00Z') })).toEqual({ eligible: false, refundMode: 'NONE', refundPercent: 0, policyVersion: 'v1' });
   });
 
   it('is ineligible for a non cancellable status', () => {
@@ -41,7 +41,7 @@ describe('CancelGuestBookingUseCase', () => {
   const uow = { cancel: jest.fn() };
   const clock = { now: () => new Date('2030-01-01T00:00:00Z'), today: () => '2030-01-01' };
   const make = (booking = storedBooking()) => {
-    policy.evaluate.mockReturnValue({ eligible: true, refundMode: 'POLICY', policyVersion: 'v1' });
+    policy.evaluate.mockReturnValue({ eligible: true, refundMode: 'POLICY', refundPercent: 50, policyVersion: 'v1' });
     uow.cancel.mockResolvedValue({ ...booking, status: 'CANCELLED_BY_GUEST' });
     return new CancelGuestBookingUseCase({ findById: jest.fn().mockResolvedValue(booking) }, policy, uow, clock);
   };
@@ -65,13 +65,13 @@ describe('CancelGuestBookingUseCase', () => {
 
   it('maps an ineligible policy to a stable conflict without mutating', async () => {
     const useCase = make();
-    policy.evaluate.mockReturnValue({ eligible: false, refundMode: 'NONE', policyVersion: 'v1' });
+    policy.evaluate.mockReturnValue({ eligible: false, refundMode: 'NONE', refundPercent: 0, policyVersion: 'v1' });
     await expect(useCase.execute({ bookingId: BOOKING_ID, actorId: GUEST_ID })).rejects.toMatchObject({ code: 'CANCELLATION_NOT_ALLOWED' });
     expect(uow.cancel).not.toHaveBeenCalled();
   });
 
   it('delegates an eligible cancellation with the policy decision and expected version', async () => {
     await make().execute({ bookingId: BOOKING_ID, actorId: GUEST_ID });
-    expect(uow.cancel).toHaveBeenCalledWith({ bookingId: BOOKING_ID, expectedVersion: 1, actorId: GUEST_ID, now: new Date('2030-01-01T00:00:00Z'), decision: { eligible: true, refundMode: 'POLICY', policyVersion: 'v1' } });
+    expect(uow.cancel).toHaveBeenCalledWith({ bookingId: BOOKING_ID, expectedVersion: 1, actorId: GUEST_ID, now: new Date('2030-01-01T00:00:00Z'), decision: { eligible: true, refundMode: 'POLICY', refundPercent: 50, policyVersion: 'v1' } });
   });
 });

@@ -37,8 +37,8 @@ export class SessionPrincipalResponse {
   @ApiProperty({ format: 'uuid' })
   public readonly sessionId!: string;
 
-  @ApiProperty({ enum: ['GUEST', 'OWNER', 'ADMIN'] })
-  public readonly role!: 'GUEST' | 'OWNER' | 'ADMIN';
+  @ApiProperty({ enum: ['GUEST', 'OWNER', 'ADMIN', 'VERIFIER'] })
+  public readonly role!: 'GUEST' | 'OWNER' | 'ADMIN' | 'VERIFIER';
 }
 
 @ApiSchema({ name: 'InternalTokenPair' })

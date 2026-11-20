@@ -5,6 +5,7 @@ import { PrismaService } from '@bookings/infrastructure/persistence/prisma/prism
 import { PrismaPaymentResultUnitOfWork } from '@bookings/infrastructure/persistence/prisma/payment-result.unit-of-work';
 import { PrismaRefundResultUnitOfWork } from '@bookings/infrastructure/persistence/prisma/refund-result.unit-of-work';
 import { PaymentHoldExpiryRepository } from '@bookings/infrastructure/persistence/prisma/payment-hold-expiry.repository';
+import { SearchAvailabilityController } from '@bookings/interfaces/http/internal/search-availability.controller';
 
 describe('payment worker', () => {
   it('marks a successful order', async () => {
@@ -47,6 +48,7 @@ describeDb('payment result and expiration saga', () => {
     await prisma.processedEvent.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.notificationWork.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: bookingIds } } });
+    await prisma.paymentWork.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.bookingTransition.deleteMany({ where: { bookingId: { in: bookingIds } } });
     await prisma.booking.deleteMany({ where: { id: { in: bookingIds } } });
     await prisma.$disconnect();
@@ -68,6 +70,39 @@ describeDb('payment result and expiration saga', () => {
     eventId, eventType: 'payment.v1.approved' as const, schemaVersion: 1 as const, occurredAt: new Date().toISOString(),
     paymentId: booking.paymentOrderId, bookingId: booking.id, payerUserId: randomUUID(), amountMinor: 1000, currency: 'USD',
   });
+
+  it('queues the saved partial refund once for approval after cancellation', async () => {
+    const booking = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    await prisma.bookingTransition.create({ data: { id: randomUUID(), bookingId: booking.id, fromStatus: 'PENDING_PAYMENT', toStatus: 'CANCELLED_BY_GUEST', actorType: 'GUEST', reasonCode: 'CANCELLED_BY_GUEST', metadata: { refundAmount: '5.00' } } });
+    const event = approved(booking); eventIds.push(event.eventId);
+    await paymentResults.apply(event, '7'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).paymentStatus).toBe('REFUND_PENDING');
+    expect((await prisma.paymentWork.findFirstOrThrow({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).amount.toFixed(2)).toBe('5.00');
+    await expect(paymentResults.apply(event, '7'.repeat(64))).resolves.toBe('DUPLICATE');
+    expect(await prisma.paymentWork.count({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).toBe(1);
+  });
+
+  it('marks historical cancellations without a saved amount for review', async () => {
+    const booking = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    const event = approved(booking); eventIds.push(event.eventId);
+    await paymentResults.apply(event, '8'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).paymentStatus).toBe('REVIEW_REQUIRED');
+    expect(await prisma.paymentWork.count({ where: { bookingId: booking.id, operation: 'REQUEST_REFUND' } })).toBe(0);
+  });
+
+  it('handles owner cancellation and a zero-refund guest decision', async () => {
+    const owner = await create('CANCELLED_BY_OWNER', 'PENDING', null);
+    const ownerEvent = approved(owner); eventIds.push(ownerEvent.eventId);
+    await paymentResults.apply(ownerEvent, '9'.repeat(64));
+    expect((await prisma.paymentWork.findFirstOrThrow({ where: { bookingId: owner.id, operation: 'REQUEST_REFUND' } })).amount.toFixed(2)).toBe('10.00');
+    const guest = await create('CANCELLED_BY_GUEST', 'PENDING', null);
+    await prisma.bookingTransition.create({ data: { id: randomUUID(), bookingId: guest.id, fromStatus: 'PENDING_PAYMENT', toStatus: 'CANCELLED_BY_GUEST', actorType: 'GUEST', reasonCode: 'CANCELLED_BY_GUEST', metadata: { refundAmount: '0.00' } } });
+    const guestEvent = approved(guest); eventIds.push(guestEvent.eventId);
+    await paymentResults.apply(guestEvent, 'a'.repeat(64));
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: guest.id } })).paymentStatus).toBe('CAPTURED');
+    expect(await prisma.paymentWork.count({ where: { bookingId: guest.id, operation: 'REQUEST_REFUND' } })).toBe(0);
+  });
+
 
   it('confirms exactly once with outbox and notification work, and treats replays idempotently', async () => {
     const booking = await create();
@@ -116,6 +151,28 @@ describeDb('payment result and expiration saga', () => {
     expect(stored.holdExpiresAt).not.toBeNull();
     await expiry.expire(100);
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe('PENDING_PAYMENT');
+  });
+
+  it('releases the same room and dates only after the expiry worker persists EXPIRED', async () => {
+    const hold = await create('PENDING_PAYMENT', 'PENDING', new Date(Date.now() - 60_000));
+    const original = await prisma.booking.findUniqueOrThrow({ where: { id: hold.id } });
+    const occupancy = new SearchAvailabilityController(prisma);
+    const query = { roomIds: [original.roomId], checkIn: '2032-01-01', checkOut: '2032-01-02' };
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [] });
+    const replacementId = randomUUID();
+    bookingIds.push(replacementId);
+    const replacement = {
+      ...original, id: replacementId, guestId: randomUUID(), paymentOrderId: randomUUID(),
+      holdExpiresAt: new Date(Date.now() + 60_000),
+    };
+    await expect(prisma.booking.create({ data: replacement })).rejects.toThrow(/bookings_no_overlap|23P01/u);
+    await expiry.expire(100);
+    await expect(prisma.booking.findUniqueOrThrow({ where: { id: hold.id } })).resolves.toMatchObject({
+      status: 'EXPIRED', holdExpiresAt: null,
+    });
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [original.roomId] });
+    await expect(prisma.booking.create({ data: replacement })).resolves.toMatchObject({ id: replacementId });
+    await expect(occupancy.read(query)).resolves.toEqual({ availableRoomIds: [] });
   });
 
   it('applies partial and total refunds without reactivating inventory', async () => {

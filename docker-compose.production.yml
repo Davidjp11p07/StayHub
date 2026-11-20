@@ -1,0 +1,64 @@
+x-production-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  api-gateway:
+    logging: *production-logging
+    ports: !override
+      - "127.0.0.1:8080:8080"
+    environment:
+      GATEWAY_TRUSTED_PROXY_CIDRS: ${STAYHUB_PROXY_CIDRS:?indica el CIDR del proxy de producción}
+      GATEWAY_SWAGGER_SERVER_URL: ${STAYHUB_PUBLIC_API_URL:?indica la URL HTTPS pública con /api/v1}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+
+  accommodations-service:
+    logging: *production-logging
+    environment:
+      ACCOMMODATIONS_SEARCH_PUBLIC_API_URL: ${STAYHUB_PUBLIC_API_URL:?indica la URL HTTPS pública con /api/v1}
+
+  reports-service:
+    logging: *production-logging
+    ports: !override []
+
+  gateway-redis: {logging: *production-logging}
+  auth-db: {logging: *production-logging}
+  auth-redis: {logging: *production-logging}
+  auth-migrate: {logging: *production-logging}
+  auth-service: {logging: *production-logging}
+  accommodations-db: {logging: *production-logging}
+  accommodations-migrate: {logging: *production-logging}
+  users-db: {logging: *production-logging}
+  users-migrate: {logging: *production-logging}
+  users-service: {logging: *production-logging}
+  search-db: {logging: *production-logging}
+  search-redis: {logging: *production-logging}
+  rabbitmq: {logging: *production-logging}
+  search-migrate: {logging: *production-logging}
+  search-service: {logging: *production-logging}
+  bookings-db: {logging: *production-logging}
+  bookings-rabbitmq: {logging: *production-logging}
+  bookings-migrate: {logging: *production-logging}
+  bookings-service: {logging: *production-logging}
+  reviews-db: {logging: *production-logging}
+  reviews-migrate: {logging: *production-logging}
+  reviews-service: {logging: *production-logging}
+  payments-db: {logging: *production-logging}
+  payments-migrate: {logging: *production-logging}
+  payments-service: {logging: *production-logging}
+  notifications-db: {logging: *production-logging}
+  notifications-migrate: {logging: *production-logging}
+  notifications-service: {logging: *production-logging}
+  inventory-db: {logging: *production-logging}
+  room-inventory-migrate: {logging: *production-logging}
+  room-inventory-service: {logging: *production-logging}
+  reports-db: {logging: *production-logging}
+  reports-migrate: {logging: *production-logging}
+
+secrets:
+  gateway_tls_cert:
+    file: ${STAYHUB_GATEWAY_TLS_CERT:?indica el archivo de certificado interno de producción}
+  gateway_tls_key:
+    file: ${STAYHUB_GATEWAY_TLS_KEY:?indica el archivo de clave interna de producción}

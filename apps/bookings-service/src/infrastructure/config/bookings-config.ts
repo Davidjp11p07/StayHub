@@ -5,6 +5,7 @@ export interface CancellationPolicyRules {
   refundPercent: number;
 }
 export interface BookingsConfig {
+  allowedPaymentCurrencies?: readonly string[];
   port: number; databaseUrl: string; jwtPublicKeys: Readonly<Record<string,string>>; jwtIssuer: string; jwtAudience: string; jwtScope: string; reviewEligibilityScope: string; reviewEligibilityAudience: string;
   accommodationsUrl: string; paymentsUrl: string; paymentsMockToken: string | undefined; dependencyTimeoutMs: number; paymentHoldMinutes: number; cancellationPolicyVersion: string; cancellationPolicy: CancellationPolicyRules | null;
   notificationsUrl: string; notificationsJwtAudience: string; notificationsJwtScope: string; notificationsTimeoutMs: number;
@@ -35,6 +36,7 @@ export function loadBookingsConfig(env: NodeJS.ProcessEnv = process.env): Bookin
   const cancellationPolicyVersion = required('BOOKINGS_CANCELLATION_POLICY_VERSION',env.BOOKINGS_CANCELLATION_POLICY_VERSION);
   const jwtAudience = required('BOOKINGS_SERVICE_JWT_AUDIENCE',env.BOOKINGS_SERVICE_JWT_AUDIENCE);
   return Object.freeze({
+    allowedPaymentCurrencies: (env.PAYMENTS_ALLOWED_CURRENCIES ?? 'COP,USD').split(',').map(code => code.trim().toUpperCase()),
     port, databaseUrl: url('BOOKINGS_DATABASE_URL', secret(env,'BOOKINGS_DATABASE_URL')),
     jwtPublicKeys: keys(required('BOOKINGS_SERVICE_JWT_PUBLIC_KEYS_JSON',env.BOOKINGS_SERVICE_JWT_PUBLIC_KEYS_JSON)),
     jwtIssuer: required('BOOKINGS_SERVICE_JWT_ISSUER',env.BOOKINGS_SERVICE_JWT_ISSUER), jwtAudience, jwtScope: required('BOOKINGS_SERVICE_JWT_SCOPE',env.BOOKINGS_SERVICE_JWT_SCOPE),

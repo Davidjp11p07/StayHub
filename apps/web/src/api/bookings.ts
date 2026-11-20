@@ -55,11 +55,12 @@ export async function getBooking(id: string, signal?: AbortSignal): Promise<Book
   return data;
 }
 
-export function useBooking(id: string | undefined) {
+export function useBooking(id: string | undefined, pollPending = false) {
   return useQuery({
     queryKey: bookingKeys.detail(id ?? ''),
     queryFn: ({ signal }) => getBooking(id ?? '', signal),
     enabled: id !== undefined,
+    refetchInterval: (query) => pollPending && query.state.data?.status === 'PENDING_PAYMENT' ? 2_000 : false,
   });
 }
 
@@ -70,6 +71,7 @@ export function useBooking(id: string | undefined) {
 export function bookingErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return 'No pudimos completar la reserva. Intenta nuevamente.';
   switch (error.problem?.code) {
+    case 'UNSUPPORTED_PAYMENT_CURRENCY': return 'No se puede pagar en la moneda de esta habitación. Elige otra habitación o alojamiento.';
     case 'BOOKING_CONFLICT': return 'Esas fechas ya no están disponibles. Elige otras.';
     case 'IDEMPOTENCY_CONFLICT': return 'Ya hay una reserva en curso con esos datos. Revisa tus reservas.';
     default: break;

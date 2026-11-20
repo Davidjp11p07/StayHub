@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { http } from '../../api/http';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { bookingErrorMessage, newIdempotencyKey, useCreateBooking } from '../../api/bookings';
 import { ApiError } from '../../api/identity';
@@ -6,14 +8,7 @@ import { formatMoney, useProperty } from '../../api/properties';
 import { paths } from '../../app/navigation';
 import { Button } from '../../components/Button';
 import { Header } from '../../components/Header';
-import { bookingTotalAmount, countNights, useBookings, validateStayDates } from '../../context/BookingContext';
-
-/**
- * RQ-07 booking flow (FE-030), mounted at `/property/:id/book` behind a GUEST guard (see routes.tsx).
- * Reuses `BookingContext` (pure date/total helpers + the in-memory draft) and `useCreateBooking`.
- * The total is `precio × noches` with no extra fees (contract). Confirming creates the booking in
- * PENDING_PAYMENT and navigates to the payment step `/booking/:id/pay` (screen in FE-031).
- */
+import { countNights, useBookings, validateStayDates } from '../../context/BookingContext';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -36,10 +31,32 @@ export function Booking() {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
   const [general, setGeneral] = useState<string>();
   const submitting = useRef(false);
+  const attempt = useRef<{ payload: string; key: string }>();
   const alertRef = useRef<HTMLDivElement>(null);
+
+  const [breakfastSelected, setBreakfastSelected] = useState(false);
+  const bookableRooms = query.data?.rooms.filter(r => r.basePrice) ?? [];
+  const room = bookableRooms.find(r => r.id === roomId) ?? bookableRooms[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const nights = countNights(checkIn, checkOut);
+  const currency = room?.basePrice?.currency ?? 'USD';
+  const withBreakfast = Boolean(breakfastSelected && room?.breakfastPerGuestNight);
+  const stay = { propertyId: id, roomId: room?.id, checkIn, checkOut, guests, breakfastSelected: withBreakfast };
+  const canQuote = Boolean(room && checkIn >= today && nights > 0 && guests <= room.capacity);
+  const price = useQuery({
+    queryKey: ['booking-price', stay], enabled: canQuote, retry: false,
+    queryFn: async ({ signal }) => (await http.post<{ lodging: string; breakfast: string; total: string; currency: string; propertyVersion: number }>(
+      '/bookings/quote', stay, { signal })).data,
+  });
+
+  useEffect(() => {
+    if (price.error instanceof ApiError && price.error.status === 401) {
+      navigate(paths.login, { state: { from: location.pathname + location.search } });
+    }
+  }, [price.error, navigate, location.pathname, location.search]);
 
   if (query.isPending) {
     return <Shell><p role="status" className="text-sm text-gray-500 py-12 text-center">Cargando el alojamiento…</p></Shell>;
@@ -55,30 +72,33 @@ export function Booking() {
   }
 
   const property = query.data;
-  const bookableRooms = property.rooms.filter((r) => r.basePrice);
-  const room = bookableRooms.find((r) => r.id === roomId) ?? bookableRooms[0];
-  const today = new Date().toISOString().split('T')[0]!;
-  const nights = countNights(checkIn, checkOut);
-  const currency = room?.basePrice?.currency ?? 'USD';
-  const totalAmount = room?.basePrice ? bookingTotalAmount(room.basePrice.amount, nights) : '0.00';
-
-  const resetFeedback = () => { setErrors([]); setGeneral(undefined); };
+  const resetFeedback = () => setGeneral(undefined);
+  const validate = () => ({
+    ...validateStayDates(checkIn, checkOut, today),
+    guests: room && guests > room.capacity ? `Esta habitación admite hasta ${room.capacity} huésped${room.capacity === 1 ? '' : 'es'}` : undefined,
+  });
+  const errors = showErrors ? Object.entries(validate()).filter(([, message]) => message) : [];
+  const errorProps = (key: string) => {
+    const invalid = errors.some(([field]) => field === key);
+    return { 'aria-invalid': invalid, 'aria-describedby': invalid ? 'booking-error-' + key : undefined };
+  };
 
   const confirm = () => {
     if (submitting.current || !room || !room.basePrice) return;
-    const dateErrors = validateStayDates(checkIn, checkOut, today);
-    const found: string[] = [];
-    if (dateErrors.checkIn) found.push(dateErrors.checkIn);
-    if (dateErrors.checkOut) found.push(dateErrors.checkOut);
-    if (guests > room.capacity) found.push(`Esta habitación admite hasta ${room.capacity} huésped${room.capacity === 1 ? '' : 'es'}`);
-    setErrors(found);
+    setShowErrors(true);
     setGeneral(undefined);
-    if (found.length) { requestAnimationFrame(() => alertRef.current?.focus()); return; }
-
+    if (Object.values(validate()).some(Boolean)) {
+      requestAnimationFrame(() => alertRef.current?.focus());
+      return;
+    }
+    if (!price.data || price.isFetching || price.isError) return;
     submitting.current = true;
-    const idempotencyKey = newIdempotencyKey();
+    const input = { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests, breakfastSelected: withBreakfast, expectedPropertyVersion: price.data.propertyVersion };
+    const payload = JSON.stringify(input);
+    if (!attempt.current || attempt.current.payload !== payload) attempt.current = { payload, key: newIdempotencyKey() };
+    const idempotencyKey = attempt.current.key;
     createMutation.mutate(
-      { input: { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests }, idempotencyKey },
+      { input, idempotencyKey },
       {
         onSuccess: (booking) => {
           setDraft({
@@ -93,7 +113,11 @@ export function Booking() {
             navigate(paths.login, { state: { from: `${location.pathname}${location.search}` } });
             return;
           }
-          setGeneral(bookingErrorMessage(error));
+          if (error instanceof ApiError && error.problem?.code === 'ACCOMMODATION_CONFLICT') {
+            setGeneral('La oferta ha cambiado. Revisa la nueva cotización antes de confirmar.');
+            void query.refetch();
+            void price.refetch();
+          } else setGeneral(bookingErrorMessage(error));
           requestAnimationFrame(() => alertRef.current?.focus());
         },
       },
@@ -112,7 +136,7 @@ export function Booking() {
         <form noValidate onSubmit={(e) => { e.preventDefault(); confirm(); }} className="flex flex-col gap-5">
           {(errors.length > 0 || general) && (
             <div ref={alertRef} tabIndex={-1} role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl focus:outline-none flex flex-col gap-1">
-              {errors.map((e) => <p key={e}>{e}</p>)}
+              {errors.map(([key, message]) => <p key={key} id={'booking-error-' + key}>{message}</p>)}
               {general && <p>{general}</p>}
             </div>
           )}
@@ -123,8 +147,8 @@ export function Booking() {
               <select
                 id="booking-room"
                 value={room.id}
-                onChange={(e) => { setRoomId(e.target.value); setGuests(1); resetFeedback(); }}
-                className="h-10 px-3 border border-gray-300 rounded-xl text-sm"
+                onChange={(e) => { setRoomId(e.target.value); setBreakfastSelected(false); setGuests(1); resetFeedback(); }}
+                className="h-10 px-3 border border-gray-500 rounded-xl text-sm"
               >
                 {bookableRooms.map((r) => (
                   <option key={r.id} value={r.id}>{r.name} · {formatMoney(r.basePrice!.amount, r.basePrice!.currency)}</option>
@@ -137,17 +161,17 @@ export function Booking() {
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-in" className="text-xs font-semibold text-gray-700">ENTRADA</label>
               <input
-                id="booking-check-in" type="date" value={checkIn} min={today}
+                id="booking-check-in" {...errorProps('checkIn')} type="date" value={checkIn} min={today}
                 onChange={(e) => { setCheckIn(e.target.value); if (checkOut && checkOut <= e.target.value) setCheckOut(''); resetFeedback(); }}
-                className="h-10 px-2 border border-gray-300 rounded-xl text-sm"
+                className="h-10 px-2 border border-gray-500 rounded-xl text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-out" className="text-xs font-semibold text-gray-700">SALIDA</label>
               <input
-                id="booking-check-out" type="date" value={checkOut} min={checkIn || today}
+                id="booking-check-out" {...errorProps('checkOut')} type="date" value={checkOut} min={checkIn || today}
                 onChange={(e) => { setCheckOut(e.target.value); resetFeedback(); }}
-                className="h-10 px-2 border border-gray-300 rounded-xl text-sm"
+                className="h-10 px-2 border border-gray-500 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -155,9 +179,9 @@ export function Booking() {
           <div className="flex flex-col gap-1">
             <label htmlFor="booking-guests" className="text-xs font-semibold text-gray-700">HUÉSPEDES</label>
             <select
-              id="booking-guests" value={guests}
+              id="booking-guests" {...errorProps('guests')} value={guests}
               onChange={(e) => { setGuests(Number(e.target.value)); resetFeedback(); }}
-              className="h-10 px-3 border border-gray-300 rounded-xl text-sm"
+              className="h-10 px-3 border border-gray-500 rounded-xl text-sm"
             >
               {Array.from({ length: room.capacity }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{n} huésped{n === 1 ? '' : 'es'}</option>
@@ -165,20 +189,31 @@ export function Booking() {
             </select>
           </div>
 
-          {room.basePrice && nights > 0 && (
+          {room.breakfastPerGuestNight && <label><input type="checkbox" checked={withBreakfast} onChange={e => setBreakfastSelected(e.target.checked)} /> Incluir desayuno ({formatMoney(room.breakfastPerGuestNight.amount, currency)} por huésped y noche)</label>}
+          {canQuote && price.isFetching && <p role="status">Consultando el precio...</p>}
+          {price.isError && <p role="alert">
+            {price.error instanceof ApiError && price.error.problem?.code === 'UNSUPPORTED_PAYMENT_CURRENCY'
+              ? bookingErrorMessage(price.error)
+              : <>No se pudo cotizar la estancia. <button type="button" onClick={() => void price.refetch()}>Reintentar</button></>}
+          </p>}
+          {canQuote && room.basePrice && price.data && !price.isError && (
             <dl aria-label="Resumen de la reserva" className="flex flex-col gap-2 border-t border-gray-100 pt-4">
               <div className="flex justify-between text-sm text-gray-700">
                 <dt>{`${formatMoney(room.basePrice.amount, currency)} × ${nights} ${nights === 1 ? 'noche' : 'noches'}`}</dt>
               </div>
+              {withBreakfast && <>
+                <div className="flex justify-between"><dt>Alojamiento</dt><dd>{formatMoney(price.data.lodging, price.data.currency)}</dd></div>
+                <div className="flex justify-between"><dt>Desayuno</dt><dd>{formatMoney(price.data.breakfast, price.data.currency)}</dd></div>
+              </>}
               <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-200 pt-3">
                 <dt>Total</dt>
-                <dd>{formatMoney(totalAmount, currency)}</dd>
+                <dd>{formatMoney(price.data.total, price.data.currency)}</dd>
               </div>
             </dl>
           )}
 
-          <Button type="submit" variant="primary" size="lg" loading={createMutation.isPending}>Confirmar reserva</Button>
-          <p className="text-xs text-center text-gray-400">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
+          <Button type="submit" variant="primary" size="lg" disabled={canQuote && (!price.data || price.isFetching || price.isError)} loading={createMutation.isPending}>Confirmar reserva</Button>
+          <p className="text-xs text-center text-gray-600">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
         </form>
       )}
     </Shell>

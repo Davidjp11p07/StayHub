@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLegacyNavigate } from '../app/navigation';
+import { http } from '../api/http';
 
 interface HeaderProps {
   /** Defaults to router navigation. */
@@ -33,7 +34,26 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
   const onNavigate = navigateProp ?? routerNavigate;
   const { currentUser, logout, profileUnavailable, retryProfile, error, logoutFailed } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>();
+  const [photoRevision, setPhotoRevision] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const refresh = () => setPhotoRevision(value => value + 1);
+    window.addEventListener('stayhub:profile-photo-updated', refresh);
+    return () => window.removeEventListener('stayhub:profile-photo-updated', refresh);
+  }, []);
+  useEffect(() => {
+    const userId = currentUser?.id;
+    setPhotoUrl(undefined);
+    if (!userId) return;
+    const abort = new AbortController();
+    let objectUrl: string | undefined;
+    void http.get<Blob>(`/users/${userId}/profile/photo`, { responseType: 'blob', signal: abort.signal })
+      .then(({ data }) => { if (!abort.signal.aborted) { objectUrl = URL.createObjectURL(data); setPhotoUrl(objectUrl); } })
+      .catch(() => undefined);
+    return () => { abort.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [currentUser?.id, photoRevision]);
 
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -86,7 +106,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                 className="flex items-center gap-2 border border-gray-300 rounded-full px-3 py-1.5 hover:shadow-md transition-shadow"
               >
                 <div className="w-8 h-8 rounded-full bg-[#E31C5F] flex items-center justify-center text-white text-sm font-bold">
-                  {currentUser.name.charAt(0).toUpperCase()}
+                  {photoUrl ? <img src={photoUrl} alt="Foto de perfil" className="w-full h-full rounded-full object-cover" /> : currentUser.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-sm font-medium text-gray-800 hidden sm:block max-w-32 truncate">
                   {currentUser.name.split(' ')[0]}
@@ -102,6 +122,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                     <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.name}</p>
                     <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
                   </div>
+                  <a href="/profile" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</a>
                   <button
                     onClick={() => { setMenuOpen(false); onNavigate('bookings'); }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
@@ -114,6 +135,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                     </svg>
                     Mis reservas
                   </button>
+                  {currentUser.role === 'VERIFIER' && <a href="/verification" className="block px-4 py-2.5">Revisar inmuebles</a>}
                   {(currentUser.role === 'OWNER' || currentUser.role === 'ADMIN') && (
                     <a href={currentUser.role === 'ADMIN' ? '/admin/reports' : '/host/reports'} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Reportes</a>
                   )}
