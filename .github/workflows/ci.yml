@@ -92,6 +92,7 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - run: npm run prisma:reviews:generate
       - run: npm run lint:gateway
       - run: npm run typecheck:gateway
       - run: npm run test:gateway:coverage
