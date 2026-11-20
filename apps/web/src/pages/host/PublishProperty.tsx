@@ -1,3 +1,4 @@
+import { CoordinatePicker } from '../../components/host/CoordinatePicker';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -191,6 +192,11 @@ export function PublishProperty() {
                 <input inputMode="decimal" value={form.longitude} onChange={set('longitude')} placeholder="-74.0721" className={fieldClass(!!errors['location.longitude'])} />
               </FormField>
             </div>
+            <CoordinatePicker latitude={form.latitude} longitude={form.longitude} disabled={locked}
+              onSelect={(latitude, longitude) => {
+                setForm(current => current && ({ ...current, latitude, longitude }));
+                setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'location.latitude' && key !== 'location.longitude')));
+              }} />
           </fieldset>
 
           <fieldset disabled={locked} className="flex flex-col gap-3">
