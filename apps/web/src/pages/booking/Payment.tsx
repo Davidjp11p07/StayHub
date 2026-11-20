@@ -42,6 +42,10 @@ export function Payment() {
       <div className="flex justify-between"><dt>Habitación</dt><dd>{booking.roomName}</dd></div>
       <div className="flex justify-between"><dt>Fechas</dt><dd>{booking.checkIn} → {booking.checkOut}</dd></div>
       <div className="flex justify-between"><dt>Huéspedes</dt><dd>{booking.guests}</dd></div>
+      {booking.breakfastPerGuestNight && booking.breakfast && booking.lodging && <>
+        <div className="flex justify-between"><dt>Alojamiento</dt><dd>{formatMoney(booking.lodging.amount, booking.lodging.currency)}</dd></div>
+        <div className="flex justify-between"><dt>Desayuno</dt><dd>{formatMoney(booking.breakfast.amount, booking.breakfast.currency)}</dd></div>
+      </>}
       <div className="flex justify-between border-t border-gray-100 pt-2 text-base font-bold"><dt>Total</dt><dd>{formatMoney(booking.total.amount, booking.total.currency)}</dd></div>
     </dl>
     {booking.status === 'CONFIRMED' ? <div role="status" className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">

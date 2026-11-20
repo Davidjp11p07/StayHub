@@ -13,5 +13,9 @@ export class Money {
     if (!Number.isSafeInteger(quantity) || quantity <= 0) invalid('quantity');
     return new Money(this.cents * BigInt(quantity), this.currency);
   }
+  public add(other: Money): Money {
+    if (other.currency !== this.currency) invalid('money.currency');
+    return new Money(this.cents + other.cents, this.currency);
+  }
   public toString(): string { return `${this.cents / 100n}.${(this.cents % 100n).toString().padStart(2, '0')}`; }
 }

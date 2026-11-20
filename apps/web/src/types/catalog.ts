@@ -275,6 +275,8 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /** Request body of `POST /bookings`. `checkIn` is inclusive, `checkOut` exclusive. */
 export interface CreateBookingInput {
+  breakfastSelected?: boolean;
+  expectedPropertyVersion?: number;
   propertyId: string;
   roomId: string;
   checkIn: IsoDate;
@@ -283,6 +285,9 @@ export interface CreateBookingInput {
 }
 
 export interface Booking {
+  lodging?: BasePrice;
+  breakfast?: BasePrice;
+  breakfastPerGuestNight?: BasePrice;
   id: string;
   guestId: string;
   /** Present only when the requester is the property owner. */

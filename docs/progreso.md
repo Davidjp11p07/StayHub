@@ -226,3 +226,13 @@ Se adoptó la tarifa opcional por habitación, huésped y noche, expresada en la
 Chrome y Gateway verificaron en un borrador sintético guardar, recargar y retirar 12.000,50 COP conservando el precio de alojamiento de 90.000 COP. Pasaron 276 pruebas unitarias de Accommodations y 25 pruebas web focalizadas, lint y tipos de ambos componentes. La pila local queda activa. Prueba reproducible: node scripts/e2e-breakfast-catalog.mjs con NODE_EXTRA_CA_CERTS apuntando al certificado del gateway.
 
 Siguiente unidad: selección del huésped y cotización versionada en Bookings, persistencia del desglose y verificación de pago, devolución y reporte. Primer comando: Get-Content apps/bookings-service/src/application/create-booking/create-booking.use-case.ts. El cobro del desayuno aún está pendiente.
+
+## REQ-06 — Reserva, pago y reporte verificados en integración
+
+El huésped elige el desayuno antes de confirmar. POST /bookings/quote calcula alojamiento, desayuno y total por estancia. La confirmación contrasta la versión del catálogo, guarda las tarifas y totales y crea el trabajo de pago en la misma transacción. Repetir la clave devuelve la reserva incluso tras cambiar la tarifa y despublicar el inmueble. Se conservó la compatibilidad de los pedidos sin desayuno y se aplicó la migración aditiva 202611200004_breakfast_snapshot.
+
+Chrome, gateway y servicios locales: dos huéspedes, dos noches, 240.000 COP de alojamiento y 60.001 COP de desayuno. Total cobrado y reembolsado 300.001 COP, neto 0 en Reports LIVE. También se verificaron una noche/un huésped, exclusión del desayuno, fechas de cero noches y cero huéspedes rechazados, versión obsoleta y repetición con distinto contenido. Se corrigió la consulta de movimientos de Payments para reconocer la aprobación histórica si approvedAt es nulo.
+
+Pasaron las 346 pruebas web, 96 unitarias y 88 de contrato de Bookings, dos casos adicionales de importes, dos de Gateway y dos de regresión del reporte de Payments. Tipos y lint verificados. Pasarela de desarrollo simulada, servicios locales activos. Reproducible con STAYHUB_TEST_BROWSER=1 y el certificado local mediante node scripts/e2e-verifier-session.mjs.
+
+Siguiente unidad: REQ-01 + REQ-02, país, ciudad y coordenadas. Primer comando: rg -n "COUNTRY_PATTERN|parseLocation|LocationMap|longitude" apps/web/src apps/accommodations-service/src.

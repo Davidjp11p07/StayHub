@@ -55,7 +55,7 @@ describe('Booking flow — dates and total', () => {
     fill('ENTRADA', '2027-01-05');
     fill('SALIDA', '2027-01-08');
     // 3 nights × 145.00 USD = 435.00, with no service fee (contract).
-    expect(screen.getByText(/3 noche/)).toBeInTheDocument();
+    expect(await screen.findByText(/3 noche/)).toBeInTheDocument();
     expect(screen.getByText(/435/)).toBeInTheDocument();
     expect(screen.queryByText(/servicio/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText('HUÉSPEDES')).toHaveValue('1');
@@ -64,7 +64,7 @@ describe('Booking flow — dates and total', () => {
   it('validates required dates and a valid range before any booking request', async () => {
     let posts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.includes('/bookings')) posts += 1;
+      if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/bookings')) posts += 1;
     });
     renderBooking();
     await screen.findByRole('heading', { name: /Casa Azul/ });
@@ -100,9 +100,9 @@ describe('Booking flow — dates and total', () => {
     await screen.findByRole('heading', { name: /Villa Serena/ });
     fill('ENTRADA', '2027-02-01');
     fill('SALIDA', '2027-02-04'); // 3 nights
-    expect(screen.getByText(/585/)).toBeInTheDocument(); // 195 × 3 (room 1)
+    expect(await screen.findByText(/585/)).toBeInTheDocument(); // 195 × 3 (room 1)
     fireEvent.change(screen.getByLabelText('HABITACIÓN'), { target: { value: mockDb.property(PROPERTY_IDS.villa)!.rooms[1]!.id } });
-    expect(screen.getByText(/780/)).toBeInTheDocument(); // 260 × 3 (room 2)
+    expect(await screen.findByText(/780/)).toBeInTheDocument(); // 260 × 3 (room 2)
   });
 });
 
@@ -110,12 +110,13 @@ describe('Booking flow — confirmation', () => {
   it('creates the booking once and navigates to payment', async () => {
     let posts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.includes('/bookings')) posts += 1;
+      if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/bookings')) posts += 1;
     });
     renderBooking();
     await screen.findByRole('heading', { name: /Casa Azul Frente al Mar/ });
     fill('ENTRADA', '2027-01-05');
     fill('SALIDA', '2027-01-08');
+    await screen.findByText('Total');
     const confirm = screen.getByRole('button', { name: 'Confirmar reserva' });
     fireEvent.click(confirm);
     fireEvent.click(confirm); // double click must not create a second booking
@@ -132,6 +133,7 @@ describe('Booking flow — confirmation', () => {
     await screen.findByRole('heading', { name: /Casa Azul/ });
     fill('ENTRADA', '2026-12-12');
     fill('SALIDA', '2026-12-16');
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     expect(await screen.findByText('Esas fechas ya no están disponibles. Elige otras.')).toBeInTheDocument();
     expect(locationRef.current?.pathname).toBe(bookRoute(PROPERTY_IDS.casaAzul));
@@ -144,6 +146,7 @@ describe('Booking flow — confirmation', () => {
     await screen.findByRole('heading', { name: /Casa Azul/ });
     fill('ENTRADA', '2027-01-05');
     fill('SALIDA', '2027-01-08');
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     expect(await screen.findByText('Revisa las fechas y el número de huéspedes.')).toBeInTheDocument();
     expect(screen.getByLabelText('ENTRADA')).toHaveValue('2027-01-05');
@@ -155,6 +158,7 @@ describe('Booking flow — confirmation', () => {
     await screen.findByRole('heading', { name: /Casa Azul/ });
     fill('ENTRADA', '2027-04-01');
     fill('SALIDA', '2027-04-03');
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     expect(await screen.findByText('No pudimos completar la reserva. Intenta nuevamente.')).toBeInTheDocument();
     expect(screen.getByLabelText('ENTRADA')).toHaveValue('2027-04-01');
@@ -166,8 +170,10 @@ describe('Booking flow — confirmation', () => {
     renderBooking();
     await screen.findByRole('heading', { name: /Casa Azul/ });
     fill('ENTRADA', '2027-04-01'); fill('SALIDA', '2027-04-03');
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     await screen.findByText('No pudimos completar la reserva. Intenta nuevamente.');
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[0]).toBeTruthy();
@@ -180,7 +186,6 @@ describe('Booking flow — confirmation', () => {
     await screen.findByRole('heading', { name: /Casa Azul/ });
     fill('ENTRADA', '2027-03-01');
     fill('SALIDA', '2027-03-04');
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     await waitFor(() => expect(locationRef.current?.pathname).toBe('/login'));
     expect(locationRef.current?.state).toMatchObject({ from: bookRoute(PROPERTY_IDS.casaAzul) });
   });

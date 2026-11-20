@@ -4,15 +4,20 @@ import type { Money } from '@bookings/domain/money/money';
 import type { StayPeriod } from './stay-period';
 import { canTransition, type BookingStatus } from './booking-status';
 export interface BookingSnapshot { propertyId: string; roomId: string; ownerId: string; propertyName: string; roomName: string; capacity: number; propertyVersion: number; roomUpdatedAt: Date; }
-export interface NewBooking { id?: string; guestId: string; guests: number; period: StayPeriod; nightlyPrice: Money; snapshot: BookingSnapshot; holdExpiresAt: Date; }
+export interface NewBooking { id?: string; guestId: string; guests: number; period: StayPeriod; nightlyPrice: Money; breakfastUnitPrice?: Money; snapshot: BookingSnapshot; holdExpiresAt: Date; }
 export class Booking {
   public status: BookingStatus = 'PENDING_PAYMENT'; public paymentOrderId: string | null = null;
   public readonly id: string; public readonly total: Money;
+  public readonly lodging: Money;
+  public readonly breakfast: Money | undefined;
   public constructor(public readonly data: NewBooking) {
     this.id = data.id ?? randomUUID();
     if (!Number.isSafeInteger(data.guests) || data.guests < 1 || data.guests > data.snapshot.capacity) invalid('guests');
     if (data.holdExpiresAt.getTime() <= Date.now()) invalid('holdExpiresAt');
-    this.total = data.nightlyPrice.multiply(data.period.nights);
+    this.lodging = data.nightlyPrice.multiply(data.period.nights);
+    this.breakfast = data.breakfastUnitPrice?.multiply(data.guests).multiply(data.period.nights);
+    this.total = this.breakfast ? this.lodging.add(this.breakfast) : this.lodging;
+    if (this.total.toString().split('.')[0]!.length > 10) invalid('total');
   }
   public transition(to: BookingStatus): void { if (!canTransition(this.status, to)) throw new DomainError('STATE_CONFLICT'); this.status = to; }
 }

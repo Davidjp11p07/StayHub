@@ -38,6 +38,28 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /bookings/quote:
+    post:
+      operationId: previewBookingPrice
+      summary: Cotizar una estancia sin crear una reserva
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateBooking' } } }
+      responses:
+        '200':
+          description: Desglose calculado por Bookings y versión del alojamiento para confirmar.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [propertyVersion, currency, lodging, breakfast, total]
+                properties:
+                  propertyVersion: { type: integer, minimum: 1 }
+                  currency: { type: string }
+                  lodging: { type: string }
+                  breakfast: { type: string }
+                  total: { type: string }
+        '409': { $ref: '#/components/responses/Problem' }
   /bookings:
     post:
       operationId: createBooking
@@ -186,6 +208,8 @@ components:
         checkIn: { type: string, format: date, description: Inicio inclusivo. }
         checkOut: { type: string, format: date, description: Fin exclusivo. }
         guests: { type: integer, minimum: 1 }
+        breakfastSelected: { type: boolean, default: false }
+        expectedPropertyVersion: { type: integer, minimum: 1, description: Required to confirm a paid breakfast selection. }
     BookingStatus:
       type: string
       enum: [PENDING_PAYMENT, CONFIRMED, CHECKED_IN, COMPLETED, PAYMENT_FAILED, EXPIRED, CANCELLED_BY_GUEST, CANCELLED_BY_OWNER]
@@ -214,6 +238,9 @@ components:
         checkOut: { type: string, format: date }
         guests: { type: integer, minimum: 1 }
         nights: { type: integer, minimum: 1 }
+        breakfastPerGuestNight: { $ref: '#/components/schemas/Money' }
+        breakfast: { $ref: '#/components/schemas/Money' }
+        lodging: { $ref: '#/components/schemas/Money' }
         nightlyPrice: { $ref: '#/components/schemas/Money' }
         total: { $ref: '#/components/schemas/Money' }
         status: { $ref: '#/components/schemas/BookingStatus' }

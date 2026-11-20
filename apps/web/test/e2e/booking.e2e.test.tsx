@@ -80,6 +80,7 @@ async function reachPayment(propertyId: string, checkIn: string, checkOut: strin
   await screen.findByLabelText('ENTRADA');
   fireEvent.change(screen.getByLabelText('ENTRADA'), { target: { value: checkIn } });
   fireEvent.change(screen.getByLabelText('SALIDA'), { target: { value: checkOut } });
+  await screen.findByText('Total');
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
   await waitFor(() => expect(locationRef.current?.pathname).toMatch(/\/booking\/.+\/pay/));
   const id = /\/booking\/([^/]+)\/pay/.exec(locationRef.current!.pathname)![1]!;
@@ -104,10 +105,11 @@ describe('guest happy path (RQ-07)', () => {
     fireEvent.change(screen.getByLabelText('SALIDA'), { target: { value: '2027-06-13' } });
 
     // Summary and total (precio × noches, no extra fees) before confirming.
-    const summary = screen.getByLabelText('Resumen de la reserva');
+    const summary = await screen.findByLabelText('Resumen de la reserva');
     expect(within(summary).getByText(/3 noches/)).toBeInTheDocument();
     expect(within(summary).getByText('Total')).toBeInTheDocument();
 
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
     await waitFor(() => expect(locationRef.current?.pathname).toMatch(/\/booking\/.+\/pay/));
     const id = /\/booking\/([^/]+)\/pay/.exec(locationRef.current!.pathname)![1]!;
@@ -154,6 +156,7 @@ describe('availability conflict (RQ-07)', () => {
     await screen.findByLabelText('ENTRADA');
     fireEvent.change(screen.getByLabelText('ENTRADA'), { target: { value: '2026-12-11' } });
     fireEvent.change(screen.getByLabelText('SALIDA'), { target: { value: '2026-12-13' } });
+    await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
 
     expect(await screen.findByText('Esas fechas ya no están disponibles. Elige otras.')).toBeInTheDocument();

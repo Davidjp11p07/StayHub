@@ -376,6 +376,19 @@ const BOOKING_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9._:-]{16,128}$/;
 const BLOCKING_STATUSES = new Set(['PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN']);
 
+const bookingQuoteHandler = http.post(`${API}/bookings/quote`, async ({ request }) => {
+  if (!authenticate(request).caller) return problem(401, 'UNAUTHORIZED');
+  const input = await request.json() as CreateBookingInput;
+  const property = mockDb.property(input.propertyId);
+  const room = property?.rooms.find(r => r.id === input.roomId);
+  if (!property || !room?.basePrice) return problem(404, 'NOT_FOUND');
+  const nights = (Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86400000;
+  const lodging = Math.round(Number(room.basePrice.amount) * 100) * nights;
+  const breakfast = input.breakfastSelected ? Math.round(Number(room.breakfastPerGuestNight?.amount ?? 0) * 100) * input.guests * nights : 0;
+  return HttpResponse.json({ lodging: (lodging / 100).toFixed(2), breakfast: (breakfast / 100).toFixed(2),
+    total: ((lodging + breakfast) / 100).toFixed(2), currency: room.basePrice.currency, propertyVersion: property.version });
+});
+
 const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) => {
   const auth = authenticate(request);
   if (!auth.caller) return problem(401, 'UNAUTHORIZED');
@@ -386,7 +399,7 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   const body = await request.json().catch(() => undefined);
   if (!isObject(body)) return invalid('body');
-  const allowed = ['propertyId', 'roomId', 'checkIn', 'checkOut', 'guests'];
+  const allowed = ['propertyId', 'roomId', 'checkIn', 'checkOut', 'guests', 'breakfastSelected', 'expectedPropertyVersion'];
   const errors = Object.keys(body).filter((k) => !allowed.includes(k));
   if (typeof body.propertyId !== 'string' || !UUID.test(body.propertyId)) errors.push('propertyId');
   if (typeof body.roomId !== 'string' || !UUID.test(body.roomId)) errors.push('roomId');
@@ -400,7 +413,7 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   // Idempotent replay per (guest, key): same command → same booking; different command → conflict.
   const ledgerId = `${caller.sub}|${key}`;
-  const hash = JSON.stringify([input.propertyId, input.roomId, input.checkIn, input.checkOut, input.guests]);
+  const hash = JSON.stringify([input.propertyId, input.roomId, input.checkIn, input.checkOut, input.guests, input.breakfastSelected ?? false, input.expectedPropertyVersion]);
   const prior = bookingIdempotency.get(ledgerId);
   if (prior) {
     if (prior.hash !== hash) return problem(409, 'IDEMPOTENCY_CONFLICT');
@@ -418,12 +431,18 @@ const createBookingHandler = http.post(`${API}/bookings`, async ({ request }) =>
 
   const nights = Math.round((Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86_400_000);
   const now = new Date();
+  if ((input.expectedPropertyVersion !== undefined && input.expectedPropertyVersion !== property.version) ||
+      (input.breakfastSelected && (!room.breakfastPerGuestNight || !input.expectedPropertyVersion))) return problem(409, 'ACCOMMODATION_CONFLICT');
+  const breakfast = input.breakfastSelected ? Number(room.breakfastPerGuestNight?.amount) * input.guests * nights : 0;
   const booking: Booking = {
     id: crypto.randomUUID(), guestId: caller.sub, ownerId: property.ownerId,
     propertyId: property.id, roomId: room.id, propertyName: property.name, roomName: room.name,
     checkIn: input.checkIn, checkOut: input.checkOut, guests: input.guests, nights,
     nightlyPrice: { amount: room.basePrice.amount, currency: room.basePrice.currency },
-    total: { amount: (Number(room.basePrice.amount) * nights).toFixed(2), currency: room.basePrice.currency },
+    lodging: { amount: (Number(room.basePrice.amount) * nights).toFixed(2), currency: room.basePrice.currency },
+    breakfast: { amount: breakfast.toFixed(2), currency: room.basePrice.currency },
+    ...(input.breakfastSelected && room.breakfastPerGuestNight ? { breakfastPerGuestNight: room.breakfastPerGuestNight } : {}),
+    total: { amount: (Number(room.basePrice.amount) * nights + breakfast).toFixed(2), currency: room.basePrice.currency },
     status: 'PENDING_PAYMENT', paymentStatus: 'NOT_STARTED', paymentOrderId: null,
     holdExpiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
     cancellationReason: null, createdAt: now.toISOString(), updatedAt: now.toISOString(),
@@ -625,6 +644,7 @@ export const handlers = [
   submitVerificationHandler,
   uploadPhotoHandler,
   myPropertiesHandler,
+  bookingQuoteHandler,
   createBookingHandler,
   cancelBookingHandler,
   bookingHistoryHandler,

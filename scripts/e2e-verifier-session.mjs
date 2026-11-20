@@ -43,7 +43,7 @@ assert.equal(ownerLogin.status, 200);
 const owner = { authorization: `Bearer ${(await ownerLogin.json()).accessToken}` };
 const draft = {
   type: 'HOUSE', name: `Revisión ${randomUUID()}`, location: { addressLine: 'Calle 1', city: 'Bogota', region: 'Cundinamarca', country: 'CO' },
-  rooms: [{ name: 'Habitación', capacity: 2, basePrice: { amount: '120000.00', currency: 'COP' } }],
+  rooms: [{ name: 'Habitación', capacity: 2, basePrice: { amount: '120000.00', currency: 'COP' }, breakfastPerGuestNight: { amount: '15000.25', currency: 'COP' } }],
 };
 const created = await post('/properties', draft, owner);
 assert.equal(created.status, 201);
@@ -54,8 +54,8 @@ form.append('file', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAA
 assert.equal((await fetch(base + path + '/photos', { method: 'POST', headers: owner, body: form })).status, 201);
 const submit = version => post(path + '/verification', { version }, owner);
 const decision = (version, status, actor) => post(path + '/verification/decision', { version, status, reason: 'Revisión de evidencia sintética' }, actor);
-const edit = (version, status) => fetch(base + path, { method: 'PUT', headers: { ...owner, 'content-type': 'application/json' },
-  body: JSON.stringify({ ...draft, featureCodes: [], rooms: property.rooms, version, status }) });
+const edit = (version, status, rooms = property.rooms) => fetch(base + path, { method: 'PUT', headers: { ...owner, 'content-type': 'application/json' },
+  body: JSON.stringify({ ...draft, featureCodes: [], rooms, version, status }) });
 assert.equal((await edit(property.version, 'PUBLISHED')).status, 403);
 const guestCredentials = { email: `review-guest-${randomUUID()}@stayhub.test`, password: `Test-${randomUUID()}` };
 assert.equal((await post('/auth/register', { name: 'Huesped de prueba', ...guestCredentials, role: 'GUEST' }, { 'idempotency-key': randomUUID() })).status, 201);
@@ -122,10 +122,61 @@ assert.ok(history.every(row => row.reviewerId === user.userId && row.reason && r
 console.log('Propiedad sintética: publicación directa denegada, rechazo, corrección, aprobación idempotente y dos decisiones trazables.');
 
 await checkSearch(true);
-const reservation = await book(120);
+const stay = { propertyId: property.id, roomId: property.rooms[0].id, checkIn: date(120), checkOut: date(122), guests: 2 };
+async function preview(input) {
+  const response = await post('/bookings/quote', input, guest);
+  assert.equal(response.status, 200);
+  return response.json();
+}
+assert.equal((await preview({ ...stay, guests: 1, checkOut: date(121), breakfastSelected: true })).total, '135000.25');
+assert.equal((await preview(stay)).breakfast, '0.00');
+assert.equal((await post('/bookings/quote', { ...stay, guests: 0 }, guest)).status, 400);
+assert.equal((await post('/bookings/quote', { ...stay, checkOut: stay.checkIn }, guest)).status, 400);
+const priced = await preview({ ...stay, breakfastSelected: true });
+assert.deepEqual(priced, { propertyVersion: version + 1, currency: 'COP', lodging: '240000.00', breakfast: '60001.00', total: '300001.00' });
+const command = { ...stay, breakfastSelected: true, expectedPropertyVersion: priced.propertyVersion };
+const orderHeaders = { ...guest, 'idempotency-key': randomUUID() };
+assert.equal((await post('/bookings', { ...command, expectedPropertyVersion: version }, orderHeaders)).status, 409);
+if (process.env.STAYHUB_TEST_BROWSER === '1') {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage({ ignoreHTTPSErrors: true });
+    const web = process.env.STAYHUB_WEB_URL || 'http://localhost:5173';
+    await page.goto(web + '/login');
+    await page.locator('#email').fill(guestCredentials.email);
+    await page.locator('#password').fill(guestCredentials.password);
+    await page.locator('form button[type=submit]').click();
+    await page.waitForURL(url => url.pathname !== '/login');
+    await page.goto(web + '/property/' + property.id + '/book');
+    await page.locator('#booking-check-in').fill(stay.checkIn);
+    await page.locator('#booking-check-out').fill(stay.checkOut);
+    await page.locator('#booking-guests').selectOption('2');
+    await page.getByRole('checkbox', { name: /Incluir desayuno/ }).check();
+    await page.getByText('Desayuno', { exact: true }).waitFor();
+    const created = page.waitForResponse(res => res.request().method() === 'POST' && new URL(res.url()).pathname.endsWith('/bookings'));
+    await page.getByRole('button', { name: 'Confirmar reserva' }).click();
+    const response = await created;
+    assert.equal(response.status(), 201);
+    orderHeaders['idempotency-key'] = await response.request().headerValue('idempotency-key');
+    await page.waitForURL(url => url.pathname.endsWith('/pay'));
+    await page.getByText('Desayuno', { exact: true }).waitFor();
+    console.log('Chrome: elección del desayuno y desglose de la reserva en pago.');
+  } finally { await browser.close(); }
+}
+const reservation = await post('/bookings', command, orderHeaders);
 assert.equal(reservation.status, 201);
 const booking = await reservation.json();
-assert.equal((await edit(version + 1, 'UNPUBLISHED')).status, 200);
+assert.equal(booking.total.amount, priced.total);
+assert.equal(booking.breakfastPerGuestNight.amount, '15000.25');
+assert.equal(booking.breakfast.amount, priced.breakfast);
+assert.equal(booking.lodging.amount, priced.lodging);
+const newRates = property.rooms.map(room => ({ ...room, breakfastPerGuestNight: { amount: '21000.00', currency: 'COP' } }));
+assert.equal((await edit(version + 1, 'UNPUBLISHED', newRates)).status, 200);
+const replay = await post('/bookings', command, orderHeaders);
+assert.equal(replay.status, 201);
+assert.equal((await replay.json()).id, booking.id);
+assert.equal((await post('/bookings', { ...command, breakfastSelected: false }, orderHeaders)).status, 409);
 await checkSearch(false);
 assert.equal((await book(122)).status, 404);
 const prior = await fetch(base + '/bookings/' + booking.id, { headers: guest });
@@ -133,3 +184,22 @@ assert.equal(prior.status, 200);
 assert.equal((await prior.json()).id, booking.id);
 assert.equal((await fetch(base + '/bookings/' + booking.id, { method: 'DELETE', headers: guest })).ok, true);
 console.log('Search, nuevas reservas y consulta de la reserva anterior verificados tras despublicar.');
+
+for (let i = 0; i < 60; i++) {
+  const response = await fetch(base + '/bookings/' + booking.id, { headers: guest });
+  const current = await response.json();
+  if (current.paymentStatus === 'REFUNDED') {
+    assert.equal(current.total.amount, priced.total);
+    break;
+  }
+  assert.ok(i < 59, 'Tiempo agotado esperando el reembolso');
+  await new Promise(resolve => setTimeout(resolve, 500));
+}
+const reportQuery = new URLSearchParams({ propertyId: property.id, from: date(-1), to: date(1), group: 'day' });
+const financial = await fetch(base + '/reports/owner/' + property.ownerId + '?' + reportQuery, { headers: owner });
+assert.equal(financial.status, 200);
+const reportData = await financial.json();
+assert.equal(reportData.source, 'LIVE');
+const movement = reportData.metrics.revenue.find(row => row.currency === 'COP');
+assert.deepEqual(movement, { currency: 'COP', chargedMinor: '30000100', refundedMinor: '30000100', netMinor: '0' });
+console.log('Desayuno: 240000.00 + 60001.00 COP. Cobro, reembolso y reporte LIVE conciliados.');

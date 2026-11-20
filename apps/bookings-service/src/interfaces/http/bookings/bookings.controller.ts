@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Optional, Param, Post, Query, Req, ServiceUnavailableException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Headers, Optional, Param, Post, Query, Req, ServiceUnavailableException, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CreateBookingUseCase } from '@bookings/application/create-booking/create-booking.use-case';
+import { CreateBookingUseCase, type BookingPricePreview } from '@bookings/application/create-booking/create-booking.use-case';
 import { GetBookingUseCase } from '@bookings/application/get-booking/get-booking.use-case';
 import { CancelGuestBookingUseCase } from '@bookings/application/cancel-booking/cancel-guest-booking.use-case';
 import { CancelOwnerBookingUseCase } from '@bookings/application/cancel-booking/cancel-owner-booking.use-case';
@@ -34,10 +34,16 @@ export class BookingsController {
     return presentBookingPage(page, { role: 'GUEST', sub: principal.sub });
   }
 
+  @Post('quote') @HttpCode(200)
+  public preview(@Body() body: CreateBookingDto, @Req() request: AuthenticatedRequest & { traceId?: string }): Promise<BookingPricePreview> {
+    if (request.principal?.role !== 'GUEST') throw new ForbiddenException('GUEST role required');
+    return this.createBooking.preview({ ...body, guestId: request.principal.sub, ...(request.traceId ? { traceId: request.traceId } : {}) });
+  }
+
   @Post() @ApiOperation({ summary: 'Create an idempotent pending booking' }) @ApiHeader({ name: 'Idempotency-Key', required: true }) @ApiCreatedResponse({ description: 'Booking created or replayed' })
   public async create(@Body() body: CreateBookingDto, @Headers('idempotency-key') key: string | undefined, @Req() request: AuthenticatedRequest & { traceId?: string }): Promise<BookingView> {
     if (request.principal?.role !== 'GUEST') throw new ForbiddenException('GUEST role required');
-    const booking = await this.createBooking.execute({ guestId: request.principal.sub, propertyId: body.propertyId, roomId: body.roomId, checkIn: body.checkIn, checkOut: body.checkOut, guests: body.guests, idempotencyKey: assertIdempotencyKey(key), ...(request.traceId ? { traceId: request.traceId } : {}) });
+    const booking = await this.createBooking.execute({ guestId: request.principal.sub, ...body, idempotencyKey: assertIdempotencyKey(key), ...(request.traceId ? { traceId: request.traceId } : {}) });
     return presentBooking(booking);
   }
 
