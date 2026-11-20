@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { chromium } from 'playwright';
+import { launchTestChrome } from './verify-https-proxy.mjs';
 
 export async function verifyOwnerReport({ base, property, ownerCredentials, guest, post, date }) {
   const stay = { checkIn: date(5), checkOut: date(7), guests: 2 };
@@ -19,7 +19,7 @@ export async function verifyOwnerReport({ base, property, ownerCredentials, gues
       assert.ok(attempt < 59, 'La reserva no se confirmó');
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    browser = await chromium.launch({ channel: 'chrome' });
+    browser = await launchTestChrome();
     const page = await browser.newPage({ baseURL: process.env.STAYHUB_WEB_URL || 'http://localhost:5173' });
     await page.goto('/login');
     await page.locator('#email').fill(ownerCredentials.email);

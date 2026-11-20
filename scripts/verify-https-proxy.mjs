@@ -1,14 +1,20 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { createHash, X509Certificate } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
-export async function verifyHttpsProxy({ origin, credentials, propertyId }) {
-  assert.equal(new URL(origin).protocol, 'https:');
+export function launchTestChrome() {
+  if (!process.env.STAYHUB_TEST_PROXY_CERT) return chromium.launch({ channel: 'chrome' });
   const certificate = new X509Certificate(readFileSync(process.env.STAYHUB_TEST_PROXY_CERT));
   const spki = certificate.publicKey.export({ type: 'spki', format: 'der' });
   const pin = createHash('sha256').update(spki).digest('base64');
-  const browser = await chromium.launch({ channel: 'chrome', args: ['--ignore-certificate-errors-spki-list=' + pin] });
+  return chromium.launch({ channel: 'chrome', args: ['--ignore-certificate-errors-spki-list=' + pin] });
+}
+
+export async function verifyHttpsProxy({ origin, credentials, propertyId }) {
+  assert.equal(new URL(origin).protocol, 'https:');
+  assert.ok(process.env.STAYHUB_TEST_PROXY_CERT, 'Falta el certificado del proxy de prueba');
+  const browser = await launchTestChrome();
   try {
     const page = await browser.newPage({ baseURL: origin });
     const path = '/property/' + propertyId;
