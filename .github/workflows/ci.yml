@@ -161,7 +161,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: bookings_test
+          POSTGRES_DB: bookings_db
           POSTGRES_USER: bookings_test
           POSTGRES_PASSWORD: bookings_test
         ports: ['5432:5432']
@@ -169,8 +169,8 @@ jobs:
           --health-cmd "pg_isready -U bookings_test -d bookings_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      BOOKINGS_DATABASE_URL: postgresql://bookings_test:bookings_test@localhost:5432/bookings_test?schema=public
-      BOOKINGS_TEST_DATABASE_URL: postgresql://bookings_test:bookings_test@localhost:5432/bookings_test?schema=public
+      BOOKINGS_DATABASE_URL: postgresql://bookings_test:bookings_test@localhost:5432/bookings_db?schema=public
+      BOOKINGS_TEST_DATABASE_URL: postgresql://bookings_test:bookings_test@localhost:5432/bookings_db?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -199,7 +199,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: reviews_test
+          POSTGRES_DB: reviews_db
           POSTGRES_USER: reviews_test
           POSTGRES_PASSWORD: reviews_test
         ports: ['5432:5432']
@@ -207,8 +207,8 @@ jobs:
           --health-cmd "pg_isready -U reviews_test -d reviews_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      REVIEWS_DATABASE_URL: postgresql://reviews_test:reviews_test@localhost:5432/reviews_test?schema=public
-      REVIEWS_TEST_DATABASE_URL: postgresql://reviews_test:reviews_test@localhost:5432/reviews_test?schema=public
+      REVIEWS_DATABASE_URL: postgresql://reviews_test:reviews_test@localhost:5432/reviews_db?schema=public
+      REVIEWS_TEST_DATABASE_URL: postgresql://reviews_test:reviews_test@localhost:5432/reviews_db?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
