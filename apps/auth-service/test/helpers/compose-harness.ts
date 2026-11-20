@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { parse } from 'yaml';
 
 export type ContainerEngine = 'docker' | 'podman';
 
@@ -149,9 +150,22 @@ export function buildRuntimeImage(engine: ContainerEngine, environment: TestCont
 }
 
 export function composeUp(engine: ContainerEngine, environment: TestContainerEnvironment, repoRoot: string): CommandResult {
+  const platform = parse(readFileSync(join(repoRoot, 'docker-compose.yml'), 'utf8')) as {
+    services: Record<string, unknown>;
+    networks: Record<string, unknown>;
+    volumes: Record<string, unknown>;
+  };
+  const services = ['auth-db', 'auth-redis', 'auth-migrate', 'auth-service'];
+  const networks = ['stayhub-internal', 'services'];
+  const model = {
+    services: Object.fromEntries(services.map(name => [name, platform.services[name]])),
+    networks: Object.fromEntries(networks.map(name => [name, platform.networks[name]])),
+    volumes: { 'auth-db-data': platform.volumes['auth-db-data'] },
+  };
+  writeFileSync(join(environment.directory, 'compose.json'), JSON.stringify(model));
   return compose(
     engine,
-    ['-p', environment.project, '-f', 'docker-compose.yml', 'up', '-d', '--build'],
+    ['-p', environment.project, '--project-directory', repoRoot, '-f', join(environment.directory, 'compose.json'), 'up', '-d', '--build'],
     { cwd: repoRoot, env: composeEnv(environment), timeoutMs: 900_000 },
   );
 }
@@ -159,7 +173,7 @@ export function composeUp(engine: ContainerEngine, environment: TestContainerEnv
 export function composeDown(engine: ContainerEngine, environment: TestContainerEnvironment, repoRoot: string): CommandResult {
   return compose(
     engine,
-    ['-p', environment.project, '-f', 'docker-compose.yml', 'down', '-v', '--remove-orphans'],
+    ['-p', environment.project, '--project-directory', repoRoot, '-f', join(environment.directory, 'compose.json'), 'down', '-v', '--remove-orphans'],
     { cwd: repoRoot, env: composeEnv(environment), timeoutMs: 180_000 },
   );
 }

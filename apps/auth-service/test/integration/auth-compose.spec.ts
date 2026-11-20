@@ -107,7 +107,7 @@ describe('Auth container verification (AUTH-082)', () => {
     expect(document.services['auth-db']?.ports).toBeUndefined();
     expect(document.services['auth-redis']?.ports).toBeUndefined();
     expect(document.services['auth-service']?.ports).toBeUndefined();
-    expect(document.networks['auth-internal']?.internal).toBe(true);
+    expect(document.networks['stayhub-internal']?.internal).toBe(true);
     expect(document.networks['services']?.internal).toBe(true);
     expect(document.services['auth-service']?.restart).toBe('always');
     expect(document.services['auth-service']?.depends_on?.['auth-migrate']?.condition).toBe(

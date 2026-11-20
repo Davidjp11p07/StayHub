@@ -18,6 +18,7 @@ services:
   reports-service:
     build: {context: ., dockerfile: infra/docker/reports/Dockerfile, target: runtime}
     env_file: .artifacts/reports-demo/reports.env
+    user: '${REPORTS_DEMO_UID:-1000}'
     secrets: [source_public, source_private]
     networks: [reports]
     ports: ['127.0.0.1:3011:3011']
