@@ -282,3 +282,16 @@ P1-E. El seed acepta un destino del catálogo y conserva Leticia por defecto. Ar
 Madrid. Bookings usa la lista de monedas de Payments antes de persistir una reserva. Gateway local: cotización y alta de Madrid devolvieron 409 ACCOMMODATION_CONFLICT; historial del huésped estable en una reserva. La reserva anterior quedó CANCELLED_BY_OWNER por la API. Tres pruebas unitarias y typecheck correctos.
 
 Madrid. Bookings distingue UNSUPPORTED_PAYMENT_CURRENCY (409) de un cambio de oferta. Chrome con el huésped demo confirmó el aviso y el botón de confirmación deshabilitado al cotizar en EUR. Pasaron 15 pruebas del formulario, 3 del caso de uso y typecheck web.
+## Compose efectivo de integración local
+
+El 20 de noviembre de 2026 se validó con `docker compose config --quiet` el proyecto `stayhub-integracion-local`. La comparación usó los siguientes archivos en orden.
+
+| Archivos acumulados | Servicios | Diferencia observada |
+| --- | ---: | --- |
+| `docker-compose.yml` | 33 | Incluye base, migración y servicio de inventario. |
+| Más `docker-compose.reports.integration.yml` | 36 | Añade base, migración y servicio Reports. Amplía entorno y secretos de Accommodations, Bookings y Payments, y entorno y dependencias del Gateway. |
+| Más `.artifacts/compose-local-ports.yml` | 36 | Cambia el entorno de Accommodations y Gateway, y los puertos, redes y acceso al host del Gateway. |
+
+El modelo completo declara 14 redes, 11 volúmenes nombrados y 39 secretos respaldados por archivos. Los 39 archivos existían en el host. Los únicos puertos publicados por Compose eran Gateway en `127.0.0.1:18080` hacia 8080 y Reports en `127.0.0.1:3011` hacia 3011. El frontend Vite de 5173 se ejecuta fuera de este modelo. El archivo local de puertos y `.env` están ignorados por Git. Falta demostrar su reproducción desde una instalación aislada.
+
+Los 36 contenedores estaban presentes. Los 26 persistentes estaban saludables y los 10 de migración habían terminado con código 0. Se compararon las huellas del modelo efectivo con las etiquetas de creación de los contenedores. Coincidieron 35. La huella distinta corresponde a `rabbitmq` (bus de Search). Coincidían la referencia de imagen y los valores de entorno declarados. El contenedor estaba conectado a las redes de Search y carecía de puertos publicados. El origen de la diferencia sigue abierto. La comprobación fue de lectura y no ejercitó tráfico entre servicios.
