@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Header, HttpException, Param, ParseUUIDPipe, Patch, Query, Req, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Header, HttpException, Param, ParseUUIDPipe, Patch, Query, Req, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 import { principalFrom } from '../auth/access.guard';
 
@@ -11,7 +11,7 @@ export class GuestNotificationsController {
     if (!principal) throw new UnauthorizedException();
     const query = new URLSearchParams({ limit: '20' });
     if (cursor) query.set('cursor', cursor);
-    return this.forward(request, 'GET', '/user/' + encodeURIComponent(principal.userId) + '?' + query);
+    return this.forward(request, 'GET', '/user/' + encodeURIComponent(principal.userId) + '?' + query.toString());
   }
 
   @Patch(':id/read')

@@ -1,5 +1,6 @@
 type Item = { name?: unknown; location?: unknown; capacity?: unknown; minNightlyPrice?: unknown; currency?: unknown; amenities?: unknown };
 export interface CatalogExplanationData {
+  outOfScope?: boolean;
   total?: number;
   filterSource?: 'text' | 'ollama' | 'global';
   filters?: Record<string, unknown>;

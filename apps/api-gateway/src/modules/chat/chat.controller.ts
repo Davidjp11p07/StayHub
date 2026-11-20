@@ -35,6 +35,7 @@ export class ChatController {
     let explanation = '';
     try {
       const data = JSON.parse(catalog) as CatalogExplanationData;
+      if (data.outOfScope) return { reply: 'Puedo ayudarte con alojamientos, reservas y el uso de StayHub. ¿Qué te gustaría consultar?' };
       const filters = data.filters ?? {};
       explanation = explainCatalog(data);
       if (filters.missingCurrency === true) {

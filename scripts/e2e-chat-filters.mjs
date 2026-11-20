@@ -30,6 +30,29 @@ try {
   }
   await page.locator('#stayhub-chat p').filter({ hasText: items[0].name }).first().waitFor();
   console.log('Chrome y Search coincidieron en filtros, total y tarifas de ' + total + ' resultados.');
+  async function ask(message) {
+    await input.fill(message);
+    const pending = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/chat') && r.request().method() === 'POST', { timeout: 190000 });
+    await page.getByRole('button', { name: 'Enviar' }).click();
+    const result = await pending;
+    assert.equal(result.status(), 201);
+    const answer = await result.json();
+    await page.locator('#stayhub-chat p').filter({ hasText: answer.reply.slice(0, 40) }).last().waitFor();
+    return answer;
+  }
+  filters.set('guests', '8');
+  filters.set('maxPrice', '200000');
+  const revised = await page.request.get('/api/v1/search?' + filters);
+  assert.equal(revised.status(), 200);
+  const expected = await revised.json();
+  const followup = await ask('¿Y para 8 personas con máximo 200000 COP?');
+  for (const term of ['ubicación: Bogotá', 'fechas: ' + checkIn + ' a ' + checkOut, 'huéspedes: 8', 'precio máximo: 200000 COP', 'servicios: wifi', 'Resultados recuperados: ' + expected.total + '.']) {
+    assert.ok(followup.explanation?.toLowerCase().includes(term.toLowerCase()), 'Seguimiento: ' + term + '. ' + followup.explanation);
+  }
+  const unrelated = await ask('¿Cómo se forma una estrella de neutrones?');
+  assert.match(unrelated.reply, /StayHub/);
+  assert.equal(unrelated.explanation, undefined);
+  console.log('Seguimiento contrastado con Search; pregunta de astronomía redirigida a StayHub.');
   if (process.env.STAYHUB_TEST_OFFLINE_CHAT === '1') {
     await page.route('**/api/v1/chat', async route => {
       const actual = await page.request.post('https://127.0.0.1:18443/api/v1/chat', { data: route.request().postDataJSON() });

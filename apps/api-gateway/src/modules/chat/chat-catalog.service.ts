@@ -22,7 +22,8 @@ export class ChatCatalogService {
     const conversation = [...history.filter(turn => turn.startsWith('Usuario: ')).map(turn => turn.slice(9)), message].join('\n');
     const explicitCity = simpleCityCount(message);
     const globalCount = isGlobalCount(message, history);
-    const filters: SearchFilters = globalCount ? {} : explicitCity ? placeFilters(explicitCity) : await this.extractFilters(conversation);
+    const filters: SearchFilters | null = globalCount ? {} : explicitCity ? placeFilters(explicitCity) : await this.extractFilters(conversation);
+    if (filters === null) return JSON.stringify({ outOfScope: true });
     if (isCountQuestion(message) && !/\b(?:llamad[oa]s?|nombre)\b/iu.test(message)) delete filters.q;
     const params = new URLSearchParams({ pageSize: '10' });
     if (filters.q) params.set('q', filters.q);
@@ -62,16 +63,17 @@ export class ChatCatalogService {
     }
   }
 
-  private async extractFilters(conversation: string): Promise<SearchFilters> {
+  private async extractFilters(conversation: string): Promise<SearchFilters | null> {
     try {
       const base = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/u, '');
       const response = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60000), body: JSON.stringify({
         model: process.env.OLLAMA_MODEL || 'qwen2.5:1.5b', stream: false, format: 'json', options: { temperature: 0, num_predict: 150 },
-        messages: [{ role: 'system', content: 'Extrae filtros de búsqueda de alojamiento del texto. Devuelve JSON con q (nombre exacto), location (ubicación exacta), checkIn y checkOut (fechas YYYY-MM-DD), guests (número de huéspedes), minPrice, maxPrice, currency (código ISO de 3 letras), amenities (lista de palabras exactas). Omite campos no explícitos. No inventes valores ni conviertas fechas ambiguas.' }, { role: 'user', content: conversation }],
+        messages: [{ role: 'system', content: 'La última línea es la pregunta actual. Si esa pregunta trata de un tema ajeno a StayHub, viajes o alojamientos, devuelve únicamente {"outOfScope":true}, incluso si las líneas anteriores hablan de reservas. En un seguimiento de búsqueda conserva los filtros previos y actualiza los que cambian. Extrae filtros de búsqueda de alojamiento del texto. Devuelve JSON con q (nombre exacto), location (ubicación exacta), checkIn y checkOut (fechas YYYY-MM-DD), guests (número de huéspedes), minPrice, maxPrice, currency (código ISO de 3 letras), amenities (lista de palabras exactas). Omite campos no explícitos. No inventes valores ni conviertas fechas ambiguas.' }, { role: 'user', content: conversation }],
       }) });
       if (!response.ok) return {};
       const result = await response.json() as { message?: { content?: string } };
       const raw = JSON.parse(result.message?.content ?? '{}') as Record<string, unknown>;
+      if (raw.outOfScope === true) return null;
       const literal = (value: unknown, max: number): string | undefined => typeof value === 'string' && value.trim().length > 0 && value.length <= max && conversation.toLocaleLowerCase().includes(value.trim().toLocaleLowerCase()) ? value.trim() : undefined;
       const q = literal(raw.q, 200);
       const location = literal(raw.location, 120);
@@ -79,10 +81,10 @@ export class ChatCatalogService {
       const checkOut = literal(raw.checkOut, 10);
       const validDate = (value: string): boolean => DATE.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
       const words = conversation.toLocaleLowerCase();
-      const guestMatch = words.match(/(?:\bpara\s+)?(\d{1,3})\s+(?:hu[eé]spedes?|personas?|adultos?)(?!\p{L})/u);
+      const guestMatch = [...words.matchAll(/(?:\bpara\s+)?(\d{1,3})\s+(?:hu[eé]spedes?|personas?|adultos?)(?!\p{L})/gu)].at(-1);
       const guests = guestMatch ? Number(guestMatch[1]) : undefined;
-      const minMatch = words.match(/(?:desde|m[ií]nimo|al menos)\s+(\d+(?:\.\d{1,2})?)(?![\d.,-])/u);
-      const maxMatch = words.match(/(?:hasta|m[aá]ximo|menos de|presupuesto de)\s+(\d+(?:\.\d{1,2})?)(?![\d.,-])/u);
+      const minMatch = [...words.matchAll(/(?:desde|m[ií]nimo|al menos)\s+(\d+(?:\.\d{1,2})?)(?![\d.,-])/gu)].at(-1);
+      const maxMatch = [...words.matchAll(/(?:hasta|m[aá]ximo|menos de|presupuesto de)\s+(\d+(?:\.\d{1,2})?)(?![\d.,-])/gu)].at(-1);
       const currencyMatches = [...words.matchAll(/(?<!\p{L})(cop|usd|eur|mxn|ars)(?!\p{L})/gu)].map(match => match[1]!.toUpperCase());
       const uniqueCurrencies = [...new Set(currencyMatches)];
       const currency = uniqueCurrencies.length === 1 ? uniqueCurrencies[0] : undefined;
@@ -92,6 +94,14 @@ export class ChatCatalogService {
       // Only accept literal, positive amenities; ambiguous negatives must not become filters.
       const amenityTerms = ['wifi', 'wi-fi', 'parking', 'pool', 'piscina', 'estacionamiento', 'cocina', 'mascotas', 'desayuno', 'air_conditioning', 'kitchen', 'pets_allowed', 'breakfast_included'];
       const amenities = Array.isArray(raw.amenities) ? raw.amenities.filter((value): value is string => typeof value === 'string' && amenityTerms.includes(value.toLowerCase()) && words.includes(value.toLowerCase()) && !/(?:sin|no)\s+\S*$/u.test(words.slice(Math.max(0, words.indexOf(value.toLowerCase()) - 10), words.indexOf(value.toLowerCase())))).map(value => value.toLowerCase()) : [];
+      for (const term of amenityTerms) {
+        const mentions = [...words.matchAll(new RegExp('(?:^|\\s)(con|sin)\\s+' + term + '(?![\\p{L}_])', 'gu'))];
+        const last = mentions.at(-1);
+        if (last?.[1] === 'con' && !amenities.includes(term)) amenities.push(term);
+        if (last?.[1] === 'sin') {
+          for (let i = amenities.length - 1; i >= 0; i--) if (amenities[i] === term) amenities.splice(i, 1);
+        }
+      }
       return { ...(q ? { q } : {}), ...(location ? placeFilters(location) : {}), ...(checkIn && checkOut && validDate(checkIn) && validDate(checkOut) && checkIn < checkOut ? { checkIn, checkOut } : {}),
         ...(guests && guests <= 100 ? { guests } : {}), ...(amenities.length ? { amenities: [...new Set(amenities)].slice(0, 20) } : {}),
         ...(validPrices && currency ? { currency, ...(minPrice !== undefined ? { minPrice } : {}), ...(maxPrice !== undefined ? { maxPrice } : {}) } : {}),
