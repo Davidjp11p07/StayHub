@@ -49,7 +49,7 @@ export function countAdvancedFilters(f: SearchFilters): number {
 }
 
 const inputClass = (invalid: boolean) =>
-  `h-10 px-3 border rounded-xl bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary ${invalid ? 'border-red-400' : 'border-gray-300'}`;
+  `h-10 px-3 border rounded-xl bg-white text-sm text-gray-800 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary ${invalid ? 'border-red-600' : 'border-gray-500'}`;
 
 export function FiltersPanel({ filters, onKeywordsChange, onApply, suggestions, validation = {} }: FiltersPanelProps) {
   const id = useId();
@@ -74,12 +74,16 @@ export function FiltersPanel({ filters, onKeywordsChange, onApply, suggestions, 
     ...d, amenities: d.amenities.includes(code) ? d.amenities.filter((a) => a !== code) : [...d.amenities, code],
   }));
 
-  const apply = (e: React.FormEvent) => {
+  const apply = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const next = fromDraft(filters, draft);
     const found = validateSearchFilters(next);
     setErrors(found);
     if (Object.keys(found).length === 0) onApply(next);
+    else {
+      const form = e.currentTarget;
+      requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+    }
   };
   const clear = () => { setErrors({}); onApply({ q: filters.q, pageSize: filters.pageSize }); };
 

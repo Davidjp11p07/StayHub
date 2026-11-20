@@ -31,7 +31,7 @@ export function Booking() {
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
   const [general, setGeneral] = useState<string>();
   const submitting = useRef(false);
   const attempt = useRef<{ payload: string; key: string }>();
@@ -72,19 +72,25 @@ export function Booking() {
   }
 
   const property = query.data;
-  const resetFeedback = () => { setErrors([]); setGeneral(undefined); };
+  const resetFeedback = () => setGeneral(undefined);
+  const validate = () => ({
+    ...validateStayDates(checkIn, checkOut, today),
+    guests: room && guests > room.capacity ? `Esta habitación admite hasta ${room.capacity} huésped${room.capacity === 1 ? '' : 'es'}` : undefined,
+  });
+  const errors = showErrors ? Object.entries(validate()).filter(([, message]) => message) : [];
+  const errorProps = (key: string) => {
+    const invalid = errors.some(([field]) => field === key);
+    return { 'aria-invalid': invalid, 'aria-describedby': invalid ? 'booking-error-' + key : undefined };
+  };
 
   const confirm = () => {
     if (submitting.current || !room || !room.basePrice) return;
-    const dateErrors = validateStayDates(checkIn, checkOut, today);
-    const found: string[] = [];
-    if (dateErrors.checkIn) found.push(dateErrors.checkIn);
-    if (dateErrors.checkOut) found.push(dateErrors.checkOut);
-    if (guests > room.capacity) found.push(`Esta habitación admite hasta ${room.capacity} huésped${room.capacity === 1 ? '' : 'es'}`);
-    setErrors(found);
+    setShowErrors(true);
     setGeneral(undefined);
-    if (found.length) { requestAnimationFrame(() => alertRef.current?.focus()); return; }
-
+    if (Object.values(validate()).some(Boolean)) {
+      requestAnimationFrame(() => alertRef.current?.focus());
+      return;
+    }
     if (!price.data || price.isFetching) return;
     submitting.current = true;
     const input = { propertyId: property.id, roomId: room.id, checkIn, checkOut, guests, breakfastSelected: withBreakfast, expectedPropertyVersion: price.data.propertyVersion };
@@ -130,7 +136,7 @@ export function Booking() {
         <form noValidate onSubmit={(e) => { e.preventDefault(); confirm(); }} className="flex flex-col gap-5">
           {(errors.length > 0 || general) && (
             <div ref={alertRef} tabIndex={-1} role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl focus:outline-none flex flex-col gap-1">
-              {errors.map((e) => <p key={e}>{e}</p>)}
+              {errors.map(([key, message]) => <p key={key} id={'booking-error-' + key}>{message}</p>)}
               {general && <p>{general}</p>}
             </div>
           )}
@@ -142,7 +148,7 @@ export function Booking() {
                 id="booking-room"
                 value={room.id}
                 onChange={(e) => { setRoomId(e.target.value); setBreakfastSelected(false); setGuests(1); resetFeedback(); }}
-                className="h-10 px-3 border border-gray-300 rounded-xl text-sm"
+                className="h-10 px-3 border border-gray-500 rounded-xl text-sm"
               >
                 {bookableRooms.map((r) => (
                   <option key={r.id} value={r.id}>{r.name} · {formatMoney(r.basePrice!.amount, r.basePrice!.currency)}</option>
@@ -155,17 +161,17 @@ export function Booking() {
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-in" className="text-xs font-semibold text-gray-700">ENTRADA</label>
               <input
-                id="booking-check-in" type="date" value={checkIn} min={today}
+                id="booking-check-in" {...errorProps('checkIn')} type="date" value={checkIn} min={today}
                 onChange={(e) => { setCheckIn(e.target.value); if (checkOut && checkOut <= e.target.value) setCheckOut(''); resetFeedback(); }}
-                className="h-10 px-2 border border-gray-300 rounded-xl text-sm"
+                className="h-10 px-2 border border-gray-500 rounded-xl text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-out" className="text-xs font-semibold text-gray-700">SALIDA</label>
               <input
-                id="booking-check-out" type="date" value={checkOut} min={checkIn || today}
+                id="booking-check-out" {...errorProps('checkOut')} type="date" value={checkOut} min={checkIn || today}
                 onChange={(e) => { setCheckOut(e.target.value); resetFeedback(); }}
-                className="h-10 px-2 border border-gray-300 rounded-xl text-sm"
+                className="h-10 px-2 border border-gray-500 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -173,9 +179,9 @@ export function Booking() {
           <div className="flex flex-col gap-1">
             <label htmlFor="booking-guests" className="text-xs font-semibold text-gray-700">HUÉSPEDES</label>
             <select
-              id="booking-guests" value={guests}
+              id="booking-guests" {...errorProps('guests')} value={guests}
               onChange={(e) => { setGuests(Number(e.target.value)); resetFeedback(); }}
-              className="h-10 px-3 border border-gray-300 rounded-xl text-sm"
+              className="h-10 px-3 border border-gray-500 rounded-xl text-sm"
             >
               {Array.from({ length: room.capacity }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{n} huésped{n === 1 ? '' : 'es'}</option>
@@ -203,7 +209,7 @@ export function Booking() {
           )}
 
           <Button type="submit" variant="primary" size="lg" disabled={canQuote && (!price.data || price.isFetching)} loading={createMutation.isPending}>Confirmar reserva</Button>
-          <p className="text-xs text-center text-gray-400">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
+          <p className="text-xs text-center text-gray-600">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
         </form>
       )}
     </Shell>
