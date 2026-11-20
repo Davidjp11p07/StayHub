@@ -339,3 +339,5 @@ Ensayo de recuperación de Accommodations: pg_dump y restauración transaccional
 Restauración Accommodations / HTTP. Dos rutas anónimas devolvieron 404 con el estado original y 200 con una muestra publicada en una segunda restauración desechable. Se cotejaron UUID, nombre, referencia, tipo, tamaño y SHA-256 de la foto con el manifiesto. Contenedores de prueba cerrados.
 
 Recuperación conjunta de Bookings y Payments desde un corte sin escritores: 17 tablas públicas, 84 filas y tres reservas reembolsadas cotejadas con sus pagos y reembolsos. Neto cero por reserva. Volcados locales y manifiesto conservados. Ensayo detenido.
+
+RabbitMQ de reservas restaurado en un nodo aislado desde una copia en frío. Definiciones y mensaje persistente verificados; cola temporal retirada en origen y topología inicial cotejada. Ensayo detenido.
