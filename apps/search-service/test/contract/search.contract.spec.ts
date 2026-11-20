@@ -23,6 +23,9 @@ describe('search HTTP contract', () => {
   afterAll(async () => { if (app) await app.close(); });
   it('keeps the source OpenAPI valid', async () => { const api = await SwaggerParser.validate('../../specs/002-alojamientos-busqueda/search_service/contracts/openapi-search-service.yaml'); expect(api.paths?.['/internal/v1/search']).toBeDefined(); });
   it('returns the paginated summary shape', async () => { const response = await request(app.getHttpServer() as Server).get('/internal/v1/search?page=1&pageSize=20').set('Authorization', 'Bearer test').expect(200); expect(response.body).toEqual(expect.objectContaining({ items: [], total: 0, hasNext: false })); });
+  it.each([['co', 200], ['CO', 200], ['ZZ', 400]] as const)('validates countryCode=%s', async (code, status) => {
+    await request(app.getHttpServer() as Server).get('/internal/v1/search').query({ countryCode: code }).set('Authorization', 'Bearer test').expect(status);
+  });
   it('rejects unknown query fields', async () => { await request(app.getHttpServer() as Server).get('/internal/v1/search?unknown=value').set('Authorization', 'Bearer test').expect(400); });
   it('returns 401 without a service token', async () => { await request(app.getHttpServer() as Server).get('/internal/v1/search').expect(401); });
   it('returns 403 when the service scope is insufficient', async () => { verify.mockRejectedValueOnce(new SearchApplicationError('SEARCH_FORBIDDEN', 'Insufficient scope.', 403)); await request(app.getHttpServer() as Server).get('/internal/v1/search').set('Authorization', 'Bearer test').expect(403); });

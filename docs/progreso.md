@@ -238,3 +238,5 @@ Pasaron las 346 pruebas web, 96 unitarias y 88 de contrato de Bookings, dos caso
 Siguiente unidad: REQ-01 + REQ-02, país, ciudad y coordenadas. Primer comando: rg -n "COUNTRY_PATTERN|parseLocation|LocationMap|longitude" apps/web/src apps/accommodations-service/src.
 
 REQ-01 parcial. Alta y edición de alojamientos y filtro web de país validan códigos ISO 3166-1 alpha-2 asignados. 26 pruebas del dominio y 34 web aprobadas, tipos de ambos componentes correctos. Chrome contra Vite aceptó CO y AR y rechazó ZZ en el módulo servido. Sin migraciones. Pendiente verificar por gateway tras reconstruir Accommodations y completar ciudades y selector del mapa.
+
+REQ-01, filtro de país verificado. Search acepta códigos ISO asignados con ambas capitalizaciones. En Chrome, el enlace guardado con countryCode=co mostró alojamientos de Bogotá. El gateway devolvió los mismos identificadores y total para CO y co, y HTTP 400 para ZZ tanto en búsqueda como en el alta por propietario. Prueba reproducible: node scripts/e2e-country-filter.cjs. Pasaron 13 pruebas unitarias y 9 de contrato. Search y Accommodations reconstruidos y saludables.

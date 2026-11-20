@@ -31,7 +31,7 @@ export class SearchController {
   @ApiOperation({ operationId: 'searchAccommodations', summary: 'Search published accommodations' })
   @ApiQuery({ name: 'q', required: false, schema: { type: 'string', maxLength: 200 } })
   @ApiQuery({ name: 'location', required: false, schema: { type: 'string', maxLength: 120 } })
-  @ApiQuery({ name: 'countryCode', required: false, schema: { type: 'string', pattern: '^[A-Za-z]{2}$' } })
+  @ApiQuery({ name: 'countryCode', required: false, description: 'Código ISO 3166-1 alpha-2 asignado, en mayúsculas o minúsculas.', schema: { type: 'string', pattern: '^[A-Za-z]{2}$' } })
   @ApiQuery({ name: 'amenities', required: false, schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true })
   @ApiResponse({ status: 200, description: 'Paginated search results.' })
   @ApiResponse({ status: 400, description: 'Invalid or unknown filters.', content: PROBLEM })

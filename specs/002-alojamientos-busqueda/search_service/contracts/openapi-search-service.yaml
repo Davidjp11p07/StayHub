@@ -17,7 +17,7 @@ paths:
         - $ref: '#/components/parameters/Location'
         - name: countryCode
           in: query
-          description: Código de país de dos letras. Se combina con la ubicación textual.
+          description: Código ISO 3166-1 alpha-2 asignado, en mayúsculas o minúsculas. Se combina con la ubicación textual.
           schema: { type: string, pattern: '^[A-Za-z]{2}$' }
         - $ref: '#/components/parameters/MinPrice'
         - $ref: '#/components/parameters/MaxPrice'

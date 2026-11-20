@@ -1,3 +1,4 @@
+import { isISO31661Alpha2 } from "class-validator";
 import { SearchApplicationError } from "@search/application/errors/search-errors";
 import { normalizeTerms } from "./projection";
 
@@ -55,7 +56,7 @@ export function createSearchQuery(input: SearchQueryInput): SearchQuery {
   const q = optionalText("q", input.q, 200);
   const location = optionalText("location", input.location, 120);
   const countryCode = input.countryCode?.trim().toUpperCase();
-  if (countryCode !== undefined && !/^[A-Z]{2}$/u.test(countryCode)) throw invalid("countryCode", "ALPHA_2");
+  if (countryCode !== undefined && !isISO31661Alpha2(countryCode)) throw invalid("countryCode", "ALPHA_2");
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 20;
   if (!Number.isSafeInteger(page) || page < 1) throw invalid("page", "MIN_1");

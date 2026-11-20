@@ -3,6 +3,7 @@ import { Transform, Type, type TransformFnParams } from "class-transformer";
 import {
   IsArray,
   IsDateString,
+  IsISO31661Alpha2,
   IsInt,
   IsNumber,
   IsOptional,
@@ -21,7 +22,7 @@ export class SearchQueryDto implements SearchQueryInput {
   @MinLength(1)
   @MaxLength(120)
   @ApiPropertyOptional({ minLength: 1, maxLength: 120, description: 'Ubicación textual; se combina con los demás filtros mediante AND.' }) public location?: string;
-  @IsOptional() @Matches(/^[A-Za-z]{2}$/u) @ApiPropertyOptional({ pattern: '^[A-Za-z]{2}$', description: 'Código de país de dos letras. Se combina con la ubicación textual.' }) public countryCode?: string;
+  @IsOptional() @IsISO31661Alpha2() @ApiPropertyOptional({ pattern: '^[A-Za-z]{2}$', description: 'Código ISO 3166-1 alpha-2 asignado, en mayúsculas o minúsculas. Se combina con la ubicación textual.' }) public countryCode?: string;
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
