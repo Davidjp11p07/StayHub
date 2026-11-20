@@ -128,7 +128,7 @@ export function toReplaceInput(property: Property, overrides: Partial<PropertyRe
     status: property.status,
     version: property.version,
     rooms: property.rooms.map((room) => ({
-      id: room.id, name: room.name, capacity: room.capacity, ...(room.basePrice ? { basePrice: room.basePrice } : {}),
+      id: room.id, name: room.name, capacity: room.capacity, ...(room.breakfastPerGuestNight ? { breakfastPerGuestNight: room.breakfastPerGuestNight } : {}), ...(room.basePrice ? { basePrice: room.basePrice } : {}),
     })),
     ...overrides,
   };

@@ -32,6 +32,9 @@ export function RoomsEditor({ rooms, errors, disabled, onChange }: RoomsEditorPr
             <FormField id={`room-${room.key}-amount`} label="Precio por noche" error={errors[`rooms.${i}.amount`]}>
               <input inputMode="decimal" value={room.amount} onChange={(e) => update(i, { amount: e.target.value })} placeholder="120.00" className={fieldClass(!!errors[`rooms.${i}.amount`])} />
             </FormField>
+            <FormField id={`room-${room.key}-breakfast`} label={`Desayuno opcional por huésped y noche (${room.currency})`} error={errors[`rooms.${i}.breakfastAmount`]}>
+              <input inputMode="decimal" value={room.breakfastAmount ?? ''} placeholder="Sin servicio" onChange={e => update(i, { breakfastAmount: e.target.value })} className={fieldClass(!!errors[`rooms.${i}.breakfastAmount`])} />
+            </FormField>
             <FormField id={`room-${room.key}-currency`} label="Moneda" error={errors[`rooms.${i}.currency`]}>
               <select value={room.currency} onChange={(e) => update(i, { currency: e.target.value })} className={fieldClass(!!errors[`rooms.${i}.currency`])}>
                 {SEARCH_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}

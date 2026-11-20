@@ -104,6 +104,7 @@ describe('PublishProperty form', () => {
   it('creates, uploads photos in order and submits for review, then opens the listing', async () => {
     renderForm();
     fillValidForm();
+    fill(/Desayuno opcional/, '12.50');
     addPhotos(image('portada.jpg'), image('sala.png', 4096, 'image/png'));
     fireEvent.click(screen.getByRole('button', { name: 'Solicitar revisión' }));
     await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent(`/property/${newest()!.id}`));
@@ -112,6 +113,7 @@ describe('PublishProperty form', () => {
       location: { country: 'AR', latitude: -40.76, longitude: -71.64 },
       rooms: [expect.objectContaining({ name: 'Cabaña completa', capacity: 4, basePrice: { amount: '150.50', currency: 'USD' } })],
     });
+    expect(newest()!.rooms[0]?.breakfastPerGuestNight).toEqual({ amount: '12.50', currency: 'USD' });
     expect(newest()!.features.map((f) => f.code)).toEqual(['WIFI', 'PARKING']);
     expect(newest()!.photos.map((p) => [p.position, p.mediaType])).toEqual([[0, 'image/jpeg'], [1, 'image/png']]);
   });

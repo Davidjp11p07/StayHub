@@ -12,7 +12,7 @@ export interface Location {
   postalCode?: string; latitude?: number; longitude?: number;
 }
 export interface BasePrice { amount: string; currency: string }
-export interface RoomData { name: string; capacity: number; basePrice: BasePrice | null }
+export interface RoomData { name: string; capacity: number; basePrice: BasePrice | null; breakfastPerGuestNight?: BasePrice }
 export interface Room extends RoomData { id: string }
 export interface Feature { code: string; name: string }
 export interface Photo { id: string; storageKey: string; mediaType: PhotoMediaType; byteSize: number; position: number; createdAt: Date }

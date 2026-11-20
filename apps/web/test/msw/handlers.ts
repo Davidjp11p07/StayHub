@@ -279,7 +279,7 @@ const createPropertyHandler = http.post(`${API}/properties`, async ({ request })
   const property: Property = {
     id: crypto.randomUUID(), ownerId: auth.caller.sub, type: body.type, name: body.name.trim(),
     description: body.description ?? null, location: body.location, status: 'DRAFT', version: 1,
-    rooms: body.rooms.map((r) => ({ id: crypto.randomUUID(), name: r.name, capacity: r.capacity, basePrice: r.basePrice ?? null })),
+    rooms: body.rooms.map((r) => ({ id: crypto.randomUUID(), name: r.name, capacity: r.capacity, ...(r.breakfastPerGuestNight ? { breakfastPerGuestNight: r.breakfastPerGuestNight } : {}), basePrice: r.basePrice ?? null })),
     features: features(body.featureCodes), photos: [], createdAt: now, updatedAt: now,
   };
   db.properties.push(property);
@@ -304,7 +304,7 @@ const replacePropertyHandler = http.put<IdParams>(`${API}/properties/:id`, async
   const next: Property = {
     ...current, type: body.type, name: body.name.trim(), description: body.description ?? null, location: body.location,
     features: features(body.featureCodes), status: body.status, version: current.version + 1, updatedAt: new Date().toISOString(),
-    rooms: body.rooms.map((r) => ({ id: r.id ?? crypto.randomUUID(), name: r.name, capacity: r.capacity, basePrice: r.basePrice ?? null })),
+    rooms: body.rooms.map((r) => ({ id: r.id ?? crypto.randomUUID(), name: r.name, capacity: r.capacity, ...(r.breakfastPerGuestNight ? { breakfastPerGuestNight: r.breakfastPerGuestNight } : {}), basePrice: r.basePrice ?? null })),
   };
   if (body.status === 'PUBLISHED' && !publishable(next)) return problem(409, 'PUBLICATION_INCOMPLETE');
   db.properties = db.properties.map((p) => (p.id === id ? next : p));

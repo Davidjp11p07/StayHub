@@ -34,6 +34,7 @@ function toDomain(row: PropertyRow): Property {
     status: row.status, version: row.version,
     rooms: row.rooms.map((room) => ({
       id: room.id, name: room.name, capacity: room.capacity,
+      ...(room.breakfastAmount != null && room.basePriceCurrency ? { breakfastPerGuestNight: { amount: room.breakfastAmount.toFixed(2), currency: room.basePriceCurrency } } : {}),
       basePrice: room.basePriceAmount === null || room.basePriceCurrency === null ? null : { amount: room.basePriceAmount.toFixed(2), currency: room.basePriceCurrency },
     })),
     features: row.features.map(({ feature }) => ({ code: feature.code, name: feature.name })),
@@ -42,9 +43,10 @@ function toDomain(row: PropertyRow): Property {
   };
 }
 
-function roomColumns(room: RoomData): { name: string; capacity: number; basePriceAmount: Prisma.Decimal | null; basePriceCurrency: string | null } {
+function roomColumns(room: RoomData): { name: string; capacity: number; basePriceAmount: Prisma.Decimal | null; basePriceCurrency: string | null; breakfastAmount: Prisma.Decimal | null } {
   return {
     name: room.name, capacity: room.capacity,
+    breakfastAmount: room.breakfastPerGuestNight ? new Prisma.Decimal(room.breakfastPerGuestNight.amount) : null,
     basePriceAmount: room.basePrice ? new Prisma.Decimal(room.basePrice.amount) : null, basePriceCurrency: room.basePrice?.currency ?? null,
   };
 }

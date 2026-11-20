@@ -6,7 +6,7 @@ import {
 
 /** Editable form state for publishing a property (strings mirror the inputs). */
 
-export interface RoomDraft { key: string; name: string; capacity: string; amount: string; currency: string }
+export interface RoomDraft { key: string; name: string; capacity: string; amount: string; breakfastAmount?: string; currency: string }
 export interface PhotoDraft { key: string; file: File }
 
 export interface PropertyFormState {
@@ -69,6 +69,12 @@ export function validatePropertyForm(form: PropertyFormState, photos: PhotoDraft
     if (!room.name.trim()) e[`rooms.${i}.name`] = 'El nombre de la habitación es obligatorio.';
     else if (tooLong(room.name, CATALOG_LIMITS.roomNameMaxLength)) e[`rooms.${i}.name`] = `Usa hasta ${CATALOG_LIMITS.roomNameMaxLength} caracteres.`;
     if (!/^\d+$/.test(room.capacity) || Number(room.capacity) < 1) e[`rooms.${i}.capacity`] = 'Capacidad mínima de 1 huésped.';
+    const breakfast = room.breakfastAmount?.trim();
+    if (breakfast && (!AMOUNT_PATTERN.test(breakfast) || ZERO_AMOUNT_PATTERN.test(breakfast))) {
+      e[`rooms.${i}.breakfastAmount`] = 'Introduce un precio positivo con hasta dos decimales.';
+    } else if (breakfast && form.featureCodes.includes('BREAKFAST_INCLUDED')) {
+      e[`rooms.${i}.breakfastAmount`] = 'El desayuno incluido ya forma parte del alojamiento.';
+    }
     const amount = room.amount.trim();
     if (!amount) e[`rooms.${i}.amount`] = 'Indica el precio por noche.';
     else if (!AMOUNT_PATTERN.test(amount) || ZERO_AMOUNT_PATTERN.test(amount)) e[`rooms.${i}.amount`] = 'Precio mayor que 0, con hasta 2 decimales.';
@@ -101,6 +107,7 @@ export function toPropertyCreate(form: PropertyFormState): PropertyCreate {
     },
     featureCodes: [...form.featureCodes],
     rooms: form.rooms.map((r) => ({
+      ...(r.breakfastAmount?.trim() ? { breakfastPerGuestNight: { amount: r.breakfastAmount.trim(), currency: r.currency } } : {}),
       name: r.name.trim(), capacity: Number(r.capacity), basePrice: { amount: r.amount.trim(), currency: r.currency },
     })),
   };

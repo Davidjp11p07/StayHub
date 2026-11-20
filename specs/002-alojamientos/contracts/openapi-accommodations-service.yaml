@@ -296,6 +296,10 @@ components:
         capacity:
           type: integer
           minimum: 1
+        breakfastPerGuestNight:
+          description: Optional breakfast price per guest per night, denominated in the room currency. Omitted when unavailable.
+          allOf:
+            - $ref: '#/components/schemas/BasePrice'
         basePrice:
           type: object
           additionalProperties: false
@@ -486,6 +490,10 @@ components:
         capacity:
           type: integer
           minimum: 1
+        breakfastPerGuestNight:
+          description: Optional breakfast price per guest per night, denominated in the room currency. Omitted when unavailable.
+          allOf:
+            - $ref: '#/components/schemas/BasePrice'
         basePrice:
           $ref: '#/components/schemas/BasePrice'
     RoomReplaceInput:
@@ -502,6 +510,10 @@ components:
         capacity:
           type: integer
           minimum: 1
+        breakfastPerGuestNight:
+          description: Optional breakfast price per guest per night, denominated in the room currency. Omitted when unavailable.
+          allOf:
+            - $ref: '#/components/schemas/BasePrice'
         basePrice:
           $ref: '#/components/schemas/BasePrice'
     Room:
@@ -517,6 +529,10 @@ components:
         capacity:
           type: integer
           minimum: 1
+        breakfastPerGuestNight:
+          description: Optional breakfast price per guest per night, denominated in the room currency. Omitted when unavailable.
+          allOf:
+            - $ref: '#/components/schemas/BasePrice'
         basePrice:
           allOf:
             - $ref: '#/components/schemas/BasePrice'

@@ -95,6 +95,7 @@ export interface Room {
   id: string;
   name: string;
   capacity: number;
+  breakfastPerGuestNight?: BasePrice;
   basePrice?: BasePrice | null;
 }
 
@@ -133,6 +134,7 @@ export interface Property {
 export interface RoomInput {
   name: string;
   capacity: number;
+  breakfastPerGuestNight?: BasePrice;
   basePrice?: BasePrice;
 }
 

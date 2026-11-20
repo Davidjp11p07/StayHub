@@ -31,7 +31,7 @@ function toFormState(property: Property): { form: PropertyFormState; roomIds: Re
   const rooms: RoomDraft[] = property.rooms.map((room) => {
     const key = nextKey('room');
     roomIds[key] = room.id;
-    return { key, name: room.name, capacity: String(room.capacity), amount: room.basePrice?.amount ?? '', currency: room.basePrice?.currency ?? 'USD' };
+    return { key, name: room.name, capacity: String(room.capacity), breakfastAmount: room.breakfastPerGuestNight?.amount ?? '', amount: room.basePrice?.amount ?? '', currency: room.basePrice?.currency ?? 'USD' };
   });
   return {
     form: {
@@ -61,6 +61,7 @@ function toChanges(form: PropertyFormState, roomIds: Record<string, string>): Pa
     ...(roomIds[r.key] ? { id: roomIds[r.key] } : {}),
     name: r.name.trim(),
     capacity: Number(r.capacity),
+    ...(r.breakfastAmount?.trim() ? { breakfastPerGuestNight: { amount: r.breakfastAmount.trim(), currency: r.currency } } : {}),
     basePrice: { amount: r.amount.trim(), currency: r.currency },
   }));
   return {

@@ -20,6 +20,18 @@ describe('ACC-017 create property input', () => {
     });
   });
 
+  it('accepts a breakfast rate only in the room currency and independently from included breakfast', () => {
+    const body = createBody();
+    const offer = { amount: '15000.50', currency: 'COP' };
+    const rooms = [{ ...body.rooms[0], breakfastPerGuestNight: offer }];
+    expect(parseCreateProperty({ ...body, rooms }).rooms[0]?.breakfastPerGuestNight).toEqual(offer);
+    expect(fieldOf(() => parseCreateProperty({ ...body, rooms, featureCodes: ['BREAKFAST_INCLUDED'] }))).toBe('featureCodes');
+    for (const amount of ['0', '-1', '1.001']) {
+      expect(fieldOf(() => parseCreateProperty({ ...body, rooms: [{ ...rooms[0], breakfastPerGuestNight: { ...offer, amount } }] }))).toBe('rooms[0].breakfastPerGuestNight.amount');
+    }
+    expect(fieldOf(() => parseCreateProperty({ ...body, rooms: [{ ...rooms[0], breakfastPerGuestNight: { ...offer, currency: 'USD' } }] }))).toBe('rooms[0].breakfastPerGuestNight.currency');
+  });
+
   it('defaults optional description, featureCodes and basePrice', () => {
     const body: Partial<CreateBody> = createBody({ rooms: [{ name: 'R', capacity: 1 }, { name: 'S', capacity: 3 }] });
     delete body.description; delete body.featureCodes;

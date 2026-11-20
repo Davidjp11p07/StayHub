@@ -218,3 +218,11 @@ Lint y tipos comprobados en Accommodations, Gateway y web. En la ejecución conj
 ## Regresión web de REQ-05 cerrada
 
 Vitest precarga FormData de Node antes de inicializar jsdom. Así el analizador multipart usa el constructor File compatible y MSW recibe el archivo completo. Se actualizaron las expectativas de catálogo y el mock del historial de revisión del propietario. Pasaron 28/28 pruebas focalizadas y 346/346 pruebas web en 37 archivos, además de lint y comprobación de tipos. La comprobación real en Chrome y la pila local corresponde al hito anterior. Este cambio afecta al entorno de pruebas.
+
+## REQ-06 — Configuración del desayuno en el catálogo
+
+Se adoptó la tarifa opcional por habitación, huésped y noche, expresada en la moneda de la habitación. El alta y reemplazo rechazan importe no positivo, más de dos decimales, moneda distinta y combinación con BREAKFAST_INCLUDED. La migración aditiva 202611200003_room_breakfast dejó las habitaciones anteriores sin extra. El catálogo incluye la tarifa en el detalle y en su respuesta interna de cotización.
+
+Chrome y Gateway verificaron en un borrador sintético guardar, recargar y retirar 12.000,50 COP conservando el precio de alojamiento de 90.000 COP. Pasaron 276 pruebas unitarias de Accommodations y 25 pruebas web focalizadas, lint y tipos de ambos componentes. La pila local queda activa. Prueba reproducible: node scripts/e2e-breakfast-catalog.mjs con NODE_EXTRA_CA_CERTS apuntando al certificado del gateway.
+
+Siguiente unidad: selección del huésped y cotización versionada en Bookings, persistencia del desglose y verificación de pago, devolución y reporte. Primer comando: Get-Content apps/bookings-service/src/application/create-booking/create-booking.use-case.ts. El cobro del desayuno aún está pendiente.
