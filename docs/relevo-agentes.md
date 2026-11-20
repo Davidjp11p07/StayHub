@@ -50,3 +50,4 @@ El 20 de noviembre de 2026 (UTC), el gateway aceptó dos reservas sintéticas y 
 Cada reserva conservó CANCELLED_BY_GUEST, sin transición a CONFIRMED. Para cada una, la política fijó 318.000 COP, Bookings completó un único REQUEST_REFUND en un intento y Payments registró una sola devolución por el total. La ejecución usó scripts/e2e-booking-concurrency.mjs con la propiedad 2b626617-a318-48e6-b63e-b1582f3342ab y un desplazamiento de 343 días. El orden temporal se verificó por consulta posterior, no está garantizado en cada ejecución del script.
 
 Siguiente unidad pendiente: REQ-05, verificación autorizada y publicación de inmuebles.
+REQ-05 parcial. Auth enumera explícitamente GUEST y OWNER para el alta pública y su reconciliación. Contratos de registro con VERIFIER y ADMIN rechazados (HTTP 400). Próxima unidad: aprovisionamiento autorizado del verificador y propagación de su rol en sesión. Flujo de publicación pendiente.

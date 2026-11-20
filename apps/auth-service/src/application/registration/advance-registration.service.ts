@@ -27,7 +27,7 @@ export function normalizeRegistrationInput(input: RegisterAccountInput): Registe
 }
 
 export function toRegistrationRole(role: UserRole): RegistrationRole {
-  if (role === 'ADMIN') throw new DependencyUnavailableError('users');
+  if (role !== 'GUEST' && role !== 'OWNER') throw new DependencyUnavailableError('users');
   return role;
 }
 

@@ -22,7 +22,7 @@ describe('USR-022 provider registration contract', () => {
     for (let i = 0; i < 2; i++) await request(h.server).post(`/internal/v1/registrations/${command.registrationId}/cancel`).set('Authorization', auth).expect(204);
     await request(h.server).post(`/internal/v1/registrations/${pendingFixture().registrationId}/activate`).set('Authorization', auth).expect(404);
   });
-  it.each([{ role: 'ADMIN' }, { password: 'synthetic' }, { name: null }, { userId: 'invalid' }, { email: 'invalid' }])('rejects invalid/unknown input %p', async (patch) => {
+  it.each([{ role: 'ADMIN' }, { role: 'VERIFIER' }, { password: 'synthetic' }, { name: null }, { userId: 'invalid' }, { email: 'invalid' }])('rejects invalid/unknown input %p', async (patch) => {
     await request(h.server).post('/internal/v1/registrations').set('Authorization', `Bearer ${serviceToken()}`).send({ ...pendingFixture(), ...patch }).expect(400);
     expect(await h.db.user.count()).toBe(0);
   });
