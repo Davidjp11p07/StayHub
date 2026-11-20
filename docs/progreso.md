@@ -297,3 +297,15 @@ El modelo completo declara 14 redes, 11 volúmenes nombrados y 39 secretos respa
 Los 36 contenedores estaban presentes. Los 26 persistentes estaban saludables y los 10 de migración habían terminado con código 0. Se compararon las huellas del modelo efectivo con las etiquetas de creación de los contenedores. Coincidieron 35. La huella distinta corresponde a `rabbitmq` (bus de Search). Coincidían la referencia de imagen y los valores de entorno declarados. El contenedor estaba conectado a las redes de Search y carecía de puertos publicados. El origen de la diferencia sigue abierto. La comprobación fue de lectura y no ejercitó tráfico entre servicios.
 
 RabbitMQ de Search, 20 de noviembre. La huella de creación se reprodujo exactamente al calcular config --hash rabbitmq con una variante temporal que declara solo search-internal. Con las dos redes actuales difiere. El contenedor tiene ambas redes y comparte search-events con Accommodations. El healthcheck coincide (ping, 10 s, timeout 5 s, 20 intentos), reinicio unless-stopped y volumen anónimo en /var/lib/rabbitmq; el servicio no declara secretos montados. Desde Search, la API de gestión del broker devolvió 99 mensajes publicados, 99 entregados y 99 reconocidos en la cola de proyección, un consumidor y cero pendientes. Reintentos y DLQ vacías. Gateway devolvió 200 para Leticia y el accommodationId coincidió con el catálogo. Son contadores acumulados; esta comprobación no publicó un evento nuevo.
+
+## Reproducir la configuración de integración local
+
+Desde la raíz de una copia limpia, con las dependencias Node instaladas (incluido jose), Docker Compose con soporte de !override y openssl en PATH, ejecutar en este orden:
+
+```powershell
+node scripts/generate-compose-dev-env.mjs
+node scripts/reports-live-env.mjs
+docker compose -p stayhub-prueba -f docker-compose.yml -f docker-compose.reports.integration.yml -f docker-compose.local.yml config --quiet
+```
+
+El 20 de noviembre de 2026 se ejecutaron los dos generadores en copias temporales de archivos versionados, con dependencias Node ya instaladas y OpenSSL de Git para Windows. Sin el tercer archivo, Compose publicaba Gateway en 8080 sin dirección de enlace explícita. Con el nuevo docker-compose.local.yml se obtuvieron 36 servicios y los 39 archivos de secretos. Gateway quedó en 127.0.0.1:18080 y Reports en 127.0.0.1:3011. En el worktree activo, el modelo JSON completo fue idéntico al del antiguo override ignorado. El nombre de proyecto de prueba aísla los nombres de Compose; para arrancar simultáneamente otra pila también se necesitan puertos libres. Esta validación solo resolvió configuración.
