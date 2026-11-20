@@ -8,6 +8,7 @@ const document = YAML.parse(text);
 await SwaggerParser.validate(document);
 
 const expected = new Map([
+  ['/notifications/{notificationId}/read', ['patch', 'markNotificationRead']],
   ['/notifications/send', ['post', 'sendNotification']],
   ['/notifications/events/booking-confirmed', ['post', 'bookingConfirmedEvent']],
   ['/notifications/user/{id}', ['get', 'listUserNotifications']],
@@ -21,4 +22,4 @@ for (const [path, [method, operationId]] of expected) {
 for (const scheme of ['accessJwt', 'serviceJwt']) {
   if (document.components?.securitySchemes?.[scheme]?.scheme !== 'bearer') throw new Error(`Missing bearer security scheme ${scheme}`);
 }
-process.stdout.write('OpenAPI contract valid: 3 operations, schemas and security schemes.\n');
+process.stdout.write('OpenAPI contract valid: 4 operations, schemas and security schemes.\n');

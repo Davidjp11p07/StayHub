@@ -76,7 +76,7 @@ describe('payment and refund outbox atomicity with PostgreSQL 16', () => {
     const useCase = new CreatePayment({
       unitOfWork: failAfterOutboxInsert(unitOfWork as unknown as UnitOfWork<PaymentUnitOfWorkRepositories>),
       gateway: paymentGateway,
-      clock: { now: (): Date => new Date('2026-11-08T12:00:00.000Z') },
+      clock: { now: (): Date => new Date() },
       config,
     });
 
@@ -92,14 +92,14 @@ describe('payment and refund outbox atomicity with PostgreSQL 16', () => {
     const created = await new CreatePayment({
       unitOfWork: unitOfWork as unknown as UnitOfWork<PaymentUnitOfWorkRepositories>,
       gateway: baseGateway,
-      clock: { now: (): Date => new Date('2026-11-08T12:00:00.000Z') },
+      clock: { now: (): Date => new Date() },
       config,
     }).execute(createInput());
     const failingGateway = gateway();
     const refundUseCase = new RefundPayment({
       unitOfWork: failAfterOutboxInsert(unitOfWork as unknown as UnitOfWork<RefundUnitOfWorkRepositories>),
       gateway: failingGateway,
-      clock: { now: (): Date => new Date('2026-11-08T12:01:00.000Z') },
+      clock: { now: (): Date => new Date() },
       config: { idempotencyTtlHours: config.idempotencyTtlHours, maxAmountMinor: config.maxAmountMinor, reconcilerIntervalMs: config.reconcilerIntervalMs },
     });
 
@@ -121,7 +121,7 @@ describe('payment and refund outbox atomicity with PostgreSQL 16', () => {
     const created = await new CreatePayment({
       unitOfWork: unitOfWork as unknown as UnitOfWork<PaymentUnitOfWorkRepositories>,
       gateway: paymentGateway,
-      clock: { now: (): Date => new Date('2026-11-08T12:00:00.000Z') },
+      clock: { now: (): Date => new Date() },
       config,
     }).execute(createInput());
     const paymentId = created.payment.id;
@@ -131,7 +131,7 @@ describe('payment and refund outbox atomicity with PostgreSQL 16', () => {
     const refund = await new RefundPayment({
       unitOfWork: unitOfWork as unknown as UnitOfWork<RefundUnitOfWorkRepositories>,
       gateway: refundGateway,
-      clock: { now: (): Date => new Date('2026-11-08T12:01:00.000Z') },
+      clock: { now: (): Date => new Date() },
       config: { idempotencyTtlHours: config.idempotencyTtlHours, maxAmountMinor: config.maxAmountMinor, reconcilerIntervalMs: config.reconcilerIntervalMs },
     }).execute({ paymentId, reason: 'GUEST_CANCELLATION', idempotencyKey: randomUUID(), callerSubject: 'bookings-service' });
 
