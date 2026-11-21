@@ -16,7 +16,62 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Hide scrollbar but keep scroll */
-::-webkit-scrollbar {
-  width: 0px;
+
+@layer base {
+  body { color: #182333; background: #f7f8fa; }
+  main h1 { letter-spacing: -.035em; text-wrap: balance; }
+  main h2 { letter-spacing: -.022em; }
+  :focus-visible { outline: 3px solid #aa1851; outline-offset: 3px; }
+  button:enabled, select { cursor: pointer; }
+  main :is(input,select,textarea) { max-width: 100%; min-width: 0; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+}
+.app-header { background: #fffffff5; border-bottom: 1px solid #dde2e8; }
+.workspace { width: min(100%, 72rem); margin: auto; padding: clamp(1.25rem,4vw,3.5rem) 1.25rem 6rem; }
+.workspace h1 { font-size: clamp(2rem,4vw,3rem); font-weight: 750; line-height: 1.15; }
+.workspace h2,.inbox h2 { font-size: 1.35rem; font-weight: 700; }
+.workspace-heading,.section-heading,.arrival-row,.notice-meta { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; justify-content: space-between; }
+.workspace-heading { margin-bottom: 2rem; }
+.kicker { font-size: .78rem; font-weight: 700; margin-bottom: .5rem; color: #a81650; }
+.action-primary,.manage-link,.inbox-toggle,.report-filter-toggle { display: inline-flex; align-items: center; border-radius: .8rem; padding: .7rem 1rem; font-weight: 650; }
+.action-primary { background: #be1754; color: white; }
+.manage-link,.inbox-toggle,.report-filter-toggle { background: white; border: 1px solid #cdd5df; }
+.section-heading a { font-size: .9rem; font-weight: 650; text-decoration: underline; text-underline-offset: .22em; }
+.summary-panel,.identity-panel { background: #172a40; color: white; border-radius: 1.25rem; padding: clamp(1.25rem,3vw,2.25rem); }
+.summary-panel .kicker { color: #ffc5db; }
+.metric-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.25rem; margin-top: 1.75rem; }
+.metric-grid dt { color: #d6e0e9; font-size: .88rem; }
+.metric-grid dd { font-size: clamp(1.35rem,2.7vw,2.25rem); font-weight: 650; font-variant-numeric: tabular-nums; }
+.surface { background: white; border: 1px solid #dce2e9; border-radius: 1.25rem; padding: clamp(1rem,3vw,2rem); margin: 1.25rem 0; }
+.surface .section-heading { margin-bottom: 1rem; }
+.arrival-row,.notice { border-top: 1px solid #e4e8ed; padding: 1rem 0; }
+.profile-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,2fr); gap: 1.25rem; margin-top: 1.5rem; align-items: start; }
+.identity-panel { overflow-wrap: anywhere; }
+.identity-panel h2 { margin-top: 1rem; }
+.identity-panel p { color: #d6e0e9; }
+.avatar-initial { width: 4rem; aspect-ratio: 1; display: grid; place-items: center; background: #ffe1ec; color: #851244; border-radius: 50%; font-size: 1.6rem; font-weight: 700; }
+.profile-fields { display: grid; gap: 1.25rem; margin: 0; }
+.profile-fields input { border: 1px solid #bec8d3; padding: .65rem; border-radius: .6rem; margin-top: .4rem; width: 100%; }
+.profile-fields button { justify-self: start; }
+.notice-meta { font-size: .78rem; color: #526171; margin-bottom: .35rem; }
+.notice[data-unread=true] .notice-meta span { color: #9a1244; background: #ffebf2; border-radius: 1rem; padding: .15rem .55rem; font-weight: 700; }
+.notice p { overflow-wrap: anywhere; color: #475569; margin: .3rem 0; }
+.report-filter-toggle { display: none; }
+@media (max-width: 640px) {
+  .profile-layout,.metric-grid { grid-template-columns: 1fr; }
+  .metric-grid { gap: .8rem; }
+  .metric-grid div { border-top: 1px solid #485767; padding-top: .65rem; }
+  .report-filter-toggle:not([hidden]) { display: inline-flex; margin-top: 1rem; }
+  #report-filters[data-open=false] { display: none; }
+  #report-filters { display: grid; grid-template-columns: minmax(0,1fr); }
+  #report-filters :is(select,input) { width: 100%; }
+}
+
+.management-content { background: white; border: 1px solid #dce2e9; border-radius: 1.25rem; margin-block: clamp(1rem,3vw,2.5rem); width: calc(100% - 2rem); align-self: flex-start; }
+.management-content h1 { font-size: clamp(1.75rem,3vw,2.4rem); }
+.management-content :is(input,select,textarea) { border-color: #acb8c5; border-radius: .65rem; }
+.revenue-summary article:last-child { order: -1; background: #172a40; }
+.revenue-summary article:last-child p { color: #fff; }
+@media (max-width: 640px) {
+  .management-content { width: 100%; border-inline: 0; border-radius: 0; margin-block: 0; }
 }

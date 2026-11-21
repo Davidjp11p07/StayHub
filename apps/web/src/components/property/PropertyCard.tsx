@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useFavorites } from './favorites';
 import type { Property } from '../../types';
 
 interface PropertyCardProps extends Omit<Property, 'id'> {
+  id: string;
   onClick?: () => void;
 }
 
@@ -15,7 +16,7 @@ function money(amount: number, currency?: string): string {
 }
 
 export function PropertyCard({
-  image,
+  id, image,
   title,
   location,
   rating,
@@ -26,7 +27,8 @@ export function PropertyCard({
   tag,
   onClick,
 }: PropertyCardProps) {
-  const [saved, setSaved] = useState(false);
+  const { favorites, toggle } = useFavorites();
+  const saved = favorites.some(item => item.id === id);
 
   return (
     // role="link" + teclado: la card completa se puede usar sin mouse
@@ -61,9 +63,10 @@ export function PropertyCard({
           className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-colors"
           onClick={(e) => {
             e.stopPropagation(); // evita abrir el detalle al guardar
-            setSaved((s) => !s);
+            toggle({ id, title, location });
           }}
           onKeyDown={(e) => e.stopPropagation()}
+          aria-pressed={saved}
           aria-label={saved ? 'Quitar de favoritos' : 'Guardar en favoritos'}
         >
           <svg

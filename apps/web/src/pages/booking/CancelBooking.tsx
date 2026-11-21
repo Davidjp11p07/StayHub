@@ -21,9 +21,9 @@ import type { Booking } from '../../types/catalog';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 max-w-xl mx-auto px-6 py-10 w-full">{children}</main>
+      <main className="management-content flex-1 max-w-xl mx-auto px-6 py-10 w-full">{children}</main>
     </div>
   );
 }

@@ -135,9 +135,9 @@ export function EditProperty() {
 
   if (!id || isError) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header />
-        <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
+        <main className="management-content flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
           <p role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
             {id ? propertyErrorMessage(error) : 'No encontramos la propiedad solicitada.'}
           </p>
@@ -148,9 +148,9 @@ export function EditProperty() {
 
   if (isLoading || !form || !property) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header />
-        <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
+        <main className="management-content flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
           <p role="status" className="text-sm text-gray-500">Cargando la propiedad…</p>
         </main>
       </div>
@@ -160,9 +160,9 @@ export function EditProperty() {
   const busy = updateMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
+      <main className="management-content flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">Panel de anfitrión</p>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Editar propiedad</h1>
         <p className="text-sm text-gray-500 mb-8">Actualiza los datos, las características y las habitaciones con su precio. Los cambios se guardan sobre la versión actual.</p>

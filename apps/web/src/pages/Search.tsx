@@ -47,6 +47,7 @@ export function Search() {
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
       <main className="flex-1 max-w-screen-xl mx-auto px-6 py-8 w-full flex flex-col gap-6">
+        <a href="/favorites" className="self-end text-sm font-semibold text-primary underline">Mis favoritos</a>
         <h1 className="text-2xl font-bold text-gray-900">Buscar alojamientos</h1>
 
         <FiltersPanel
@@ -100,7 +101,7 @@ export function Search() {
               <ul aria-label="Resultados" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-7">
                 {data.items.map((result) => (
                   <li key={result.accommodationId}>
-                    <PropertyCard {...toCardProps(result, nights)} onClick={() => navigate(paths.property(result.accommodationId))} />
+                    <PropertyCard id={result.accommodationId} {...toCardProps(result, nights)} onClick={() => navigate(paths.property(result.accommodationId))} />
                   </li>
                 ))}
               </ul>

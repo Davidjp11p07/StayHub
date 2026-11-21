@@ -23,9 +23,9 @@ const STATUS_STYLES: Record<PropertyStatus, string> = {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
+      <main className="management-content flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">Panel de anfitrión</p>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Mis propiedades</h1>

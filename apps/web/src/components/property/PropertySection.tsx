@@ -30,7 +30,7 @@ export function PropertySection({
       </div>
       <div className={`grid gap-x-5 gap-y-7 ${columns}`}>
         {properties.map(({ id, ...property }) => (
-          <PropertyCard key={id} {...property} onClick={() => onSelect(id)} />
+          <PropertyCard id={id} key={id} {...property} onClick={() => onSelect(id)} />
         ))}
       </div>
       {footer && <div className="flex justify-center mt-8">{footer}</div>}

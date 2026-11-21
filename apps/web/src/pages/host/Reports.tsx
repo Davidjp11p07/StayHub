@@ -32,6 +32,7 @@ function Trend({ title, values, periods, valueLabels }: { title: string; values:
 
 export function Reports() {
   const { currentUser } = useAuth();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const admin = currentUser?.role === 'ADMIN';
   const [owner, setOwner] = useState(admin ? '' : currentUser?.id ?? '');
   const [filters, setFilters] = useState<ReportFilters>(initialFilters);
@@ -78,7 +79,8 @@ export function Reports() {
     <p className="text-sm font-semibold text-primary">{admin ? 'Administración' : 'Panel de anfitrión'} / Reportes</p>
     <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-2 text-gray-900">Tu actividad, en perspectiva</h1>
     <p className="text-gray-500 mt-3 max-w-2xl">Reservas, ingresos y ocupación con el mismo período y una fuente verificable para cada cifra.</p>
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-4 rounded-2xl border border-gray-200 bg-white p-5 mt-7">
+    <button type="button" hidden={admin} className="report-filter-toggle" aria-expanded={filtersOpen} aria-controls="report-filters" onClick={() => setFiltersOpen(!filtersOpen)}>Filtros · {request?.filters.from ?? filters.from} → {request?.filters.to ?? filters.to}</button>
+    <form id="report-filters" data-open={filtersOpen || admin} onSubmit={submit} className="flex flex-wrap items-end gap-4 rounded-2xl border border-gray-200 bg-white p-5 mt-7">
       {admin && <label className="text-sm">Propietario (UUID)<input aria-label="Propietario" required value={owner} onChange={e => { setOwner(e.target.value); setProperties([]); }} className="block border rounded-lg p-2 mt-1" /></label>}
       <label className="text-sm">Desde<input aria-label="Desde" type="date" required value={filters.from} onChange={e => setFilters({ ...filters, from: e.target.value })} className="block border rounded-lg p-2 mt-1" /></label>
       <label className="text-sm">Hasta (exclusivo)<input aria-label="Hasta (exclusivo)" type="date" required value={filters.to} min={filters.from} onChange={e => setFilters({ ...filters, to: e.target.value })} className="block border rounded-lg p-2 mt-1" /></label>
@@ -102,7 +104,7 @@ export function Reports() {
       {total === 0 && metrics.cancellations === 0 && metrics.revenue.length === 0 && <p className="mt-5 text-gray-500">Sin movimientos ni nuevas reservas en este período.</p>}
       <section className="rounded-2xl border border-gray-200 bg-white p-6 mt-6">
         <div className="flex justify-between items-center gap-3"><div><h2 className="text-xl font-semibold">Ingresos</h2><p className="text-sm text-gray-500 mt-1">Por fecha de confirmación. Monedas independientes, sin conversión.</p></div><label className="text-sm">Moneda<select aria-label="Moneda" className="block border rounded-lg p-2" value={currency} onChange={e => setCurrency(e.target.value)}>{[...new Set(['COP', 'USD', ...metrics.revenue.map(row => row.currency)])].map(c => <option key={c}>{c}</option>)}</select></label></div>
-        <div className="grid sm:grid-cols-3 gap-4 mt-5"><Card label="Cobrado" value={money(revenue?.chargedMinor ?? '0', currency)} detail="Pagos aprobados" /><Card label="Reembolsado" value={money(revenue?.refundedMinor ?? '0', currency)} detail="Reembolsos completados" /><Card label="Ingreso neto" value={money(revenue?.netMinor ?? '0', currency)} detail="Cobrado menos reembolsado; puede ser negativo" /></div>
+        <div className="revenue-summary grid sm:grid-cols-3 gap-4 mt-5"><Card label="Cobrado" value={money(revenue?.chargedMinor ?? '0', currency)} detail="Pagos aprobados" /><Card label="Reembolsado" value={money(revenue?.refundedMinor ?? '0', currency)} detail="Reembolsos completados" /><Card label="Ingreso neto" value={money(revenue?.netMinor ?? '0', currency)} detail="Cobrado menos reembolsado; puede ser negativo" /></div>
         <Trend title={`Evolución del ingreso neto · ${currency}`} values={metrics.series.map(s => Number(s.revenue.find(row => row.currency === currency)?.netMinor ?? '0') / 100)} periods={metrics.series.map(s => s.period)} valueLabels={metrics.series.map(s => money(s.revenue.find(row => row.currency === currency)?.netMinor ?? '0', currency))} />
         <div className="overflow-x-auto mt-5"><table className="w-full text-sm text-left"><caption className="sr-only">Ingresos por moneda</caption><thead><tr>{['Moneda', 'Cobrado', 'Reembolsado', 'Neto'].map(h => <th key={h} className="py-2 border-b">{h}</th>)}</tr></thead><tbody>{metrics.revenue.map(row => <tr key={row.currency}><th className="py-3">{row.currency}</th><td>{money(row.chargedMinor, row.currency)}</td><td>{money(row.refundedMinor, row.currency)}</td><td>{money(row.netMinor, row.currency)}</td></tr>)}</tbody></table></div>
       </section>
