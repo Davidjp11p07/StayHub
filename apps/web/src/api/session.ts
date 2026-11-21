@@ -100,7 +100,7 @@ export class SessionStore {
   }
   private handleFailure(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
-      this.generation++; nextEpoch(); this.clear('Tu sesión venció. Inicia sesión nuevamente.');
+      this.generation++; nextEpoch(); this.clear(this.pair ? 'Tu sesión venció. Inicia sesión nuevamente.' : undefined);
       this.channel?.postMessage({ type: 'logout', epoch: readEpoch() } satisfies SessionMessage);
     } else {
       clearTimeout(this.timer);

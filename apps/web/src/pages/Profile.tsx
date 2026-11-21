@@ -58,14 +58,13 @@ export function Profile() {
     finally { setBusy(false); }
   }
   if (!currentUser) return <><Header /><main className="p-8"><p>Inicia sesión para ver tu perfil.</p><a href="/login">Iniciar sesión</a></main></>;
-  return <><Header /><main className="mx-auto max-w-xl p-8"><h1 className="text-2xl font-bold">Mi perfil</h1>
+  return <><Header /><main className="workspace profile-workspace"><p className="kicker">Cuenta</p><h1>Mi perfil</h1>
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
-    {!profile ? <p>Cargando perfil…</p> : <form onSubmit={event => { void save(event); }} className="mt-4 space-y-4">
-      {photoUrl && <img src={photoUrl} alt="Foto de perfil" className="h-24 w-24 rounded-full object-cover" />}
+    {!profile ? <p>Cargando perfil…</p> : <form onSubmit={event => { void save(event); }} className="profile-layout"><aside className="identity-panel">
+      {!photoUrl && <span className="avatar-initial" aria-hidden>{profile.name.trim().slice(0, 1).toUpperCase()}</span>}{photoUrl && <img src={photoUrl} alt="Foto de perfil" className="h-24 w-24 rounded-full object-cover" />}
       {photoError && <p role="status" className="text-sm text-gray-600">No pudimos cargar tu foto de perfil.</p>}
-      <label className="block">Nombre<input className="block w-full border p-2" value={name} maxLength={100} onChange={event => setName(event.target.value)} /></label>
-      <p>Correo: {profile.email}</p>
+      <h2>{profile.name}</h2><p>{profile.email}</p><a className="mt-5 inline-block underline" href="/favorites">Mis favoritos →</a></aside><section className="surface profile-fields"><h2>Datos personales</h2><label className="block">Nombre<input className="block w-full border p-2" value={name} maxLength={100} onChange={event => setName(event.target.value)} /></label>
       <label className="block">Foto JPEG o PNG<input className="block" type="file" accept="image/jpeg,image/png" onChange={event => setPhoto(event.target.files?.[0])} /></label>
-      <button disabled={busy} className="rounded bg-gray-900 px-4 py-2 text-white">{busy ? 'Guardando…' : 'Guardar cambios'}</button>
+      <button disabled={busy} className="rounded bg-gray-900 px-4 py-2 text-white">{busy ? 'Guardando…' : 'Guardar cambios'}</button></section>
     </form>}</main></>;
 }

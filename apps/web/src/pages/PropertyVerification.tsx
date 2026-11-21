@@ -80,7 +80,7 @@ function ReviewDetail({ row, onDone }: { row: QueueItem; onDone: () => void }) {
 export function PropertyVerification() {
   const queue = useQuery({ queryKey: ['verification-queue'], queryFn: async () => (await http.get<QueueItem[]>('/properties/verification/pending')).data });
   const [selected, setSelected] = useState<QueueItem>();
-  return <><Header /><main className="mx-auto max-w-4xl px-6 py-10 space-y-5">
+  return <><Header /><main className="management-content mx-auto max-w-4xl px-6 py-10 space-y-5">
     <h1 className="text-3xl font-bold">Inmuebles pendientes de revisión</h1>
     <button className="underline" onClick={() => { setSelected(undefined); void queue.refetch(); }}>Actualizar lista</button>
     {queue.isLoading && <p>Cargando solicitudes…</p>}

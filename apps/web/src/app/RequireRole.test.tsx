@@ -26,7 +26,7 @@ describe('owner routes', () => {
     unmount();
     renderAt('/host');
     expect(screen.getByRole('heading', { name: 'Hola, Olga' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Publicar una propiedad' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Publicar una propiedad' }));
     expect(locationRef.current?.pathname).toBe('/host/new');
   });
 

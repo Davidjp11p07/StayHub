@@ -60,7 +60,7 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header onNavigate={onNavigate} />
         <div className="flex-1 flex flex-col items-center justify-center py-24 text-center px-6">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Inicia sesión para ver tus reservas</h2>
@@ -131,9 +131,9 @@ export function HistoryShell(props: HistoryShellProps) {
   const items = query.data ? (props.listFilter ? props.listFilter(query.data.items) : query.data.items) : [];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header onNavigate={props.onNavigate} />
-      <main className="flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
+      <main className="management-content flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">{props.eyebrow}</p>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-3xl font-bold text-gray-900">{props.title}</h1>

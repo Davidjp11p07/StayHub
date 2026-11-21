@@ -37,7 +37,7 @@ export function Inventory() {
     } catch { setError('No pudimos actualizar el inventario. Puede haber cambiado; recarga e inténtalo de nuevo.'); }
     finally { setBusy(false); }
   }
-  return <><Header /><main className="mx-auto max-w-2xl p-8"><h1 className="text-2xl font-bold">Inventario de la habitación</h1>
+  return <><Header /><main className="management-content mx-auto max-w-2xl p-8"><h1 className="text-2xl font-bold">Inventario de la habitación</h1>
     {error && <p role="alert">{error} <button type="button" onClick={() => { void load(); }}>Recargar</button></p>}
     {!data ? <p>Cargando inventario…</p> : <><ul>{data.items.map(item => <li key={item.id} className="my-3">{item.name} · {item.quantityAvailable} · {item.active ? 'Activo' : 'Inactivo'} <button disabled={busy} onClick={() => { void toggle(item); }}>{item.active ? 'Desactivar' : 'Activar'}</button></li>)}</ul>
       {!data.items.length && <p>No hay artículos registrados.</p>}

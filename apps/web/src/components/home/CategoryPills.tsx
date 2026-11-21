@@ -25,7 +25,7 @@ export function CategoryPills({ categories, active, onChange, onFiltersClick, fi
             active === cat.label ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          <span aria-hidden>{cat.icon}</span>
+          <span aria-hidden className="category-dot" />
           {cat.label}
         </button>
       ))}

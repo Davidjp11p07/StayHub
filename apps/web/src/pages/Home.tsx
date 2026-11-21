@@ -52,7 +52,7 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
     <ul className={className}>
       {items.map((card) => (
         <li key={card.id}>
-          <PropertyCard {...card.props} onClick={() => navigate(paths.property(card.id))} />
+          <PropertyCard id={card.id} {...card.props} onClick={() => navigate(paths.property(card.id))} />
         </li>
       ))}
     </ul>
@@ -105,7 +105,7 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
 
             {featured.length > 0 && (
               <section className="mb-12" aria-labelledby="featured-heading">
-                <h2 id="featured-heading" className="text-xl font-bold text-gray-900 mb-5">Propiedades destacadas y hoteles mejor valorados</h2>
+                <h2 id="featured-heading" className="text-xl font-bold text-gray-900 mb-5">Más alojamientos para explorar</h2>
                 {grid(featured, 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7')}
               </section>
             )}
@@ -141,15 +141,7 @@ export function Home({ fallback = DEV_FALLBACK_ENABLED }: HomeProps) {
           <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="max-w-lg">
               <h2 className="text-2xl font-bold mb-2">¿Tienes un hotel, hostal o casa de huéspedes?</h2>
-              <p className="text-white/70 text-sm mb-6">StayHub te da acceso a millones de viajeros de todo el mundo.</p>
-              <div className="flex flex-wrap gap-8 mb-6">
-                {[{ value: '+38%', label: 'Reservas garantizadas' }, { value: '0%', label: 'Comisión el primer mes' }, { value: '24/7', label: 'Soporte para anfitriones' }].map((s) => (
-                  <div key={s.value}>
-                    <p className="text-2xl font-bold">{s.value}</p>
-                    <p className="text-sm text-white/60">{s.label}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-white/70 text-sm mb-6">Configura tus habitaciones, publica tus fotos y envía el alojamiento a verificación.</p>
               <div className="flex gap-3">
                 <Button variant="primary" size="md" onClick={() => navigate(paths.hostNew)}>Publicar ahora →</Button>
                 <Button variant="outline" size="md" className="!bg-transparent !text-white !border-white/60 hover:!bg-white/10" onClick={() => navigate(paths.host)}>Saber más</Button>

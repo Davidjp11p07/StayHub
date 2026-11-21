@@ -66,7 +66,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
+    <header className="app-header sticky top-0 z-40">
       {profileUnavailable && <p role="status" className="px-6 py-2">No pudimos cargar tu nombre. <button onClick={() => { void retryProfile(); }}>Reintentar</button></p>}
       {error && <p role="alert" className="px-6 py-2">{error} {logoutFailed && <button onClick={() => { void logout(); }}>Reintentar cierre</button>}</p>}
       <div className="max-w-screen-xl mx-auto px-6 py-3 flex items-center gap-4">
@@ -122,6 +122,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                     <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.name}</p>
                     <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
                   </div>
+                  <a href="/favorites" className="block px-4 py-2.5 text-sm hover:bg-gray-50">Mis favoritos</a>
                   <a href="/profile" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</a>
                   <button
                     onClick={() => { setMenuOpen(false); onNavigate('bookings'); }}

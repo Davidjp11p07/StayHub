@@ -24,7 +24,7 @@ export function MyReviews({ onNavigate }: MyReviewsProps) {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header onNavigate={onNavigate} />
         <div className="flex-1 flex flex-col items-center justify-center py-24 text-center px-6">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Inicia sesión para ver tus reseñas</h2>
@@ -40,9 +40,9 @@ export function MyReviews({ onNavigate }: MyReviewsProps) {
     : 'No pudimos cargar tus reseñas. Intenta nuevamente.';
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header onNavigate={onNavigate} />
-      <main className="flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
+      <main className="management-content flex-1 max-w-screen-lg mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">Tu cuenta</p>
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Mis reseñas</h1>
 

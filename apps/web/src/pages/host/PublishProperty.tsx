@@ -127,9 +127,9 @@ export function PublishProperty() {
   const locked = busy || !!created;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
+      <main className="management-content flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
         <p className="text-sm text-primary font-semibold mb-1">Panel de anfitrión</p>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Publicar propiedad</h1>
         <p className="text-sm text-gray-500 mb-8">Completa los datos, agrega habitaciones con su precio y sube al menos una foto para solicitar la revisión.</p>
