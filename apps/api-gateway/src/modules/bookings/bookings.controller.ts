@@ -38,9 +38,40 @@ export class BookingsController {
     return this.bookings.request(context(request), 'POST', '/bookings', body, key);
   }
 
+  @Get('calendar/:property/:room/:month') @Roles('GUEST')
+  calendar(@Param('property') property: string, @Param('room') room: string, @Param('month') month: string, @Req() request: Request) {
+    if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/u.test(month)) throw new BadRequestException();
+    return this.bookings.request(context(request), 'GET', '/bookings/calendar/'+uuid(property)+'/'+uuid(room)+'/'+month);
+  }
+
   @Get('history') @Roles('OWNER')
   public history(@Req() request: Request): Promise<unknown> {
     return this.bookings.request(context(request), 'GET', `/bookings/history${allowedQuery(request, ['from', 'to', 'status', 'guestId', 'propertyId', 'page', 'pageSize'])}`);
+  }
+
+  @Get('maintenance/:property') @Roles('OWNER')
+  maintenance(@Param('property') property: string, @Req() request: Request) {
+    return this.bookings.request(context(request), 'GET', '/bookings/maintenance/' + uuid(property));
+  }
+
+  @Post('maintenance/:property/:room') @Roles('OWNER')
+  block(@Param('property') property: string, @Param('room') room: string, @Body() dates: { from: string; to: string }, @Req() request: Request) {
+    return this.bookings.request(context(request), 'POST', '/bookings/maintenance/' + uuid(property) + '/' + uuid(room), dates);
+  }
+
+  @Delete('maintenance/:property/:id') @Roles('OWNER')
+  release(@Param('property') property: string, @Param('id') id: string, @Req() request: Request) {
+    return this.bookings.request(context(request), 'DELETE', '/bookings/maintenance/' + uuid(property) + '/' + uuid(id));
+  }
+
+  @Get(':bookingId/messages') @Roles('GUEST','OWNER')
+  messages(@Param('bookingId') id:string,@Req() request:Request) {
+    return this.bookings.request(context(request),'GET','/bookings/'+uuid(id)+'/messages');
+  }
+
+  @Post(':bookingId/messages') @Roles('GUEST','OWNER')
+  sendMessage(@Param('bookingId') id:string,@Body() message:{id:string;body:string},@Req() request:Request) {
+    return this.bookings.request(context(request),'POST','/bookings/'+uuid(id)+'/messages',message);
   }
 
   @Get(':bookingId/cancellation-preview') @Roles('GUEST', 'OWNER')

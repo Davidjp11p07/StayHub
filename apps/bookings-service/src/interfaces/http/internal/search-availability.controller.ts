@@ -50,9 +50,8 @@ export class SearchAvailabilityController {
     const rows = await this.prisma.$queryRaw<{ roomId: string }[]>`
       SELECT candidate AS "roomId" FROM unnest(${input.roomIds}::uuid[]) AS candidate
       WHERE NOT EXISTS (
-        SELECT 1 FROM bookings b WHERE b."roomId" = candidate
-        AND b.status IN ('PENDING_PAYMENT','CONFIRMED','CHECKED_IN')
-        AND daterange(b."checkIn", b."checkOut", '[)') && daterange(${input.checkIn}::date, ${input.checkOut}::date, '[)')
+        SELECT 1 FROM room_calendar b WHERE b.room_id = candidate
+        AND daterange(b.arrival, b.departure, '[)') && daterange(${input.checkIn}::date, ${input.checkOut}::date, '[)')
       )`;
     return { availableRoomIds: rows.map(row => row.roomId) };
   }

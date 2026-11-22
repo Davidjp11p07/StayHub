@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Home } from '../pages/Home';
 import { Information } from '../pages/Information';
@@ -110,7 +110,10 @@ function PropertyDetailRoute() {
 }
 
 function MyBookingsRoute() {
-  return <MyBookings onNavigate={useLegacyNavigate()} />;
+  const navigate = useLegacyNavigate();
+  const { currentUser } = useAuth();
+  if (currentUser?.role === 'OWNER') return <Navigate to={paths.hostBookings} replace />;
+  return <MyBookings onNavigate={navigate} />;
 }
 
 function MyReviewsRoute() {

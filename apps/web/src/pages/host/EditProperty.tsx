@@ -267,7 +267,7 @@ export function EditProperty() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            {impact && <section role="alert" className="surface"><h2>Antes de despublicar</h2><p>{impact}</p><a className="underline" href={'/host/bookings?propertyId='+id}>Ver reservas</a> <button type="button" className="action-primary" disabled={busy} onClick={()=>void submit(true)}>Despublicar y mantener reservas</button> <button type="button" onClick={()=>setImpact(undefined)}>Volver a editar</button></section>}
+            {impact && <section role="alert" className="surface"><h2>Antes de despublicar</h2><p>{impact}</p><p>El alojamiento dejará de aceptar reservas nuevas. Cada huésped conservará el detalle de su estancia y del pago en Mis reservas.</p><a className="underline" href={'/host/bookings?propertyId='+id}>Ver reservas</a> <button type="button" className="action-primary" disabled={busy} onClick={()=>void submit(true)}>Despublicar y mantener reservas</button> <button type="button" onClick={()=>setImpact(undefined)}>Volver a editar</button></section>}
             <Button type="submit" variant="primary" size="lg" loading={busy}>{property?.status === 'PUBLISHED' ? 'Despublicar y guardar cambios' : 'Guardar cambios'}</Button>
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => navigate(paths.property(property.id))}>
               Cancelar

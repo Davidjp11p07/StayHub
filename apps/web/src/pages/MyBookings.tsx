@@ -107,6 +107,7 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
       )}
       renderItem={(booking) => (
         <BookingRow key={booking.id} booking={booking}>
+          <Link className="manage-link mr-4" to={'/stay/'+booking.id}>Ver comprobante</Link>
           {isCancelable(booking) && (
             <Link to={paths.cancelBooking(booking.id)} className="inline-block mt-2 mr-4 text-sm font-semibold text-red-600 hover:underline">
               Cancelar reserva

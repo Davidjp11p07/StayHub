@@ -40,7 +40,7 @@ export class PrismaCreateBookingUnitOfWork implements CreateBookingUnitOfWork {
         const replay = await this.replay(input.booking.data.guestId, input.idempotencyKey, input.requestHash);
         if (replay) return replay;
       }
-      if (/bookings_no_overlap|23P01|P2004/iu.test(text)) throw new DomainError('BOOKING_CONFLICT');
+      if (/room_calendar_no_overlap|bookings_no_overlap|23P01|P2004/iu.test(text)) throw new DomainError('BOOKING_CONFLICT');
       throw error;
     }
   }

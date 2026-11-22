@@ -644,6 +644,17 @@ export const handlers = [
   submitVerificationHandler,
   uploadPhotoHandler,
   myPropertiesHandler,
+  http.get(`${API}/bookings/calendar/:property/:room/:month`, ({ request, params }) => {
+    if (!authenticate(request).caller) return problem(401, 'UNAUTHORIZED');
+    const first = String(params.month) + '-01';
+    const end = new Date(first + 'T00:00:00Z');
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    const next = end.toISOString().slice(0, 10);
+    return HttpResponse.json(db.bookings
+      .filter(b => b.propertyId === params.property && b.roomId === params.room && BLOCKING_STATUSES.has(b.status)
+        && b.checkIn < next && first < b.checkOut)
+      .map(b => ({ first: b.checkIn < first ? first : b.checkIn, end: b.checkOut > next ? next : b.checkOut, blocked: false })));
+  }),
   bookingQuoteHandler,
   createBookingHandler,
   cancelBookingHandler,

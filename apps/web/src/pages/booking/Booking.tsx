@@ -1,3 +1,4 @@
+import { GuestCalendar } from './GuestCalendar';
 import { useQuery } from '@tanstack/react-query';
 import { http } from '../../api/http';
 import { useEffect, useRef, useState } from 'react';
@@ -185,6 +186,8 @@ export function Booking() {
             </div>
           )}
 
+          <GuestCalendar key={room.id} property={id} room={room.id} name={room.name} today={today} arrival={checkIn}
+            onArrival={date=>{setCheckIn(date); if(checkOut<=date) setCheckOut(''); resetFeedback();}} />
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-in" className="text-xs font-semibold text-gray-700">ENTRADA</label>
@@ -220,12 +223,16 @@ export function Booking() {
           {room.breakfastPerGuestNight && <label><input type="checkbox" checked={withBreakfast} onChange={e => setBreakfastSelected(e.target.checked)} /> Incluir desayuno ({formatMoney(room.breakfastPerGuestNight.amount, currency)} por huésped y noche)</label>}
           {canQuote && price.isFetching && <p role="status">Consultando el precio...</p>}
           {price.isError && <p role="alert">
-            {price.error instanceof ApiError && price.error.problem?.code === 'UNSUPPORTED_PAYMENT_CURRENCY'
+            {price.error instanceof ApiError && ['BOOKING_CONFLICT','UNSUPPORTED_PAYMENT_CURRENCY'].includes(price.error.problem?.code ?? '')
               ? bookingErrorMessage(price.error)
               : <>No se pudo cotizar la estancia. <button type="button" onClick={() => void price.refetch()}>Reintentar</button></>}
           </p>}
           {canQuote && room.basePrice && price.data && !price.isError && (
+            <section><h2 className="text-xl font-semibold">Revisa tu estancia</h2>
             <dl aria-label="Resumen de la reserva" className="flex flex-col gap-2 border-t border-gray-100 pt-4">
+              <div><dt>Alojamiento y habitación</dt><dd>{property.name} · {room.name}</dd></div>
+              <div><dt>Estancia</dt><dd>{checkIn} → {checkOut} · {guests} {guests===1?'huésped':'huéspedes'}</dd></div>
+              {!withBreakfast && <div><dt>Desayuno</dt><dd>{property.features?.some(f=>f.code==='BREAKFAST_INCLUDED')?'Incluido en la tarifa':'Sin desayuno'}</dd></div>}
               <div className="flex justify-between text-sm text-gray-700">
                 <dt>{`${formatMoney(room.basePrice.amount, currency)} × ${nights} ${nights === 1 ? 'noche' : 'noches'}`}</dt>
               </div>
@@ -237,11 +244,11 @@ export function Booking() {
                 <dt>Total</dt>
                 <dd>{formatMoney(price.data.total, price.data.currency)}</dd>
               </div>
-            </dl>
+            </dl></section>
           )}
 
           <div className="booking-confirm">{price.data && canQuote && !price.isError && !price.isFetching && <strong className="sm:hidden" aria-label={formatMoney(price.data.total,price.data.currency)} data-total={formatMoney(price.data.total,price.data.currency)} />}{uncertain && <button type="button" className="manage-link" onClick={()=>void reconcile()}>Recuperar mi solicitud</button>}<Button type="submit" variant="primary" size="lg" disabled={uncertain || (canQuote && (!price.data || price.isFetching || price.isError))} loading={createMutation.isPending}>Confirmar reserva</Button></div>
-          <p className="text-xs text-center text-gray-600">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
+          <p className="text-xs text-center text-gray-600">Puedes ajustar los datos arriba. Al confirmar se iniciará el pago simulado.</p>
         </form>
       )}
     </Shell>
