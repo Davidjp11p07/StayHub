@@ -13,13 +13,13 @@ export class MaintenanceDates {
 @UseGuards(ServiceAuthGuard)
 export class MaintenanceController {
   constructor(private readonly db: PrismaService, @Inject(ACCOMMODATION_QUOTE_PORT) private readonly rooms: AccommodationQuotePort) {}
-  private owner(request: AuthenticatedRequest) {
+  private owner(request: AuthenticatedRequest): string {
     if (request.principal?.role !== 'OWNER') throw new ForbiddenException();
     return request.principal.sub;
   }
 
   @Get(':property')
-  list(@Param('property', ParseUUIDPipe) property: string, @Req() request: AuthenticatedRequest) {
+  list(@Param('property', ParseUUIDPipe) property: string, @Req() request: AuthenticatedRequest): Promise<{ id: string; roomId: string; from: string; to: string }[]> {
     const owner = this.owner(request);
     return this.db.$queryRaw`SELECT id, room_id AS "roomId", arrival::text AS "from", departure::text AS "to"
       FROM room_calendar WHERE maintenance AND owner_id=${owner}::uuid AND property_id=${property}::uuid ORDER BY arrival`;
@@ -27,7 +27,7 @@ export class MaintenanceController {
 
   @Post(':property/:room')
   async block(@Param('property', ParseUUIDPipe) property: string, @Param('room', ParseUUIDPipe) room: string,
-    @Body() dates: MaintenanceDates, @Req() request: AuthenticatedRequest) {
+    @Body() dates: MaintenanceDates, @Req() request: AuthenticatedRequest): Promise<{ id: string }> {
     const owner = this.owner(request);
     if (dates.to <= dates.from) throw new BadRequestException();
     const quote = await this.rooms.getQuote(property, room, 1);
@@ -44,7 +44,7 @@ export class MaintenanceController {
   }
 
   @Delete(':property/:id')
-  async release(@Param('property', ParseUUIDPipe) property: string, @Param('id', ParseUUIDPipe) id: string, @Req() request: AuthenticatedRequest) {
+  async release(@Param('property', ParseUUIDPipe) property: string, @Param('id', ParseUUIDPipe) id: string, @Req() request: AuthenticatedRequest): Promise<{ id: string }> {
     const owner = this.owner(request);
     const count = await this.db.$executeRaw`DELETE FROM room_calendar WHERE maintenance AND id=${id}::uuid
       AND owner_id=${owner}::uuid AND property_id=${property}::uuid`;
