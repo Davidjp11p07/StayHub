@@ -7,6 +7,8 @@ import { CLOCK_PORT, type ClockPort } from '@bookings/application/ports/clock.po
 import type { StoredBooking } from '@bookings/application/ports/create-booking.unit-of-work';
 import { DomainError } from '@bookings/domain/shared/domain-error';
 
+export interface CancellationPreview { currency: string; paid: string; refund: string; retained: string }
+
 export interface CancelGuestBookingCommand {
   bookingId: string;
   actorId: string;
@@ -21,7 +23,7 @@ export class CancelGuestBookingUseCase {
     private readonly clock: ClockPort,
   ) {}
 
-  public async preview(bookingId: string, actorId: string, role: 'GUEST' | 'OWNER') {
+  public async preview(bookingId: string, actorId: string, role: 'GUEST' | 'OWNER'): Promise<CancellationPreview> {
     const booking = await this.bookings.findById(bookingId);
     if (!booking || (role === 'OWNER' ? booking.ownerId : booking.guestId) !== actorId) throw new DomainError('NOT_FOUND');
     if (booking.status !== 'PENDING_PAYMENT' && booking.status !== 'CONFIRMED') throw new DomainError('STATE_CONFLICT');

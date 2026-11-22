@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get,
 import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreateBookingUseCase, type BookingPricePreview } from '@bookings/application/create-booking/create-booking.use-case';
 import { GetBookingUseCase } from '@bookings/application/get-booking/get-booking.use-case';
-import { CancelGuestBookingUseCase } from '@bookings/application/cancel-booking/cancel-guest-booking.use-case';
+import { CancelGuestBookingUseCase, type CancellationPreview } from '@bookings/application/cancel-booking/cancel-guest-booking.use-case';
 import { CancelOwnerBookingUseCase } from '@bookings/application/cancel-booking/cancel-owner-booking.use-case';
 import { GetOwnerBookingHistoryUseCase } from '@bookings/application/owner-history/get-owner-booking-history.use-case';
 import { CreateBookingDto, assertIdempotencyKey } from '@bookings/interfaces/http/dto/create-booking.dto';
@@ -62,7 +62,7 @@ export class BookingsController {
   }
 
   @Get(':bookingId/cancellation-preview')
-  public cancellationPreview(@Param('bookingId') bookingId: string, @Req() request: AuthenticatedRequest) {
+  public cancellationPreview(@Param('bookingId') bookingId: string, @Req() request: AuthenticatedRequest): Promise<CancellationPreview> {
     const actor = request.principal;
     if (!actor || (actor.role !== 'OWNER' && actor.role !== 'GUEST')) throw new ForbiddenException();
     return this.cancelGuestBooking.preview(assertBookingId(bookingId), actor.sub, actor.role);
