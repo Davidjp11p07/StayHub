@@ -1,10 +1,13 @@
 import { useEffect, useId, useState } from 'react';
 import { validateSearchFilters, type SearchValidation } from '../../api/search';
 import { ALL_CATEGORY, AMENITY_CATEGORIES } from '../../data/categories';
-import { FEATURE_CATALOG, type SearchFilters, type SearchSuggestion } from '../../types/catalog';
+import { isCountryCode, FEATURE_CATALOG, type SearchFilters, type SearchSuggestion } from '../../types/catalog';
 import { CategoryPills } from '../home/CategoryPills';
 import { SearchBar } from '../home/SearchBar';
 
+const regionNames = new Intl.DisplayNames(['es'],{type:'region'});
+const countryChoices = Array.from({length:676}, (_,i)=>String.fromCharCode(65+Math.floor(i/26),65+i%26))
+  .filter(isCountryCode).map(code=>({code,label:regionNames.of(code) ?? code})).sort((a,b)=>a.label.localeCompare(b.label,'es'));
 export const SEARCH_CURRENCIES = ['USD', 'EUR', 'MXN', 'COP', 'ARS'] as const;
 
 interface FiltersPanelProps {
@@ -130,7 +133,8 @@ export function FiltersPanel({ filters, onKeywordsChange, onApply, suggestions, 
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor={`${id}-countryCode`} className="text-xs font-semibold text-gray-600">País (dos letras)</label>
-              <input id={`${id}-countryCode`} value={draft.countryCode} onChange={set('countryCode')} maxLength={2} placeholder="Ej. CO" className={inputClass(!!shown.countryCode)} {...field('countryCode')} />
+              <datalist id={id+'-countries'}>{countryChoices.map(({code,label})=><option key={code} value={code}>{label} ({code})</option>)}</datalist>
+              <input list={id+'-countries'} id={`${id}-countryCode`} value={draft.countryCode} onChange={set('countryCode')} maxLength={2} placeholder="Ej. CO" className={inputClass(!!shown.countryCode)} {...field('countryCode')} />
               {fieldError('countryCode')}
             </div>
             <div className="flex flex-col gap-1.5">

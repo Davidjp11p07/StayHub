@@ -96,6 +96,15 @@ export class AccommodationsController {
     return this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/verification/decision`, contextOf(request), verificationBody(body));
   }
 
+  @Post(':propertyId/photos/:photoId/cover')
+  @HttpCode(204)
+  @Roles('OWNER')
+  async cover(@Req() request: Request, @Body() body:unknown):Promise<void> {
+    const photoId=request.params['photoId'] ?? '';
+    if(!UUID_PATTERN.test(photoId)) throw new BadRequestException({code:'VALIDATION_ERROR'});
+    await this.accommodations.request('POST', `/properties/${propertyIdOf(request)}/photos/${photoId}/cover`,contextOf(request),verificationBody(body));
+  }
+
   @Get(':propertyId/photos/:photoId')
   @OptionalAuth()
   public async getPhoto(@Req() request: Request, @Res() response: Response): Promise<void> {

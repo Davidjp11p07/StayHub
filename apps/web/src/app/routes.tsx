@@ -15,6 +15,7 @@ import { Register } from '../pages/Register';
 import { Search } from '../pages/Search';
 import { PropertyVerification } from '../pages/PropertyVerification';
 import { Favorites } from '../pages/Favorites';
+import { StayDetail } from '../pages/StayDetail';
 import { Profile } from '../pages/Profile';
 import { Inventory } from '../pages/host/Inventory';
 import { EditProperty } from '../pages/host/EditProperty';
@@ -137,6 +138,7 @@ export const appRoutes: RouteObject[] = [
       { path: paths.register, element: <RegisterRoute /> },
       { path: paths.search, element: <Search /> },
       { path: '/favorites', element: <Favorites /> },
+      { path: '/stay/:id', element: <StayDetail /> },
       { path: '/profile', element: <Profile /> },
       { path: '/property/:id', element: <PropertyDetailRoute /> },
       // Guest (the page itself prompts anonymous visitors to sign in)

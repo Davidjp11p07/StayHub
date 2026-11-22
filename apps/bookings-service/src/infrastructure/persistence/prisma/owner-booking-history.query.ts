@@ -11,6 +11,7 @@ export class PrismaOwnerBookingHistoryQuery implements OwnerBookingHistoryPort {
   public async findPage(filter: OwnerBookingHistoryFilter): Promise<BookingPage> {
     const where: Prisma.BookingWhereInput = {
       ownerId: filter.ownerId,
+      ...(filter.propertyId ? {propertyId:filter.propertyId} : {}),
       ...(filter.guestId ? { guestId: filter.guestId } : {}),
       ...(filter.status ? { status: filter.status as BookingStatus } : {}),
       ...(filter.from ? { checkOut: { gt: new Date(`${filter.from}T00:00:00.000Z`) } } : {}),

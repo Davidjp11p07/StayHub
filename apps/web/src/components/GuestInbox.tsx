@@ -27,7 +27,7 @@ export function GuestInbox({ userId }: { userId: string }) {
       {inbox.isError && <button onClick={() => void inbox.refetch()}>Reintentar la consulta de avisos</button>}
       {inbox.data?.pages[0]?.items.length === 0 && <p>Aún no tienes avisos.</p>}
       {inbox.data?.pages.map(page => page.items.map(item => <article key={item.id} className="notice" data-unread={!item.readAt}><div className="notice-meta"><span>{item.readAt ? 'Leída' : 'Sin leer'}</span>{item.createdAt && <time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}</time>}</div>
-        <h3 className="font-semibold">{item.subject}</h3><p>{item.body}</p>
+        <h3 className="font-semibold">{item.subject}</h3>{/\bReserva ([0-9a-f-]{36})\b/i.test(item.body) && <a className="underline" href={'/stay/'+item.body.match(/\bReserva ([0-9a-f-]{36})\b/i)![1]}>Ver reserva</a>}<p>{item.body}</p>
         {!item.readAt && <button disabled={read.isPending} onClick={() => read.mutate(item.id)} className="text-primary underline">Marcar como leída</button>}
       </article>))}
       {read.isError && <p role="alert">No se pudo marcar el aviso como leído.</p>}

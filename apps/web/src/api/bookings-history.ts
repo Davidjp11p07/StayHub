@@ -17,6 +17,7 @@ import type { Booking, BookingStatus, Page } from '../types/catalog';
 
 export interface OwnerBookingHistoryFilters {
   status?: BookingStatus;
+  propertyId?: string;
   guestId?: string;
   from?: string;
   to?: string;

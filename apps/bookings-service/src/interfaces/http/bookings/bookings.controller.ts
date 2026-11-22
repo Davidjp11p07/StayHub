@@ -55,10 +55,17 @@ export class BookingsController {
     const page = await this.ownerHistory.execute({
       ownerId: principal.sub,
       ...(query.from ? { from: query.from } : {}), ...(query.to ? { to: query.to } : {}),
-      ...(query.status ? { status: query.status } : {}), ...(query.guestId ? { guestId: query.guestId } : {}),
+      ...(query.status ? { status: query.status } : {}), ...(query.propertyId ? {propertyId:query.propertyId} : {}), ...(query.guestId ? { guestId: query.guestId } : {}),
       page: query.page, pageSize: query.pageSize,
     });
     return presentBookingPage(page, { role: 'OWNER', sub: principal.sub });
+  }
+
+  @Get(':bookingId/cancellation-preview')
+  public cancellationPreview(@Param('bookingId') bookingId: string, @Req() request: AuthenticatedRequest) {
+    const actor = request.principal;
+    if (!actor || (actor.role !== 'OWNER' && actor.role !== 'GUEST')) throw new ForbiddenException();
+    return this.cancelGuestBooking.preview(assertBookingId(bookingId), actor.sub, actor.role);
   }
 
   @Get(':bookingId') @ApiOperation({ summary: 'Get a booking authorized for the caller' }) @ApiParam({ name: 'bookingId', required: true, schema: { type: 'string', format: 'uuid' } }) @ApiOkResponse({ description: 'Booking owned by the guest or received by the owner' })

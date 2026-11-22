@@ -57,6 +57,7 @@ export function PhotoPicker({ photos, errors, status, uploadErrors, onChange, di
                   <p className="text-xs text-gray-500">{sizeLabel(photo.file.size)} · {STATUS_LABEL[state]}</p>
                   {problem && <p role="alert" className="text-xs text-red-600">{problem}</p>}
                 </div>
+                {i===0 && <span>Portada</span>}{i>0 && !Object.values(status).some(s=>s==='uploaded'||s==='uploading') && <button disabled={disabled} type="button" onClick={()=>onChange([photo,...photos.filter(p=>p.key!==photo.key)])}>Usar como portada</button>}
                 {state !== 'uploaded' && state !== 'uploading' && (
                   <button
                     type="button"

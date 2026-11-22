@@ -188,6 +188,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
           )}
         </div>
       </div>
+      <nav aria-label="Navegación móvil" className="mobile-nav">{(currentUser?.role==='OWNER' ? [['/host','Resumen'],['/host/properties','Propiedades'],['/host/bookings','Reservas'],['/profile','Perfil']] : [['/search','Explorar'],['/favorites','Favoritos'],['/bookings','Reservas'],['/profile','Perfil']]).map(([href,label])=><a key={href} href={href} aria-current={window.location.pathname===href?'page':undefined}>{label}</a>)}</nav>
     </header>
   );
 }

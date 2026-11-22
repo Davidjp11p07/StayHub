@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { RoomCalendar } from './RoomCalendar';
+import { ownerStays } from '../../api/owner-stays';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useOwnerBookingHistory } from '../../api/bookings-history';
 import { paths } from '../../app/navigation';
 import type { Booking } from '../../types/catalog';
@@ -11,6 +15,9 @@ import { BookingRow, HistoryShell, isCancelable } from '../MyBookings';
  * needed). Property is a client-side filter over the fetched page. Mounted under the OWNER guard.
  */
 export function BookingsReceived() {
+  const [params] = useSearchParams();
+  const id=params.get('propertyId');
+  const owner=useAuth().currentUser?.id;
   const [status, setStatus] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -22,6 +29,11 @@ export function BookingsReceived() {
     to: to || undefined,
   });
 
+  const scoped = useQuery({ queryKey:['owner-stays',owner,id,params.toString(),status,from,to], enabled: Boolean(id || params.has('createdFrom')), queryFn: async ({signal})=>{
+    const rows = await ownerStays({propertyId:id ?? undefined,status:(status || undefined) as Booking['status'] | undefined,from:from || undefined,to:to || undefined},signal);
+    const items=rows.filter(b=>(!id || b.propertyId===id) && (!params.has('createdFrom') || b.createdAt.slice(0,10)>=params.get('createdFrom')!) && (!params.has('createdTo') || b.createdAt.slice(0,10)<params.get('createdTo')!));
+    return {items,total:items.length,page:1,pageSize:items.length,hasNext:false};
+  }});
   const propertyNames = [...new Set((query.data?.items ?? []).map((b) => b.propertyName))];
 
   return (
@@ -30,12 +42,12 @@ export function BookingsReceived() {
       title="Reservas recibidas"
       status={status} from={from} to={to}
       onStatus={setStatus} onFrom={setFrom} onTo={setTo}
-      query={query}
+      query={id || params.has('createdFrom') ? scoped : query}
       loadingText="Cargando las reservas…"
       listLabel="Reservas recibidas"
       extraFilters={(
         <div className="flex flex-col gap-1">
-          <label htmlFor="history-property" className="text-xs font-semibold text-gray-700">Propiedad</label>
+          {id && <RoomCalendar id={id} />}<label htmlFor="history-property" className="text-xs font-semibold text-gray-700">Propiedad</label>
           <select id="history-property" value={property} onChange={(e) => setProperty(e.target.value)} className="h-10 px-3 border border-gray-300 rounded-xl text-sm">
             <option value="">Todas</option>
             {propertyNames.map((name) => <option key={name} value={name}>{name}</option>)}

@@ -1,5 +1,6 @@
 import { CoordinatePicker } from '../../components/host/CoordinatePicker';
-import { useRef, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   fieldErrors, propertyWriteErrorMessage, useCreateProperty, useRequestVerification, useUploadPropertyPhoto,
@@ -37,6 +38,12 @@ export function PublishProperty() {
   const publishMutation = useRequestVerification();
 
   const [form, setForm] = useState<PropertyFormState>(emptyPropertyForm);
+  const draftKey='stayhub:property-draft:'+useAuth().currentUser?.id;
+  const [stored,setStored]=useState<{form:PropertyFormState;at:string}>();
+  const [step,setStep]=useState<number | null>(null);
+  const [previewPhoto,setPreviewPhoto]=useState('');
+  const [savedAt,setSavedAt]=useState('');
+  useEffect(()=>{try{const raw=localStorage.getItem(draftKey);if(raw){const value=JSON.parse(raw);if(typeof value.form?.name==='string' && Array.isArray(value.form.rooms))setStored(value);}}catch{/* storage unavailable */}},[draftKey]);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<Record<string, PhotoStatus>>({});
@@ -46,6 +53,13 @@ export function PublishProperty() {
   const [general, setGeneral] = useState<string>();
   const submitting = useRef(false);
   const summaryRef = useRef<HTMLDivElement>(null);
+  useEffect(()=>{const first=photos[0];if(!first || typeof URL.createObjectURL!=='function'){setPreviewPhoto('');return;}const url=URL.createObjectURL(first.file);setPreviewPhoto(url);return ()=>URL.revokeObjectURL(url);},[photos]);
+  const persisted = useRef(false);
+  useEffect(()=>{
+    if(stored || persisted.current || ![form.name,form.addressLine,form.city,form.description,...form.rooms.map(r=>r.name)].some(Boolean))return;
+    const at=new Date().toISOString();
+    try {localStorage.setItem(draftKey,JSON.stringify({at,form}));setSavedAt(at);}catch{/* browser storage may be unavailable */}
+  },[draftKey,form,stored]);
   const busy = phase !== 'idle';
 
   const set = (key: keyof PropertyFormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -58,6 +72,7 @@ export function PublishProperty() {
   }));
 
   const fail = (message: string, found: FormErrors = {}) => {
+    setStep(null);
     setGeneral(message);
     setErrors((p) => ({ ...p, ...found }));
     requestAnimationFrame(() => summaryRef.current?.focus());
@@ -77,6 +92,7 @@ export function PublishProperty() {
         setPhase('creating');
         try {
           property = await createMutation.mutateAsync(toPropertyCreate(form));
+          persisted.current=true; try{localStorage.removeItem(draftKey);}catch{/* optional storage */}
           setCreated(property);
         } catch (error) {
           const mapped = Object.fromEntries(fieldErrors(error).map((f) => [formKeyFromApiField(f), 'Valor no válido.']));
@@ -111,6 +127,7 @@ export function PublishProperty() {
         setPhase('publishing');
         try {
           property = await publishMutation.mutateAsync(property);
+          persisted.current=true; try{localStorage.removeItem(draftKey);}catch{/* optional storage */}
           setCreated(property);
         } catch (error) {
           fail(`La propiedad se guardó como borrador, pero no se pudo solicitar la revisión. ${propertyWriteErrorMessage(error)}`);
@@ -134,10 +151,13 @@ export function PublishProperty() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Publicar propiedad</h1>
         <p className="text-sm text-gray-500 mb-8">Completa los datos, agrega habitaciones con su precio y sube al menos una foto para solicitar la revisión.</p>
 
+        {stored && <section className="surface"><p>Borrador del {new Date(stored.at).toLocaleString('es-CO')}. Vuelve a seleccionar las fotos.</p><button className="action-primary" onClick={()=>{setForm({...stored.form,rooms:stored.form.rooms.map(room=>({...room,key:crypto.randomUUID()}))});setStored(undefined);}}>Continuar borrador</button> <button onClick={()=>{localStorage.removeItem(draftKey);setStored(undefined);}}>Descartar borrador</button></section>}
+        {savedAt && !created && <p>Guardado en este navegador a las {new Date(savedAt).toLocaleTimeString('es-CO')}</p>}
+        <nav className="flex gap-3 flex-wrap" aria-label="Pasos de publicación">{['Ubicación','Habitaciones y tarifas','Fotos','Revisión'].map((name,index)=><button type="button" className="manage-link" aria-pressed={step===index} onClick={()=>setStep(index)} key={name}>{index+1}. {name}</button>)}{step!==null && <button type="button" onClick={()=>setStep(null)}>Mostrar todo</button>}</nav>
         <form
           noValidate
           aria-busy={busy}
-          onSubmit={(e) => { e.preventDefault(); void submit('publish'); }}
+          onSubmit={(e) => { e.preventDefault(); if(step!==null && step<3)setStep(step+1);else void submit('publish'); }}
           className="flex flex-col gap-10"
         >
           {general && (
@@ -151,7 +171,7 @@ export function PublishProperty() {
             </p>
           )}
 
-          <fieldset disabled={locked} className="flex flex-col gap-4">
+          <fieldset hidden={step!==null && step!==0} disabled={locked} className="flex flex-col gap-4">
             <legend className="text-lg font-bold text-gray-900 mb-2">Datos generales</legend>
             <FormField id="property-type" label="Tipo de alojamiento" error={errors.type}>
               <select value={form.type} onChange={set('type')} className={fieldClass(!!errors.type)}>
@@ -167,8 +187,8 @@ export function PublishProperty() {
             </FormField>
           </fieldset>
 
-          <fieldset disabled={locked} className="flex flex-col gap-4">
-            <legend className="text-lg font-bold text-gray-900 mb-2">Ubicación</legend>
+          <fieldset hidden={step!==null && step!==0} disabled={locked} className="flex flex-col gap-4">
+            <legend className="text-lg font-bold text-gray-900 mb-2" id="ubicacion">Ubicación</legend>
             <FormField id="property-address" label="Dirección" error={errors['location.addressLine']}>
               <input value={form.addressLine} maxLength={CATALOG_LIMITS.addressLineMaxLength} onChange={set('addressLine')} className={fieldClass(!!errors['location.addressLine'])} />
             </FormField>
@@ -199,7 +219,7 @@ export function PublishProperty() {
               }} />
           </fieldset>
 
-          <fieldset disabled={locked} className="flex flex-col gap-3">
+          <fieldset hidden={step!==null && step!==1} disabled={locked} className="flex flex-col gap-3">
             <legend className="text-lg font-bold text-gray-900 mb-2">Características</legend>
             <div className="grid grid-cols-2 gap-3">
               {FEATURE_CATALOG.map((f) => (
@@ -212,14 +232,14 @@ export function PublishProperty() {
             {errors.featureCodes && <p role="alert" className="text-xs text-red-600">{errors.featureCodes}</p>}
           </fieldset>
 
-          <RoomsEditor
+          <section hidden={step!==null && step!==1}><RoomsEditor
             rooms={form.rooms}
             errors={errors}
             disabled={locked}
             onChange={(rooms) => { setForm((f) => ({ ...f, rooms })); setErrors((p) => Object.fromEntries(Object.entries(p).filter(([k]) => !k.startsWith('rooms')))); }}
           />
 
-          <PhotoPicker
+          </section><section hidden={step!==null && step!==2}><PhotoPicker
             photos={photos}
             errors={errors}
             status={status}
@@ -231,8 +251,9 @@ export function PublishProperty() {
             }}
           />
 
+          </section><section hidden={step!==null && step!==3} id="revision" className="surface"><h2>Vista previa del alojamiento</h2><strong>{form.name}</strong>{previewPhoto && <img className="mt-3 max-h-64 rounded-xl object-cover" src={previewPhoto} alt="Vista previa de la portada" />}<p>{[form.city,form.country].filter(Boolean).join(', ')}</p><p>{form.description}</p>{form.rooms.map(r=><p key={r.key}>{r.name} · {r.capacity} huéspedes · {r.amount} {r.currency} / noche · {form.featureCodes.includes('BREAKFAST_INCLUDED')?'Desayuno incluido':r.breakfastAmount ? 'Desayuno: '+r.breakfastAmount+' '+r.currency : 'Sin desayuno opcional'}</p>)}{photos[0] && <p>Portada: {photos[0].file.name}</p>}</section>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" variant="primary" size="lg" loading={busy}>Solicitar revisión</Button>
+             {step!==null && step<3 ? <button type="button" className="action-primary" onClick={()=>setStep(step+1)}>Siguiente</button> : <Button type="submit" variant="primary" size="lg" loading={busy}>Solicitar revisión</Button>}
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => { void submit('draft'); }}>
               Guardar como borrador
             </Button>

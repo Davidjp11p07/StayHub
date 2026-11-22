@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { http } from '../../api/http';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { bookingErrorMessage, newIdempotencyKey, useCreateBooking } from '../../api/bookings';
+import { useAuth } from '../../context/AuthContext';
+import { createBooking, bookingErrorMessage, newIdempotencyKey, useCreateBooking } from '../../api/bookings';
 import { ApiError } from '../../api/identity';
 import { formatMoney, useProperty } from '../../api/properties';
 import { paths } from '../../app/navigation';
@@ -35,6 +36,29 @@ export function Booking() {
   const [general, setGeneral] = useState<string>();
   const submitting = useRef(false);
   const attempt = useRef<{ payload: string; key: string }>();
+  const recoverKey='stayhub:booking-attempt:'+useAuth().currentUser?.id+':'+id;
+  const [uncertain,setUncertain]=useState(false);
+  useEffect(()=>{
+    try {
+      const saved=JSON.parse(sessionStorage.getItem(recoverKey) ?? 'null');
+      if (!saved || typeof saved.key!=='string' || typeof saved.payload!=='string') return;
+      const input=JSON.parse(saved.payload);
+      if(input.propertyId!==id)return;
+      attempt.current=saved;setRoomId(input.roomId);setCheckIn(input.checkIn);setCheckOut(input.checkOut);setGuests(input.guests);setBreakfastSelected(input.breakfastSelected);setUncertain(true);
+    }catch{/* optional browser state */}
+  },[recoverKey,id]);
+  const clearAttempt=()=>{try{sessionStorage.removeItem(recoverKey);}catch{/* optional storage */}setUncertain(false);};
+  const reconcile=async()=>{
+    if(!attempt.current || submitting.current)return;
+    submitting.current=true;
+    try{
+      const prior=await createBooking(JSON.parse(attempt.current.payload),attempt.current.key);
+      clearAttempt();navigate(paths.bookingPay(prior.id));
+    }catch(error){
+      if(error instanceof ApiError && error.status>=400 && error.status<500 && error.status!==429){clearAttempt();}
+      setGeneral(bookingErrorMessage(error));
+    }finally{submitting.current=false;}
+  };
   const alertRef = useRef<HTMLDivElement>(null);
 
   const [breakfastSelected, setBreakfastSelected] = useState(false);
@@ -84,7 +108,7 @@ export function Booking() {
   };
 
   const confirm = () => {
-    if (submitting.current || !room || !room.basePrice) return;
+    if (uncertain || submitting.current || !room || !room.basePrice) return;
     setShowErrors(true);
     setGeneral(undefined);
     if (Object.values(validate()).some(Boolean)) {
@@ -97,10 +121,12 @@ export function Booking() {
     const payload = JSON.stringify(input);
     if (!attempt.current || attempt.current.payload !== payload) attempt.current = { payload, key: newIdempotencyKey() };
     const idempotencyKey = attempt.current.key;
+    try{sessionStorage.setItem(recoverKey,JSON.stringify(attempt.current));}catch{/* optional storage */}
     createMutation.mutate(
       { input, idempotencyKey },
       {
         onSuccess: (booking) => {
+          clearAttempt();
           setDraft({
             propertyId: property.id, propertyName: property.name, roomId: room.id, roomName: room.name,
             checkIn, checkOut, guests, nights: booking.nights, nightlyPrice: booking.nightlyPrice, total: booking.total,
@@ -109,6 +135,8 @@ export function Booking() {
         },
         onError: (error) => {
           submitting.current = false;
+          if(error instanceof ApiError && (!error.status || error.status>=500)){setUncertain(true);setGeneral('No recibimos la confirmación. Comprueba la solicitud antes de crear otra reserva.');return;}
+          clearAttempt();
           if (error instanceof ApiError && error.status === 401) {
             navigate(paths.login, { state: { from: `${location.pathname}${location.search}` } });
             return;
@@ -203,7 +231,7 @@ export function Booking() {
               </div>
               {withBreakfast && <>
                 <div className="flex justify-between"><dt>Alojamiento</dt><dd>{formatMoney(price.data.lodging, price.data.currency)}</dd></div>
-                <div className="flex justify-between"><dt>Desayuno</dt><dd>{formatMoney(price.data.breakfast, price.data.currency)}</dd></div>
+                <div className="flex justify-between"><dt>Desayuno <small className="block">{guests} huésped(es) × {nights} noche(s) × {formatMoney(room.breakfastPerGuestNight!.amount, currency)}</small></dt><dd>{formatMoney(price.data.breakfast, price.data.currency)}</dd></div>
               </>}
               <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-200 pt-3">
                 <dt>Total</dt>
@@ -212,7 +240,7 @@ export function Booking() {
             </dl>
           )}
 
-          <Button type="submit" variant="primary" size="lg" disabled={canQuote && (!price.data || price.isFetching || price.isError)} loading={createMutation.isPending}>Confirmar reserva</Button>
+          <div className="booking-confirm">{price.data && canQuote && !price.isError && !price.isFetching && <strong className="sm:hidden" aria-label={formatMoney(price.data.total,price.data.currency)} data-total={formatMoney(price.data.total,price.data.currency)} />}{uncertain && <button type="button" className="manage-link" onClick={()=>void reconcile()}>Recuperar mi solicitud</button>}<Button type="submit" variant="primary" size="lg" disabled={uncertain || (canQuote && (!price.data || price.isFetching || price.isError))} loading={createMutation.isPending}>Confirmar reserva</Button></div>
           <p className="text-xs text-center text-gray-600">Crearemos tu reserva y te llevaremos al pago. No se te cobrará nada todavía.</p>
         </form>
       )}

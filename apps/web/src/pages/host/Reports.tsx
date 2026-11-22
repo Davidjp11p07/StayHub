@@ -93,12 +93,14 @@ export function Reports() {
     {!request && <p className="mt-6 text-gray-500">Indica el propietario y aplica los filtros para consultar sus reportes.</p>}
     {data && metrics && <>
       <div className="flex flex-wrap justify-between gap-3 text-xs text-gray-500 mt-6 mb-4"><p>{data.from} → {data.to} · UTC · Fecha final no incluida</p><p>{data.source === 'DEMO' ? 'DEMOSTRACIÓN · Datos sintéticos' : 'Datos de servicios reales'} · Actualizado {new Date(data.generatedAt).toLocaleString('es-CO', { timeZone: 'UTC' })} UTC</p></div>
+      {!admin && <a className="manage-link mb-3" href={'/host/bookings?'+new URLSearchParams({createdFrom:data.from,createdTo:data.to,...(data.propertyId ? {propertyId:data.propertyId} : {})})}>Ver reservas creadas en este período</a>}
       <section aria-label="Indicadores" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card label="Reservas creadas" value={String(total)} detail={prior ? `${Math.round((total - prior) / prior * 100)} % frente al período anterior` : 'Período anterior sin reservas; variación no calculable'} />
         <Card label="Cancelaciones en el período" value={String(metrics.cancellations)} detail="Según fecha de cancelación" />
         <Card label="Ocupación reservada" value={metrics.occupancy.rate === null ? 'No disponible' : `${metrics.occupancy.rate} %`} detail={`${metrics.occupancy.occupiedRoomNights} noches reservadas / ${metrics.occupancy.availableRoomNights ?? '—'} disponibles`} />
         <Card label="Cancelación de nuevas reservas" value={metrics.reservations.cancellationRate === null ? 'Sin base' : `${metrics.reservations.cancellationRate} %`} detail="Reservas creadas en este período que ahora están canceladas" />
       </section>
+      {metrics.occupancy.reason === 'HISTORICAL_SUPPLY_UNAVAILABLE' && <p>Falta el inventario publicado al inicio de una o más noches del período.</p>}
       {!metrics.occupancy.complete && <p role="status" className="rounded-xl bg-amber-50 border border-amber-200 p-4 mt-4 text-sm">Ocupación no disponible: falta historial de oferta publicada o hay diferencias con las reservas. No se asumió disponibilidad anterior al primer registro.</p>}
       <p className="text-xs text-gray-500 mt-3">Ocupación = noches con reservas confirmadas, en estancia o completadas / noches de habitaciones publicadas. No incluye bloqueos de inventario.{metrics.occupancy.projected ? ' Incluye fechas futuras: proyección sobre la oferta conocida.' : ''}</p>
       {total === 0 && metrics.cancellations === 0 && metrics.revenue.length === 0 && <p className="mt-5 text-gray-500">Sin movimientos ni nuevas reservas en este período.</p>}

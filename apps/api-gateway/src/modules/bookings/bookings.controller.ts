@@ -40,7 +40,12 @@ export class BookingsController {
 
   @Get('history') @Roles('OWNER')
   public history(@Req() request: Request): Promise<unknown> {
-    return this.bookings.request(context(request), 'GET', `/bookings/history${allowedQuery(request, ['from', 'to', 'status', 'guestId', 'page', 'pageSize'])}`);
+    return this.bookings.request(context(request), 'GET', `/bookings/history${allowedQuery(request, ['from', 'to', 'status', 'guestId', 'propertyId', 'page', 'pageSize'])}`);
+  }
+
+  @Get(':bookingId/cancellation-preview') @Roles('GUEST', 'OWNER')
+  public cancellationPreview(@Param('bookingId') bookingId: string, @Req() request: Request): Promise<unknown> {
+    return this.bookings.request(context(request), 'GET', `/bookings/${uuid(bookingId)}/cancellation-preview`);
   }
 
   @Get(':bookingId')

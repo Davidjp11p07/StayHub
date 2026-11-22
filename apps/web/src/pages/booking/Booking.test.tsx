@@ -33,7 +33,7 @@ beforeEach(() => {
   Object.assign(auth, { status: 'authenticated', currentUser: { id: GUEST_ID, role: 'GUEST', name: 'Ana' } });
   token = mockToken('GUEST', GUEST_ID);
   vi.spyOn(session, 'accessToken').mockImplementation(() => token);
-  try { localStorage.clear(); } catch { /* storage may be disabled */ }
+  try { sessionStorage.clear(); localStorage.clear(); } catch { /* storage may be disabled */ }
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
@@ -160,7 +160,7 @@ describe('Booking flow — confirmation', () => {
     fill('SALIDA', '2027-04-03');
     await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
-    expect(await screen.findByText('No pudimos completar la reserva. Intenta nuevamente.')).toBeInTheDocument();
+    expect(await screen.findByText('No recibimos la confirmación. Comprueba la solicitud antes de crear otra reserva.')).toBeInTheDocument();
     expect(screen.getByLabelText('ENTRADA')).toHaveValue('2027-04-01');
   });
 
@@ -172,9 +172,9 @@ describe('Booking flow — confirmation', () => {
     fill('ENTRADA', '2027-04-01'); fill('SALIDA', '2027-04-03');
     await screen.findByText('Total');
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
-    await screen.findByText('No pudimos completar la reserva. Intenta nuevamente.');
+    await screen.findByText('No recibimos la confirmación. Comprueba la solicitud antes de crear otra reserva.');
     await screen.findByText('Total');
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Recuperar mi solicitud' }));
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).toBe(keys[0]);
