@@ -5,6 +5,7 @@ export interface OwnerBookingHistoryFilter {
   from?: string;
   to?: string;
   status?: string;
+  propertyId?: string;
   guestId?: string;
   page: number;
   pageSize: number;

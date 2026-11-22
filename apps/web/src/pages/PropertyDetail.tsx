@@ -60,6 +60,7 @@ function DetailSkeleton() {
 export function PropertyDetail({ propertyId }: PropertyDetailProps) {
   const navigate = useNavigate();
   const query = useProperty(propertyId);
+  const [shareMessage, setShareMessage] = useState('');
   const [reviewsShown, setReviewsShown] = useState(REVIEWS_PAGE);
   const reviews = usePropertyReviews(query.data ? propertyId : undefined, 1, reviewsShown);
 
@@ -125,6 +126,13 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
         </div>
       </div>
 
+      <button type="button" className="manage-link mb-3" onClick={async () => {
+        try {
+          if (navigator.share) await navigator.share({ title: property.name, url: window.location.href });
+          else { await navigator.clipboard.writeText(window.location.href); setShareMessage('Enlace copiado.'); }
+        } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) setShareMessage(window.location.href); }
+      }}>Compartir alojamiento</button>{shareMessage && <p role="status">{shareMessage}</p>}
+      {['localhost','127.0.0.1'].includes(window.location.hostname) && <small className="block mb-3">Este enlace local abre en este equipo.</small>}
       <PhotoGallery propertyId={property.id} propertyName={property.name} photos={photos} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-12">
@@ -188,6 +196,7 @@ export function PropertyDetail({ propertyId }: PropertyDetailProps) {
           <LocationMap name={property.name} location={property.location} />
         </div>
 
+        {property.status === 'PUBLISHED' && fromPrice && <div className="mobile-book"><strong>{formatMoney(fromPrice.amount, fromPrice.currency)} / noche</strong><Link className="action-primary" to={paths.book(property.id)}>Ver disponibilidad</Link></div>}
         <aside aria-label="Reserva">
           <div className="sticky top-24">
             <div className="rounded-3xl border border-gray-200 p-6">

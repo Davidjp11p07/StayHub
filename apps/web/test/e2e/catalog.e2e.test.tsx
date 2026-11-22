@@ -150,6 +150,7 @@ describe('edit error handling', () => {
     mockDb.property(PROPERTY_IDS.casaAzul)!.version += 1;
     fill('Nombre', 'Casa Azul renovada');
     fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Despublicar y mantener reservas' }));
     expect(await screen.findByText('La propiedad cambió mientras la editabas. Recarga para ver la última versión.')).toBeInTheDocument();
   });
 
@@ -160,6 +161,7 @@ describe('edit error handling', () => {
     expect(await screen.findByDisplayValue('Hacienda Las Flores')).toBeInTheDocument();
     fill('Nombre', 'Intento ajeno');
     fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Despublicar y mantener reservas' }));
     expect(await screen.findByText('No encontramos la propiedad o no te pertenece.')).toBeInTheDocument();
   });
 
@@ -170,6 +172,7 @@ describe('edit error handling', () => {
     expect(await screen.findByDisplayValue('Casa Azul Frente al Mar')).toBeInTheDocument();
     fill('Nombre', 'Casa Azul sin permiso');
     fireEvent.click(screen.getByRole('button', { name: 'Despublicar y guardar cambios' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Despublicar y mantener reservas' }));
     expect(await screen.findByText('Solo los propietarios pueden publicar alojamientos.')).toBeInTheDocument();
   });
 });

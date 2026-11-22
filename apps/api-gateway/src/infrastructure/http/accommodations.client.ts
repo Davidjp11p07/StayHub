@@ -133,6 +133,7 @@ export class AccommodationsClient {
         throw new GatewayDependencyError(ACCOMMODATIONS_DEPENDENCY);
       }
       if (result.status >= 400) throw toRemoteHttpException(result);
+      if (result.status === 204) return undefined;
       try {
         return JSON.parse(new TextDecoder().decode(result.body)) as unknown;
       } catch {

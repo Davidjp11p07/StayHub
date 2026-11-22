@@ -50,6 +50,11 @@ export function Search() {
         <a href="/favorites" className="self-end text-sm font-semibold text-primary underline">Mis favoritos</a>
         <h1 className="text-2xl font-bold text-gray-900">Buscar alojamientos</h1>
 
+        <div className="flex flex-wrap gap-2" aria-label="Filtros activos">{Array.from(params.entries()).filter(([key])=>!['page','pageSize'].includes(key)).map(([key,value])=>{
+          const labels:Record<string,string>={countryCode:'País',location:'Destino',checkIn:'Entrada',checkOut:'Salida',q:'Búsqueda',guests:'Huéspedes',currency:'Moneda',amenities:'Servicios',minPrice:'Precio mínimo',maxPrice:'Precio máximo'};
+          const country=key==='countryCode' && /^[A-Za-z]{2}$/.test(value) ? new Intl.DisplayNames(['es'],{type:'region'}).of(value.toUpperCase()) : undefined;
+          return <button key={key+value} className="manage-link" onClick={()=>{const next=new URLSearchParams(params);next.delete(key,value);if(key==='checkIn'||key==='checkOut'){next.delete('checkIn');next.delete('checkOut');}next.delete('page');setParams(next);}}>{labels[key] ?? key}: {country ?? value} ×</button>;
+        })}</div>
         <FiltersPanel
           filters={filters}
           onKeywordsChange={(q) => apply({ ...filters, q, page: undefined }, true)}

@@ -48,6 +48,20 @@ describe('CancelGuestBookingUseCase', () => {
 
   beforeEach(() => { jest.clearAllMocks(); });
 
+  it('previews rounded captured funds by actor without cancelling', async () => {
+    const booking = storedBooking({ status: 'CONFIRMED', paymentStatus: 'CAPTURED', totalAmount: '10.01' });
+    const useCase = make(booking);
+    await expect(useCase.preview(booking.id, booking.guestId, 'GUEST')).resolves.toMatchObject({ paid: '10.01', refund: '5.01', retained: '5.00' });
+    await expect(useCase.preview(booking.id, booking.ownerId, 'OWNER')).resolves.toMatchObject({ refund: '10.01', retained: '0.00' });
+    await expect(useCase.preview(booking.id, OTHER_ID, 'OWNER')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(uow.cancel).not.toHaveBeenCalled();
+  });
+
+  it('previews zero paid when a charge has not been captured', async () => {
+    const booking = storedBooking({ status: 'PENDING_PAYMENT', paymentStatus: 'PENDING' });
+    await expect(make(booking).preview(booking.id, booking.guestId, 'GUEST')).resolves.toMatchObject({ paid: '0.00', refund: '0.00', retained: '0.00' });
+  });
+
   it('hides a booking owned by another guest', async () => {
     await expect(make().execute({ bookingId: BOOKING_ID, actorId: OTHER_ID })).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(make().execute({ bookingId: BOOKING_ID, actorId: GUEST_ID })).resolves.toMatchObject({ status: 'CANCELLED_BY_GUEST' });

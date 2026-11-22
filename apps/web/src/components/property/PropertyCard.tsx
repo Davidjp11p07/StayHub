@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFavorites } from './favorites';
 import type { Property } from '../../types';
 
@@ -28,6 +29,7 @@ export function PropertyCard({
   onClick,
 }: PropertyCardProps) {
   const { favorites, toggle } = useFavorites();
+  const [showSaved, setShowSaved] = useState(false);
   const saved = favorites.some(item => item.id === id);
 
   return (
@@ -63,7 +65,7 @@ export function PropertyCard({
           className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-colors"
           onClick={(e) => {
             e.stopPropagation(); // evita abrir el detalle al guardar
-            toggle({ id, title, location });
+            toggle({ id, title, location }); setShowSaved(!saved);
           }}
           onKeyDown={(e) => e.stopPropagation()}
           aria-pressed={saved}
@@ -80,6 +82,7 @@ export function PropertyCard({
         </button>
       </div>
 
+      {showSaved && saved && <a href="/favorites" onKeyDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()} className="text-primary text-sm underline">Guardado · Ver favoritos</a>}
       {/* Información */}
       <div className="flex flex-col gap-0.5">
         <div className="flex items-start justify-between gap-2">

@@ -1,3 +1,4 @@
+import { http } from '../../api/http';
 import { CoordinatePicker } from '../../components/host/CoordinatePicker';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { paths } from '../../app/navigation';
 import { Button } from '../../components/Button';
 import { Header } from '../../components/Header';
 import { FormField, fieldClass } from '../../components/host/FormField';
+import { useUploadPropertyPhoto } from '../../api/properties';
 import { RoomsEditor } from '../../components/host/RoomsEditor';
 import {
   emptyRoom, formKeyFromApiField, nextKey, validatePropertyForm,
@@ -79,10 +81,15 @@ function toChanges(form: PropertyFormState, roomIds: Record<string, string>): Pa
   };
 }
 
+import { ownerStays, occupies } from '../../api/owner-stays';
+
 export function EditProperty() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: property, isLoading, isError, error } = useProperty(id);
+  const { data: property, isLoading, isError, error, refetch } = useProperty(id);
+  const [impact,setImpact]=useState<string>();
+  const [checking,setChecking]=useState(false);
+  const uploadPhoto=useUploadPropertyPhoto();
   const updateMutation = useUpdateProperty();
 
   const [form, setForm] = useState<PropertyFormState>();
@@ -117,13 +124,25 @@ export function EditProperty() {
     requestAnimationFrame(() => summaryRef.current?.focus());
   };
 
-  const submit = () => {
+  const submit = async (acknowledged = false) => {
     if (!property || !form) return;
     // Photos already live on the server, so the publish-time photo requirement does not apply here.
     const found = validatePropertyForm(form, [], { publish: false });
     setErrors(found);
     if (Object.keys(found).length) { fail('Revisa los campos marcados antes de continuar.'); return; }
     setGeneral(undefined);
+    if (property.status === 'PUBLISHED' && !acknowledged) {
+      setChecking(true);
+      try {
+        const today=new Date().toISOString().slice(0,10);
+        const rows=await ownerStays({from:today,propertyId:property.id});
+        const active=rows.filter(b=>b.propertyId===property.id && occupies(b));
+        setImpact(active.length === 1 ? '1 reserva activa o futura seguirá vigente.' : active.length + ' reservas activas o futuras seguirán vigentes.');
+      } catch {setImpact('No pudimos comprobar las reservas. Las reservas existentes seguirán vigentes.');}
+      finally {setChecking(false);}
+      return;
+    }
+    setImpact(undefined);
     updateMutation.mutate({ property, changes: { ...toChanges(form, roomIds), status: property.status === 'PUBLISHED' ? 'UNPUBLISHED' : property.status } }, {
       onSuccess: (updated) => navigate(paths.property(updated.id), { replace: true }),
       onError: (saveError) => {
@@ -157,7 +176,7 @@ export function EditProperty() {
     );
   }
 
-  const busy = updateMutation.isPending;
+  const busy = checking || updateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -248,12 +267,15 @@ export function EditProperty() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
+            {impact && <section role="alert" className="surface"><h2>Antes de despublicar</h2><p>{impact}</p><p>El alojamiento dejará de aceptar reservas nuevas. Cada huésped conservará el detalle de su estancia y del pago en Mis reservas.</p><a className="underline" href={'/host/bookings?propertyId='+id}>Ver reservas</a> <button type="button" className="action-primary" disabled={busy} onClick={()=>void submit(true)}>Despublicar y mantener reservas</button> <button type="button" onClick={()=>setImpact(undefined)}>Volver a editar</button></section>}
             <Button type="submit" variant="primary" size="lg" loading={busy}>{property?.status === 'PUBLISHED' ? 'Despublicar y guardar cambios' : 'Guardar cambios'}</Button>
             <Button type="button" variant="outline" size="lg" disabled={busy} onClick={() => navigate(paths.property(property.id))}>
               Cancelar
             </Button>
           </div>
         </form>
+        {property.status!=='PUBLISHED' && <label className="block mt-5">Añadir foto al inmueble<input type="file" className="block" accept="image/jpeg,image/png" disabled={uploadPhoto.isPending || busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{await uploadPhoto.mutateAsync({propertyId:property.id,file});await refetch();}catch(error){setGeneral(propertyWriteErrorMessage(error));}}}/></label>}
+        {property.photos.length>0 && <section className="surface"><h2>Foto de portada</h2>{property.status==='PUBLISHED' && <p>Despublica y guarda antes de cambiar la portada.</p>}{property.photos.map((photo,i)=><button type="button" key={photo.id} disabled={!i || busy || property.status==='PUBLISHED'} className="manage-link" onClick={async()=>{try{await http.post('/properties/'+id+'/photos/'+photo.id+'/cover',{version:property.version});await refetch();}catch{setGeneral('No se pudo cambiar la portada. Comprueba que no haya una revisión pendiente.');}}}>{i ? 'Usar foto '+(i+1) : 'Portada actual'}</button>)}</section>}
         <section className="mt-8"><h2 className="text-xl font-semibold">Inventario por habitación</h2>{property.rooms.map(room => <p key={room.id} className="mt-2"><a className="underline" href={`/host/inventory/${encodeURIComponent(room.id)}`}>Gestionar inventario de {room.name}</a></p>)}</section>
       </main>
     </div>

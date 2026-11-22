@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate, useParams, useRoutes, type RouteObject } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Home } from '../pages/Home';
 import { Information } from '../pages/Information';
@@ -15,6 +15,7 @@ import { Register } from '../pages/Register';
 import { Search } from '../pages/Search';
 import { PropertyVerification } from '../pages/PropertyVerification';
 import { Favorites } from '../pages/Favorites';
+import { StayDetail } from '../pages/StayDetail';
 import { Profile } from '../pages/Profile';
 import { Inventory } from '../pages/host/Inventory';
 import { EditProperty } from '../pages/host/EditProperty';
@@ -109,7 +110,10 @@ function PropertyDetailRoute() {
 }
 
 function MyBookingsRoute() {
-  return <MyBookings onNavigate={useLegacyNavigate()} />;
+  const navigate = useLegacyNavigate();
+  const { currentUser } = useAuth();
+  if (currentUser?.role === 'OWNER') return <Navigate to={paths.hostBookings} replace />;
+  return <MyBookings onNavigate={navigate} />;
 }
 
 function MyReviewsRoute() {
@@ -137,6 +141,7 @@ export const appRoutes: RouteObject[] = [
       { path: paths.register, element: <RegisterRoute /> },
       { path: paths.search, element: <Search /> },
       { path: '/favorites', element: <Favorites /> },
+      { path: '/stay/:id', element: <StayDetail /> },
       { path: '/profile', element: <Profile /> },
       { path: '/property/:id', element: <PropertyDetailRoute /> },
       // Guest (the page itself prompts anonymous visitors to sign in)

@@ -7,9 +7,8 @@ import { DomainError } from '@bookings/domain/shared/domain-error';
 import { PrismaService } from './prisma.service';
 import { mapBooking } from './booking.repository';
 
-export function calculateRefundAmount(total: Prisma.Decimal, percent: number): Prisma.Decimal {
-  return new Prisma.Decimal(total).mul(percent).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-}
+import { calculateRefundAmount } from '@bookings/application/cancel-booking/refund-amount';
+export { calculateRefundAmount };
 
 @Injectable()
 export class PrismaCancelGuestBookingUnitOfWork implements CancelGuestBookingUnitOfWork {

@@ -125,6 +125,7 @@ model PropertyVerification {
   propertyId String @db.Uuid
   version Int
   property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  snapshot Json?
   requestedBy String @db.Uuid
   requestedAt DateTime @default(now()) @db.Timestamptz(6)
   status VerificationStatus @default(PENDING)

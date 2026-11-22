@@ -69,6 +69,14 @@ export class PropertiesController {
     return this.properties.decideVerification(parseUuid(id, 'id'), principal.sub, input.version, input.status, input.reason.trim());
   }
 
+  @Post(':id/photos/:photoId/cover')
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER')
+  async cover(@CurrentPrincipal() principal: Principal,@Param('id') id:string,@Param('photoId') photoId:string,@Body() body:unknown): Promise<void> {
+    await this.properties.chooseCover(parseUuid(id,'id'),principal.sub,parseUuid(photoId,'photoId'),verificationInput(body,['version']).version);
+  }
+
   @Get(':id/photos/:photoId')
   @UseGuards(OptionalJwtGuard)
   async getPhoto(@CurrentPrincipal() viewer: Principal | undefined, @Param('id') id: string, @Param('photoId') photoId: string, @Res() response: Response): Promise<void> {

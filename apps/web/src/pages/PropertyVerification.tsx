@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { http } from '../api/http';
+import { LocationMap } from '../components/property/LocationMap';
 import { Header } from '../components/Header';
 import type { Property } from '../types/catalog';
 
@@ -8,6 +9,8 @@ interface Decision {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   version: number;
   reason: string | null;
+  requestedBy?: string;
+  snapshot?: Record<string,unknown> | null;
 }
 interface QueueItem { propertyId: string; version: number; property: { name: string } }
 
@@ -61,11 +64,17 @@ function ReviewDetail({ row, onDone }: { row: QueueItem; onDone: () => void }) {
     onSuccess: onDone,
   });
   const property = detail.data?.property;
+  const revisions=detail.data?.history ?? [];
+  const previous=revisions.find(r=>r.version<row.version && r.status==='APPROVED');
+  const current=revisions.find(r=>r.version===row.version)?.snapshot;
+  const changes=current && previous?.snapshot ? Object.keys(current).filter(k=>JSON.stringify(current[k])!==JSON.stringify(previous.snapshot?.[k])) : undefined;
   if (!property) return <p role="status">{detail.isError ? 'No se pudo cargar el inmueble.' : 'Cargando inmueble…'}</p>;
   return <section className="rounded-xl border p-5 space-y-3">
     <h2 className="text-xl font-semibold">{property.name}</h2>
     <p>{property.location.addressLine}, {property.location.city}, {property.location.country}</p>
-    <p>{property.description}</p>
+    <p>{property.description}</p><p>Propietario: {revisions.find(r=>r.version===row.version)?.requestedBy ?? property.ownerId}</p><LocationMap name={property.name} location={property.location}/>
+    {previous && <p>{changes ? 'Cambios desde la aprobación anterior: '+(changes.join(', ') || 'ningún campo modificado') : 'La aprobación anterior no tiene una copia comparable.'}</p>}
+    <details><summary>Historial de revisiones</summary>{detail.data?.history.map(d=><p key={d.version}>Versión {d.version} · {d.status} {d.reason}</p>)}</details>
     {property.rooms.map(room => <p key={room.id}>{room.name} · {room.capacity} huéspedes · {room.basePrice?.amount} {room.basePrice?.currency}</p>)}
     <div className="grid gap-3 sm:grid-cols-2">{property.photos.map((photo, index) =>
       <EvidencePhoto key={photo.id} path={`/properties/${property.id}/photos/${photo.id}`} position={index + 1} />)}</div>

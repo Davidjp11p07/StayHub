@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { http as mock } from 'msw';
+import { http as mock, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../../test/msw/server';
 import { mockToken, problem } from '../../../test/msw/handlers';
@@ -38,6 +38,16 @@ const renderCancel = (id: string) =>
   renderWithProviders(<CancelBooking />, { route: cancelRoute(id), path: '/bookings/:bookingId/cancel' });
 
 describe('CancelBooking — guest (RQ-09)', () => {
+  it('shows a partial refund exactly as quoted by the server', async () => {
+    asGuest();
+    server.use(mock.get('*/api/v1/bookings/:id/cancellation-preview', () =>
+      HttpResponse.json({paid:'580.00',refund:'435.00',retained:'145.00',currency:'USD'})));
+    renderCancel(BOOKING_IDS.casaAzulConfirmed);
+    const quote = await screen.findByText('Reembolso estimado');
+    expect(quote.nextElementSibling).toHaveTextContent('435');
+    expect(screen.getByText('Importe retenido').nextElementSibling).toHaveTextContent('145');
+  });
+
   it('shows the summary and a policy note, confirms once and shows the refund result', async () => {
     asGuest();
     let deletes = 0;

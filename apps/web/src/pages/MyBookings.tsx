@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { getGuestBookingHistory } from '../api/bookings-history';
 import { GuestInbox } from '../components/GuestInbox';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -26,6 +28,9 @@ const STATUS_STYLES: Record<string, string> = {
 const statusStyle = (s: string) => STATUS_STYLES[s] ?? 'bg-red-50 text-red-700 border-red-200';
 
 /** One booking as a row; the status is shown with text (never color alone). */
+const paymentLabels: Record<Booking['paymentStatus'],string> = {
+  NOT_STARTED:'Sin iniciar', ORDER_PENDING:'Orden pendiente', PENDING:'Pendiente', CAPTURED:'Cobrado', FAILED:'Fallido', REFUND_PENDING:'Reembolso pendiente', PARTIALLY_REFUNDED:'Reembolso parcial', REFUNDED:'Reembolsado', REFUND_FAILED:'Error de reembolso', REFUND_REVIEW_REQUIRED:'Reembolso en revisión', REVIEW_REQUIRED:'En revisión',
+};
 export function BookingRow({ booking, children }: { booking: Booking; children?: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 p-5">
@@ -40,6 +45,7 @@ export function BookingRow({ booking, children }: { booking: Booking; children?:
         <p className="text-sm text-gray-700 mt-1">
           {booking.checkIn} → {booking.checkOut} · {booking.guests} huésped{booking.guests === 1 ? '' : 'es'} · {booking.nights} noche{booking.nights === 1 ? '' : 's'}
         </p>
+        <p>Pago · {paymentLabels[booking.paymentStatus]}</p>
         {children}
       </div>
       <p className="text-base font-bold text-gray-900">{formatMoney(booking.total.amount, booking.total.currency)}</p>
@@ -49,6 +55,7 @@ export function BookingRow({ booking, children }: { booking: Booking; children?:
 
 export function MyBookings({ onNavigate }: MyBookingsProps) {
   const { currentUser } = useAuth();
+  const [group,setGroup]=useState('Todas');
   const [status, setStatus] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -58,6 +65,14 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
     to: to || undefined,
   });
 
+  const grouped=useQuery({queryKey:['guest-stay-groups',currentUser?.id,from,to,status],enabled:!!currentUser && group!=='Todas',queryFn:async({signal})=>{
+    const items:Booking[]=[];
+    for(let page=1;;page++){
+      const batch=await getGuestBookingHistory({from:from || undefined,to:to || undefined,status:(status || undefined) as Booking['status'] | undefined,page,pageSize:100},signal);
+      items.push(...batch.items);if(!batch.hasNext)break;
+    }
+    return {items,total:items.length,page:1,pageSize:items.length,hasNext:false};
+  }});
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -79,7 +94,9 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
       titleAction={<div><GuestInbox key={currentUser.id} userId={currentUser.id} /><Link to={paths.reviews} className="text-sm font-semibold text-primary hover:underline">Mis reseñas</Link></div>}
       status={status} from={from} to={to}
       onStatus={setStatus} onFrom={setFrom} onTo={setTo}
-      query={query}
+      extraFilters={<label>Grupo de reservas<select value={group} onChange={e=>setGroup(e.target.value)}>{['Todas','Próximas','En curso','Historial'].map(g=><option key={g}>{g}</option>)}</select></label>}
+      listFilter={rows=>rows.filter(b=>group==='Todas' || (b.status==='CHECKED_IN' ? 'En curso' : isCancelable(b) ? 'Próximas' : 'Historial')===group)}
+      query={group==='Todas'?query:grouped}
       loadingText="Cargando tus reservas…"
       empty={(
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -90,6 +107,7 @@ export function MyBookings({ onNavigate }: MyBookingsProps) {
       )}
       renderItem={(booking) => (
         <BookingRow key={booking.id} booking={booking}>
+          <Link className="manage-link mr-4" to={'/stay/'+booking.id}>Ver comprobante</Link>
           {isCancelable(booking) && (
             <Link to={paths.cancelBooking(booking.id)} className="inline-block mt-2 mr-4 text-sm font-semibold text-red-600 hover:underline">
               Cancelar reserva

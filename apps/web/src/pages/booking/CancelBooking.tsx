@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { http } from '../../api/http';
 import { useBooking } from '../../api/bookings';
 import { cancellationErrorMessage, refundStatusMessage, useCancelBooking } from '../../api/bookings-cancel';
 import { BOOKING_STATUS_LABELS } from '../../api/bookings-history';
@@ -43,6 +45,7 @@ export function CancelBooking() {
   const submitting = useRef(false);
   const statusRef = useRef<HTMLDivElement>(null);
 
+  const preview = useQuery({queryKey:['cancel-preview',currentUser?.id,bookingId],enabled:!!currentUser && !result && ['CONFIRMED','PENDING_PAYMENT'].includes(query.data?.status ?? ''),queryFn:async({signal})=>(await http.get<{paid:string;refund:string;retained:string;currency:string}>('/bookings/'+bookingId+'/cancellation-preview',{signal})).data});
   const loadUnauthenticated = query.isError && query.error instanceof ApiError && query.error.status === 401;
   useEffect(() => {
     if (loadUnauthenticated) navigate(paths.login, { replace: true, state: { from: `${location.pathname}${location.search}` } });
@@ -120,6 +123,8 @@ export function CancelBooking() {
             {actor === 'owner' && ' El huésped recibirá el reembolso total.'}
           </p>
 
+          {preview.data && <p className="text-sm">Importes estimados al consultar. La política se vuelve a evaluar al confirmar.</p>}
+          {preview.data ? <dl className="surface">{[['Pagado',preview.data.paid],['Reembolso estimado',preview.data.refund],['Importe retenido',preview.data.retained]].map(([label,value])=><div key={label} className="flex justify-between"><dt>{label}</dt><dd>{formatMoney(value,preview.data.currency)}</dd></div>)}</dl> : <p role="status">{preview.isError?'No se pudo consultar el importe.':'Consultando el reembolso…'}</p>}
           {actor === 'owner' && (
             <div className="flex flex-col gap-1">
               <label htmlFor="cancel-reason" className="text-xs font-semibold text-gray-700">Motivo de la cancelación</label>

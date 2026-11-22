@@ -124,7 +124,8 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                   </div>
                   <a href="/favorites" className="block px-4 py-2.5 text-sm hover:bg-gray-50">Mis favoritos</a>
                   <a href="/profile" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Mi perfil</a>
-                  <button
+                  {currentUser.role === 'OWNER' && <a href="/host/bookings" className="block px-4 py-2.5 text-sm">Reservas recibidas</a>}
+                  {currentUser.role === 'GUEST' && <button
                     onClick={() => { setMenuOpen(false); onNavigate('bookings'); }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                   >
@@ -135,7 +136,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
                       <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                     Mis reservas
-                  </button>
+                  </button>}
                   {currentUser.role === 'VERIFIER' && <a href="/verification" className="block px-4 py-2.5">Revisar inmuebles</a>}
                   {(currentUser.role === 'OWNER' || currentUser.role === 'ADMIN') && (
                     <a href={currentUser.role === 'ADMIN' ? '/admin/reports' : '/host/reports'} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Reportes</a>
@@ -188,6 +189,7 @@ export function Header({ onNavigate: navigateProp, showSearch, searchValue, onSe
           )}
         </div>
       </div>
+      <nav aria-label="Navegación móvil" className="mobile-nav">{(currentUser?.role==='OWNER' ? [['/host','Resumen'],['/host/properties','Propiedades'],['/host/bookings','Reservas'],['/profile','Perfil']] : [['/search','Explorar'],['/favorites','Favoritos'],['/bookings','Reservas'],['/profile','Perfil']]).map(([href,label])=><a key={href} href={href} aria-current={window.location.pathname===href?'page':undefined}>{label}</a>)}</nav>
     </header>
   );
 }

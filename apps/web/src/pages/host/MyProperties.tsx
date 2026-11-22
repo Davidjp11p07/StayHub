@@ -95,7 +95,9 @@ export function MyProperties() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Link to={paths.property(property.id)} className="text-sm font-medium text-gray-600 hover:underline">Ver</Link>
+                <span className="text-xs text-gray-600">{property.status==='PUBLISHED' ? 'Disponible en búsqueda' : !property.photos.length ? 'Pendiente: añadir fotos' : 'Consulta la solicitud y el motivo de la última decisión en la ficha'}</span>
+                <Link className="text-sm underline" to={paths.hostBookings+'?propertyId='+property.id}>Reservas y calendario</Link>
+                <Link to={paths.property(property.id)} className="text-sm font-medium text-gray-600 hover:underline">{property.status==='PUBLISHED'?'Ver ficha':'Consultar revisión'}</Link>
                 <Link
                   to={paths.hostPropertyEdit(property.id)}
                   aria-label={`Editar ${property.name}`}

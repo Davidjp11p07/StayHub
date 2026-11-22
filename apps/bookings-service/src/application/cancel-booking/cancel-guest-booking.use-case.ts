@@ -1,9 +1,13 @@
+import { Prisma } from '../../infrastructure/persistence/generated/client';
+import { calculateRefundAmount } from './refund-amount';
 import { BOOKING_READ_PORT, type BookingReadPort } from '@bookings/application/ports/booking-read.port';
 import { CANCEL_GUEST_BOOKING_UOW, type CancelGuestBookingUnitOfWork } from '@bookings/application/ports/cancel-guest-booking.unit-of-work';
 import { CANCELLATION_POLICY_PORT, type CancellationPolicyPort } from '@bookings/application/ports/cancellation-policy.port';
 import { CLOCK_PORT, type ClockPort } from '@bookings/application/ports/clock.port';
 import type { StoredBooking } from '@bookings/application/ports/create-booking.unit-of-work';
 import { DomainError } from '@bookings/domain/shared/domain-error';
+
+export interface CancellationPreview { currency: string; paid: string; refund: string; retained: string }
 
 export interface CancelGuestBookingCommand {
   bookingId: string;
@@ -18,6 +22,18 @@ export class CancelGuestBookingUseCase {
     private readonly unitOfWork: CancelGuestBookingUnitOfWork,
     private readonly clock: ClockPort,
   ) {}
+
+  public async preview(bookingId: string, actorId: string, role: 'GUEST' | 'OWNER'): Promise<CancellationPreview> {
+    const booking = await this.bookings.findById(bookingId);
+    if (!booking || (role === 'OWNER' ? booking.ownerId : booking.guestId) !== actorId) throw new DomainError('NOT_FOUND');
+    if (booking.status !== 'PENDING_PAYMENT' && booking.status !== 'CONFIRMED') throw new DomainError('STATE_CONFLICT');
+    const decision = role === 'OWNER' ? { eligible: true, refundPercent: 100 } :
+      this.policy.evaluate({ actor: 'GUEST', status: booking.status, checkIn: booking.checkIn, now: this.clock.now() });
+    if (!decision.eligible) throw new DomainError('CANCELLATION_NOT_ALLOWED');
+    const paid = new Prisma.Decimal(booking.paymentStatus === 'CAPTURED' ? booking.totalAmount : '0');
+    const refund = calculateRefundAmount(paid, decision.refundPercent);
+    return { currency: booking.currency, paid: paid.toFixed(2), refund: refund.toFixed(2), retained: paid.minus(refund).toFixed(2) };
+  }
 
   public async execute(command: CancelGuestBookingCommand): Promise<StoredBooking> {
     const booking = await this.bookings.findById(command.bookingId);

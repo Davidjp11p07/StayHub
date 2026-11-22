@@ -102,7 +102,11 @@ export class PrismaPropertyRepository implements PropertyRepository {
       assertPublishable({ ...property, photoCount: property.photos.length });
       const existing = await tx.propertyVerification.findUnique({ where: reviewKey(id, version) });
       if (existing && existing.status !== 'PENDING') throw new DomainError('STATE_CONFLICT');
-      return existing ?? tx.propertyVerification.create({ data: { propertyId: id, version, requestedBy: ownerId } });
+      return existing ?? tx.propertyVerification.create({ data: { propertyId: id, version, requestedBy: ownerId, snapshot: {
+        nombre: property.name, descripción: property.description, tipo: property.type,
+        ubicación: JSON.stringify(property.location), habitaciones: JSON.stringify(property.rooms),
+        servicios: property.features.map(row=>row.code), fotos: property.photos.map(row=>row.id),
+      } } });
     });
   }
 
@@ -184,6 +188,24 @@ export class PrismaPropertyRepository implements PropertyRepository {
       await captureReportSupply(tx, id);
       return toDomain(await tx.property.findUniqueOrThrow({ where: { id }, include }));
     }, TRANSACTION).catch(translate);
+  }
+
+  async chooseCover(id: string, ownerId: string, photoId: string, version: number): Promise<void> {
+    await this.prisma.$transaction(async tx => {
+      const current = await lockAndLoad(tx,id);
+      if (!current || current.ownerId !== ownerId) throw new DomainError('NOT_FOUND');
+      if (current.version !== version) throw new DomainError('VERSION_CONFLICT');
+      const review = await tx.propertyVerification.findUnique({where:reviewKey(id,version)});
+      if (current.status === 'PUBLISHED' || review?.status === 'PENDING') throw new DomainError('STATE_CONFLICT');
+      const chosen = current.photos.find(photo=>photo.id===photoId);
+      const first = current.photos[0];
+      if (!chosen || !first) throw new DomainError('NOT_FOUND');
+      if (first.id === chosen.id) return;
+      await tx.$executeRaw`SET CONSTRAINTS "Photo_propertyId_position_key" DEFERRED`;
+      await tx.photo.update({where:{id:first.id},data:{position:chosen.position}});
+      await tx.photo.update({where:{id:chosen.id},data:{position:first.position}});
+      await tx.property.update({where:{id},data:{version:{increment:1}}});
+    });
   }
 
   async addPhoto(id: string, decide: (current: Property) => Promise<NewPhoto>): Promise<Photo | null> {

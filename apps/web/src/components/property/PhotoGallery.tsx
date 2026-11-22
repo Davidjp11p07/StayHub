@@ -18,6 +18,7 @@ const altText = (name: string, index: number, total: number) => `${name}, foto $
 export function PhotoGallery({ propertyId, propertyName, photos }: PhotoGalleryProps) {
   const [open, setOpen] = useState<number | null>(null);
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
+  const touchStart = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const lastOpened = useRef(0);
   const total = photos.length;
@@ -92,7 +93,7 @@ export function PhotoGallery({ propertyId, propertyName, photos }: PhotoGalleryP
               Cerrar galería
             </button>
           </div>
-          <img src={photoUrl(propertyId, photos[open]!)} alt={altText(propertyName, open, total)} className="max-h-[75vh] max-w-full rounded-xl object-contain" />
+          <img onTouchStart={e => { touchStart.current = e.touches[0]?.clientX ?? null; }} onTouchEnd={e => { const x = e.changedTouches[0]?.clientX; if (x !== undefined && touchStart.current !== null && Math.abs(x-touchStart.current)>50) step(x < touchStart.current ? 1 : -1); touchStart.current=null; }} src={photoUrl(propertyId, photos[open]!)} alt={altText(propertyName, open, total)} className="max-h-[75vh] max-w-full rounded-xl object-contain" />
           {total > 1 && (
             <div className="mt-4 flex gap-4">
               <button type="button" onClick={() => step(-1)} className="rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white">
