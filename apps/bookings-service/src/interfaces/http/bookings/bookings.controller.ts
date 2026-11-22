@@ -31,7 +31,7 @@ export class BookingsController {
 
   @Get('calendar/:property/:room/:month')
   async calendarMonth(@Param('property', ParseUUIDPipe) property: string, @Param('room', ParseUUIDPipe) room: string,
-    @Param('month') month: string, @Req() request: AuthenticatedRequest) {
+    @Param('month') month: string, @Req() request: AuthenticatedRequest): Promise<{ first: string; end: string; blocked: boolean }[]> {
     if (request.principal?.role !== 'GUEST') throw new ForbiddenException();
     if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/u.test(month)) throw new BadRequestException();
     if (!this.calendar) throw new ServiceUnavailableException();
