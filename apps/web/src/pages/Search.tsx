@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { catalogPhotoUrl } from '../api/properties';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { parseSearchParams, searchErrorMessage, toSearchParams, useSearch, useSearchSuggestions } from '../api/search';
 import { paths } from '../app/navigation';
@@ -17,7 +18,7 @@ function nightsBetween(checkIn?: string, checkOut?: string): number | undefined 
 
 export function toCardProps(result: SearchResult, nights?: number) {
   return {
-    image: result.primaryPhotoUrl ?? null,
+    image: result.primaryPhotoUrl ? catalogPhotoUrl(result.primaryPhotoUrl) : null,
     title: result.name,
     location: result.location,
     pricePerNight: result.minNightlyPrice,

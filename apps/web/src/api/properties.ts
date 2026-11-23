@@ -79,9 +79,14 @@ export function sortedPhotos(property: Pick<Property, 'photos'>): Photo[] {
   return [...property.photos].sort((a, b) => a.position - b.position);
 }
 
-/** Photo bytes delivery is pending G1; until then the Gateway path is derived from the metadata. */
+/** Serve catalog photos through the configured Gateway even when metadata was seeded on localhost. */
+export function catalogPhotoUrl(value: string): string {
+  const match = /^https?:\/\/[^/]+\/api\/v1(\/properties\/[\da-f-]+\/photos\/[\da-f-]+)$/i.exec(value);
+  return match ? API_BASE_URL + match[1] : value;
+}
+
 export function photoUrl(propertyId: string, photo: Pick<Photo, 'id' | 'url'>): string {
-  return photo.url ?? `${API_BASE_URL}/properties/${propertyId}/photos/${photo.id}`;
+  return photo.url ? catalogPhotoUrl(photo.url) : `${API_BASE_URL}/properties/${propertyId}/photos/${photo.id}`;
 }
 
 export function lowestNightlyPrice(property: Pick<Property, 'rooms'>): BasePrice | undefined {

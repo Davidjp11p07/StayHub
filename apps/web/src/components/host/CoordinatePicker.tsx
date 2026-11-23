@@ -48,7 +48,6 @@ export function CoordinatePicker({ latitude, longitude, disabled, onSelect, onAd
       const lon = point.lng.toFixed(6);
       const { onSelect, onAddress } = handlers.current;
       onSelect(lat, lon);
-      if (!import.meta.env.DEV) return;
 
       lookup?.abort();
       const request = new AbortController();
@@ -57,7 +56,10 @@ export function CoordinatePicker({ latitude, longitude, disabled, onSelect, onAd
       const timeout = window.setTimeout(() => request.abort(), 8000);
       try {
         const params = new URLSearchParams({ lat, lon, limit: '1' });
-        const response = await fetch(`/local-geocoding/reverse?${params}`, { signal: request.signal });
+        const endpoint = import.meta.env.DEV ? '/local-geocoding/reverse' : 'https://photon.komoot.io/reverse';
+        const response = await fetch(`${endpoint}?${params}`, {
+          signal: request.signal, credentials: 'omit', referrerPolicy: 'no-referrer',
+        });
         if (!response.ok) throw new Error('Reverse geocoding failed');
         const result = await response.json();
         if (lookup !== request) return;
