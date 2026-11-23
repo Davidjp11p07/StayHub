@@ -206,6 +206,10 @@ const SERVICES = [
       ACCOMMODATIONS_SERVICE_JWT_PUBLIC_KEY: bookingsKeys.publicKey,
       ACCOMMODATIONS_BOOKING_QUOTE_SCOPE: 'accommodations:booking-quote',
       ACCOMMODATIONS_PHOTO_STORAGE_ROOT: photosDir,
+      // Publica snapshots al exchange de Search para que el home/listado dejen de verse vacíos.
+      ACCOMMODATIONS_SEARCH_RABBITMQ_URL: mqUrl,
+      ACCOMMODATIONS_SEARCH_EXCHANGE: 'stayhub.search.v1',
+      ACCOMMODATIONS_SEARCH_PUBLIC_API_URL: 'http://127.0.0.1:8080/api/v1',
     }),
   },
   {

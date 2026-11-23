@@ -55,7 +55,20 @@ export default defineConfig(({ command, mode }) => {
     server: { host: 'localhost', port: 5173, strictPort: true,
       // The Compose Gateway serves HTTPS with a self-signed dev certificate; only skip verification
       // for a loopback target so a remote WEB_GATEWAY_URL is still verified.
-      proxy: { '/api': { target: gatewayTarget, changeOrigin: true, secure: !isLoopbackHttps(gatewayTarget) } },
+      proxy: {
+        '/api': { target: gatewayTarget, changeOrigin: true, secure: !isLoopbackHttps(gatewayTarget) },
+        '/local-geocoding/reverse': {
+          target: env.WEB_PHOTON_URL || 'https://photon.komoot.io',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/local-geocoding/, ''),
+          configure: (proxy) => {
+            proxy.on('proxyReq', (request) => {
+              request.removeHeader('cookie');
+              request.removeHeader('authorization');
+            });
+          },
+        },
+      },
     },
     preview: { host: 'localhost', port: 4173, strictPort: true },
   };

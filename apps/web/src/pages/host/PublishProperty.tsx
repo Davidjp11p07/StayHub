@@ -14,6 +14,7 @@ import { RoomsEditor } from '../../components/host/RoomsEditor';
 import {
   emptyPropertyForm, formKeyFromApiField, toPropertyCreate, validatePropertyForm,
   type FormErrors, type PhotoDraft, type PropertyFormState,
+  applyMapAddress,
 } from '../../components/host/propertyForm';
 import {
   CATALOG_LIMITS, FEATURE_CATALOG, PROPERTY_TYPE_LABELS, PROPERTY_TYPES, type Property,
@@ -216,6 +217,11 @@ export function PublishProperty() {
               onSelect={(latitude, longitude) => {
                 setForm(current => current && ({ ...current, latitude, longitude }));
                 setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'location.latitude' && key !== 'location.longitude')));
+              }}
+              onAddress={(latitude, longitude, address) => {
+                setForm(current => current && applyMapAddress(current, form, latitude, longitude, address));
+                setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) =>
+                  !Object.entries(address).some(([field, value]) => value && key === `location.${field}`))));
               }} />
           </fieldset>
 
