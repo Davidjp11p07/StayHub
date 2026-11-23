@@ -66,6 +66,13 @@ const env = {
   GATEWAY_SEARCH_BASE_URL: 'http://127.0.0.1:3004',
   GATEWAY_SEARCH_SERVICE_AUDIENCE: 'stayhub-search-service', GATEWAY_SEARCH_SERVICE_SCOPE: 'search:invoke',
   GATEWAY_SEARCH_TIMEOUT_MS: '3000', GATEWAY_SEARCH_CIRCUIT_FAILURE_THRESHOLD: '5', GATEWAY_SEARCH_CIRCUIT_RESET_MS: '30000',
+  // Inventario de habitaciones (room-inventory-service en 3008).
+  GATEWAY_INVENTORY_BASE_URL: 'http://127.0.0.1:3008',
+  GATEWAY_INVENTORY_SERVICE_AUDIENCE: 'stayhub-room-inventory-service',
+  GATEWAY_INVENTORY_SERVICE_SCOPE: 'inventory:manage',
+  GATEWAY_INVENTORY_TIMEOUT_MS: '5000',
+  GATEWAY_INVENTORY_CIRCUIT_FAILURE_THRESHOLD: '5',
+  GATEWAY_INVENTORY_CIRCUIT_RESET_MS: '30000',
 };
 const child = spawn(process.execPath, ['dist/apps/api-gateway/main.js'], { cwd: root, env, stdio: 'inherit' });
 process.on('SIGINT', () => child.kill('SIGINT')); process.on('SIGTERM', () => child.kill('SIGTERM'));

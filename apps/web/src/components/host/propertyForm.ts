@@ -9,6 +9,26 @@ import {
 export interface RoomDraft { key: string; name: string; capacity: string; amount: string; breakfastAmount?: string; currency: string }
 export interface PhotoDraft { key: string; file: File }
 
+const mapAddressFields = ['city', 'region', 'country', 'postalCode'] as const;
+export type MapAddress = Partial<Pick<PropertyFormState, (typeof mapAddressFields)[number]>>;
+
+export function applyMapAddress(
+  current: PropertyFormState,
+  beforeSelection: PropertyFormState,
+  latitude: string,
+  longitude: string,
+  address: MapAddress,
+): PropertyFormState {
+  if (current.latitude !== latitude || current.longitude !== longitude) return current;
+
+  const next = { ...current };
+  for (const field of mapAddressFields) {
+    const value = address[field];
+    if (value !== undefined && current[field] === beforeSelection[field]) next[field] = value;
+  }
+  return next;
+}
+
 export interface PropertyFormState {
   type: PropertyType | '';
   name: string;

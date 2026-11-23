@@ -25,6 +25,8 @@ servicio: `npm run dev:backend -- --build`. Las migraciones se aplican en cada a
 Ctrl+C detiene los procesos. Los contenedores y sus volúmenes se conservan; para bajarlos al
 salir usa `npm run dev:backend -- --down-deps`. No uses `down -v` si quieres conservar los datos.
 
+Al publicar o editar un alojamiento, usa **Centrar en mi ubicación** y concede permiso al navegador si quieres acercar el mapa a tu dispositivo. Luego selecciona un punto en el mapa para completar la ciudad, la región, el país y el código postal cuando estén disponibles. Los campos se pueden corregir manualmente. El servidor local de Vite envía las coordenadas a [Photon](https://github.com/komoot/photon#demo-server). Puedes usar otra instancia compatible configurando `WEB_PHOTON_URL` en el `.env` de la raíz y reiniciando Vite.
+
 ## Comprobación rápida
 
 Con las tres primeras terminales activas:

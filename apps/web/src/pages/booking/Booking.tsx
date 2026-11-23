@@ -186,8 +186,10 @@ export function Booking() {
             </div>
           )}
 
-          <GuestCalendar key={room.id} property={id} room={room.id} name={room.name} today={today} arrival={checkIn}
-            onArrival={date=>{setCheckIn(date); if(checkOut<=date) setCheckOut(''); resetFeedback();}} />
+          <GuestCalendar key={room.id} property={id} room={room.id} name={room.name} today={today} arrival={checkIn} departure={checkOut}
+            onArrival={date => { setCheckIn(date); setCheckOut(''); resetFeedback(); }}
+            onDeparture={date => { setCheckOut(date); resetFeedback(); }}
+            onReset={() => { setCheckIn(''); setCheckOut(''); resetFeedback(); }} />
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label htmlFor="booking-check-in" className="text-xs font-semibold text-gray-700">ENTRADA</label>

@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { http as mock } from 'msw';
+import { http as mock, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../../test/msw/server';
 import { mockDb, mockToken, problem } from '../../../test/msw/handlers';
@@ -49,6 +49,25 @@ const renderGuarded = (id: string = PROPERTY_IDS.casaAzul) =>
 const fill = (label: string | RegExp, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 describe('Booking flow — dates and total', () => {
+  it('moves from arrival to departure and allows checkout on the first blocked night', async () => {
+    server.use(mock.get('*/bookings/calendar/:property/:room/:month', ({ params }) =>
+      HttpResponse.json(params.month === '2026-12'
+        ? [{ first: '2026-12-01', end: '2026-12-03', blocked: true }]
+        : [])));
+    renderBooking();
+
+    fireEvent.click(await screen.findByRole('button', { name: '2026-11-30 · Disponible' }));
+    expect(screen.getByLabelText('ENTRADA')).toHaveValue('2026-11-30');
+    expect(screen.getByText('Ahora elige tu fecha de salida.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }));
+    const departure = await screen.findByRole('button', { name: '2026-12-01 · Salida disponible' });
+    expect(screen.getByRole('button', { name: '2026-12-02 · Bloqueada' })).toBeDisabled();
+    fireEvent.click(departure);
+    expect(screen.getByLabelText('SALIDA')).toHaveValue('2026-12-01');
+    expect(departure).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('shows a summary with property, nights, guests and the fee-free total', async () => {
     renderBooking();
     await screen.findByRole('heading', { name: /Casa Azul Frente al Mar/ });
